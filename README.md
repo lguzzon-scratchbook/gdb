@@ -4,6 +4,8 @@ Base de datos gráfica cliente-servidor con control de acceso basado en roles (R
 
 ---
 
+[![](https://data.jsdelivr.com/v1/package/npm/gdb-p2p/badge)](https://www.jsdelivr.com/package/npm/gdb-p2p)
+
 ## Características Principales
 
 ### ✅ **Núcleo de GraphDB**
