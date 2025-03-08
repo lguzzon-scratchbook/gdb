@@ -17,9 +17,11 @@ Base de datos gráfica cliente-servidor con control de acceso basado en roles (R
 - Indexación automática para búsquedas rápidas
 
 ## Advertencia
+
 Este proyecto está en desarrollo activo. No lo uses en entornos de producción hasta que alcance la fase beta o estable. Consulta la sección [Estado del Proyecto](#estado-del-proyecto) para más detalles.
 
 ## Estado del Proyecto
+
 - **Fase**: Alfa
 - **Funcionalidades Completadas**:
   - Consultas básicas.
@@ -51,25 +53,26 @@ Este proyecto está en desarrollo activo. No lo uses en entornos de producción 
 ```bash
 npm install gdb-p2p
 ```
+
 ### 2. Uso directo en navegador
 
 ```html
 <script type="module">
-  import { GraphDB, setCustomRoles, executeWithPermission } from "gdb-p2p";
+  import { GraphDB, setCustomRoles, executeWithPermission } from "gdb-p2p"
 </script>
 ```
 
 **Nota**: También puedes usar este paquete directamente desde un navegador importándolo desde un CDN:
 
 ```javascript
-   // jsDelivr
-   import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@latest";
+// jsDelivr
+import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@latest"
 
-   // UNPKG
-   import { GraphDB } from "https://unpkg.com/gdb-p2p@latest";
+// UNPKG
+import { GraphDB } from "https://unpkg.com/gdb-p2p@latest"
 
-   // Skypack
-   import { GraphDB } from "https://cdn.skypack.dev/gdb-p2p@latest";
+// Skypack
+import { GraphDB } from "https://cdn.skypack.dev/gdb-p2p@latest"
 ```
 
 ## Uso Básico
@@ -109,30 +112,27 @@ await db.remove(nodeId)
 ```javascript
 import { setCustomRoles } from "gdb-p2p"
 
-setCustomRoles({
-  editor: {
-    can: ["write", "publish"],
-    inherits: ["user"],
-  },
+// Definir roles personalizados
+const customRoles = {
+  editor: { can: ["edit", "write"], inherits: ["reader"] },
+  reader: { can: ["read"] },
+  admin: { can: ["delete", "assignRole"], inherits: ["editor"] },
   // Sobreescribe roles predeterminados
-})
+}
+
+setCustomRoles(customRoles)
 ```
 
 ### Flujo de Autenticación
 
 ```javascript
-import {
-  authenticateWithMetamask,
-  executeWithPermission,
-} from "gdb-p2p"
+import { executeWithPermission } from "gdb-p2p"
 
-// Conectar con Metamask
-const { userAddress } = await authenticateWithMetamask()
+// Conectar con Metamask verificando permisos
+const userAddress = await executeWithPermission(db, "write")
 
 // Ejecutar operación protegida
-await executeWithPermission(db, "delete", async () => {
-  await db.remove("nodeIdToDelete")
-})
+await db.remove("nodeIdToDelete")
 ```
 
 ### Asignar Roles
@@ -156,6 +156,7 @@ await assignRole(
 Puedes encontrar ejemplos prácticos de cómo usar esta biblioteca en la carpeta [examples](https://github.com/estebanrfp/gdb/tree/main/examples).
 
 Algunos ejemplos incluyen:
+
 - **Consulta básica**: Cómo realizar consultas simples.
 - **Almacenamiento distribuido**: Cómo configurar una base de datos distribuida.
 
@@ -264,9 +265,11 @@ Nos encantaría recibir tus contribuciones para mejorar este proyecto. Sigue est
    ```
 4. **Realizar Cambios**
    Implementa tus cambios o correcciones. Asegúrate de seguir las guías de estilo y documentación del proyecto.
+
    ```
 
    ```
+
 5. **Commit y Push**
    Confirma tus cambios y sube la rama al repositorio remoto:
    ```bash
