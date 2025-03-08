@@ -1,6 +1,6 @@
 Business Source License 1.1
 
-Copyright (c) [2025] [Esteban Fuster Pozzi]
+Copyright (c) 2025 Esteban Fuster Pozzi
 
 1. License Grant:
    Subject to the conditions of this license, Licensor grants you a non-exclusive, worldwide, royalty-free license to use, copy, and distribute the Software in object code form (e.g., minified files), provided that:
@@ -16,7 +16,7 @@ Copyright (c) [2025] [Esteban Fuster Pozzi]
    c) You do not use the Software for purposes other than its intended use (e.g., distributed graph database implementation).
 
 3. Change Date:
-   On January 1, 2026, the Software will automatically convert to the Apache License 2.0. After this date, all restrictions imposed by this license will no longer apply.
+   On January 1, 2026, the Software will automatically convert to the Apache 2.0 License. After this date, all restrictions imposed by this license will no longer apply.
 
 4. Warranty Disclaimer:
    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
