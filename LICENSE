@@ -20,4 +20,10 @@ Disclaimer of Warranty: Unless required by applicable law or agreed to in writin
 
 Limitation of Liability: In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Licensor be liable to you for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Software.
 
+Additional Restrictions:
+- Modification, alteration, or creation of derivative works based on the Software is not permitted without the explicit written consent of the Licensor.
+- Any use of the Software must include the following attribution in any visible output (such as a console.log) or in the comments of the minified code:
+  "This software was developed by Esteban Fuster Pozzi. All rights reserved."
+- Public redistribution of the original source code of the Software is strictly prohibited. Only compiled or minified versions of the Software may be distributed.
+
 You are advised to obtain a copy of the full license text from the official Business Source License repository or website.
