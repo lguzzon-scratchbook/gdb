@@ -54,27 +54,6 @@ Este proyecto está en desarrollo activo. No lo uses en entornos de producción 
 npm install gdb-p2p
 ```
 
-### 2. Uso directo en navegador
-
-```html
-<script type="module">
-  import { GraphDB, setCustomRoles, executeWithPermission } from "gdb-p2p"
-</script>
-```
-
-**Nota**: También puedes usar este paquete directamente desde un navegador importándolo desde un CDN:
-
-```javascript
-// jsDelivr
-import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@latest"
-
-// UNPKG
-import { GraphDB } from "https://unpkg.com/gdb-p2p@latest"
-
-// Skypack
-import { GraphDB } from "https://cdn.skypack.dev/gdb-p2p@latest"
-```
-
 ## Uso Básico
 
 ### Inicializar Base de Datos
@@ -84,6 +63,34 @@ import GraphDB from "gdb-p2p"
 
 const db = new GraphDB("myDatabase")
 await db.ready // Esperar inicialización
+```
+
+### 2. Uso directo en navegador desde un CDN
+
+```html
+<script type="module">
+  import {
+    GraphDB,
+    setCustomRoles,
+    executeWithPermission,
+  } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm"
+
+  const db = new GraphDB("myDatabase")
+  await db.ready // Esperar inicialización
+</script>
+```
+
+**Nota**: CDNS disponibles:
+
+```javascript
+// jsDelivr
+import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm"
+
+// UNPKG
+import { GraphDB } from "https://unpkg.com/gdb-p2p@latest"
+
+// Skypack
+import { GraphDB } from "https://cdn.skypack.dev/gdb-p2p@latest"
 ```
 
 ### Operaciones CRUD
