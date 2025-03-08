@@ -1,22 +1,19 @@
-# This is a custom license based on the Business Source License 1.1 (BSL 1.1).
-# See below for the full terms and conditions.
-
 Business Source License 1.1
 
 Copyright (c) 2025 Esteban Fuster Pozzi
 
 1. License Grant:
-   Subject to the conditions of this license, Licensor grants you a non-exclusive, worldwide, royalty-free license to use, copy, and distribute the Software in object code form (e.g., minified files), provided that:
-   a) You do not modify the Software. Modifications, alterations, or derivative works are strictly prohibited.
-   b) You retain all copyright and attribution notices in the Software, including the console.log statement(s) that attribute authorship.
+   Subject to the conditions of this license, Licensor grants you a non-exclusive, worldwide, royalty-free license to use, copy, and distribute the Software in object code form, provided that:
+
+   a) You do not modify the Software.
+   b) You retain all copyright and attribution notices in the Software.
    c) You may use the Software in free or commercial projects, provided that you comply with the terms of this license.
-   d) The Software is distributed only in object code form (e.g., minified files) and may not be redistributed as standalone software or for purposes other than its intended use.
+   d) The Software is distributed only in object code form and may not be redistributed as standalone software or for purposes other than its intended use.
 
 2. Redistribution:
    You may redistribute the Software in object code form only, provided that:
    a) You include a prominent notice stating that modifications are prohibited.
-   b) You retain the original console.log statement(s) that attribute authorship.
-   c) You do not use the Software for purposes other than its intended use (e.g., distributed graph database implementation).
+   b) You retain the original attribution notices in the Software.
 
 3. Change Date:
    On January 1, 2026, the Software will automatically convert to the Apache 2.0 License. After this date, all restrictions imposed by this license will no longer apply.
@@ -27,16 +24,5 @@ Copyright (c) 2025 Esteban Fuster Pozzi
 5. Limitation of Liability:
    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-6. Prohibited Use:
-   You may not use the Software for any unlawful, harmful, or malicious purposes. Any such use is strictly prohibited and may result in immediate termination of this license.
-
-7. Patent Rights:
-   This license includes an implicit patent license to use the Software in accordance with the terms set forth herein. Any use outside these terms may infringe on patent rights.
-
-8. Attribution:
-   Any use or redistribution of the Software must include the following notices:
-   - A visible console.log message indicating the original authorship of the Software.
-   - A reference to this license in the documentation or in the LICENSE file.
-
-9. Acceptance:
+6. Acceptance:
    By using this Software, you agree to all the terms and conditions of this license.
