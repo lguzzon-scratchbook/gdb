@@ -33,17 +33,6 @@
     "url": "https://github.com/estebanrfp"
   },
   "license": "BSL-1.1",
-  "licenses": [
-    {
-      "type": "BSL-1.1",
-      "url": "https://opensource.org/licenses/BSL-1.1"
-    },
-    {
-      "type": "Apache-2.0",
-      "url": "https://www.apache.org/licenses/LICENSE-2.0",
-      "effectiveDate": "2028-01-01"
-    }
-  ],
   "bugs": {
     "url": "https://github.com/estebanrfp/gdb/issues"
   },
