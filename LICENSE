@@ -1,37 +1,40 @@
-                    GNU AFFERO GENERAL PUBLIC LICENSE
-                       Version 3, 19 November 2007
+Business Source License 1.1
 
- Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
- Everyone is permitted to copy and distribute verbatim copies
- of this license document, but changing it is not allowed.
+Copyright (c) [2025] [Esteban Fuster Pozzi]
 
-                            Preamble
+1. License Grant:
+   Subject to the conditions of this license, Licensor grants you a non-exclusive, worldwide, royalty-free license to use, copy, and distribute the Software in object code form (e.g., minified files), provided that:
 
-The GNU Affero General Public License is a free, copyleft license for
-software and other kinds of works, specifically designed to ensure
-cooperation with the community in the case of network server software.
+   a) You do not modify the Software. Modifications, alterations, or derivative works are strictly prohibited.
+   b) You retain all copyright and attribution notices in the Software, including the console.log statement(s) that attribute authorship.
+   c) You may use the Software in free or commercial projects, provided that you comply with the terms of this license.
+   d) The Software is distributed only in object code form (e.g., minified files) and may not be redistributed as standalone software or for purposes other than its intended use.
 
-The licenses for most software and other practical works are designed
-to take away your freedom to share and change the works. By contrast,
-our General Public Licenses are intended to guarantee your freedom to
-share and change all versions of a program--to make sure it remains free
-software for all its users.
+2. Redistribution:
+   You may redistribute the Software in object code form only, provided that:
+   a) You include a prominent notice stating that modifications are prohibited.
+   b) You retain the original console.log statement(s) that attribute authorship.
+   c) You do not use the Software for purposes other than its intended use (e.g., distributed graph database implementation).
 
-...
+3. Change Date:
+   On [Future Date, e.g., January 1, 2026], the Software will automatically convert to the Apache 2.0 License. After this date, all restrictions imposed by this license will no longer apply.
 
-[El texto completo de la AGPL v3 está disponible aquí: https://www.gnu.org/licenses/agpl-3.0.txt]
+4. Warranty Disclaimer:
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-Copyright (C) [2025] [Esteban Fuster Pozzi]
+5. Limitation of Liability:
+   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+6. Prohibited Use:
+   You may not use the Software for any unlawful, harmful, or malicious purposes. Any such use is strictly prohibited and may result in immediate termination of this license.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+7. Patent Rights:
+   This license includes an implicit patent license to use the Software in accordance with the terms set forth herein. Any use outside these terms may infringe on patent rights.
 
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
+8. Attribution:
+   Any use or redistribution of the Software must include the following notices:
+   - A visible console.log message indicating the original authorship of the Software.
+   - A reference to this license in the documentation or in the LICENSE file.
+
+9. Acceptance:
+   By using this Software, you agree to all the terms and conditions of this license.
