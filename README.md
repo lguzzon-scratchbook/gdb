@@ -151,7 +151,13 @@ await assignRole(
 
 ## API Reference
 
-## API Reference
+## Ejemplos de Uso
+
+Puedes encontrar ejemplos prácticos de cómo usar esta biblioteca en la carpeta [examples](https://github.com/estebanrfp/gdb/tree/main/examples).
+
+Algunos ejemplos incluyen:
+- **Consulta básica**: Cómo realizar consultas simples.
+- **Almacenamiento distribuido**: Cómo configurar una base de datos distribuida.
 
 ### **GraphDB**
 
