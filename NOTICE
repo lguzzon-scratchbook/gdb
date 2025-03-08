@@ -1,0 +1,18 @@
+This project includes the following third-party dependencies:
+
+1. @msgpack/msgpack
+   - License: BSD 3-Clause
+   - Source: https://github.com/msgpack/msgpack-javascript
+   - Full license text: licenses/msgpack-license.txt
+
+2. pako
+   - License: MIT
+   - Source: https://github.com/nodeca/pako
+   - Full license text: licenses/pako-license.txt
+
+3. trystero
+   - License: MIT
+   - Source: https://github.com/trystero/trystero
+   - Full license text: licenses/trystero-license.txt
+
+   
