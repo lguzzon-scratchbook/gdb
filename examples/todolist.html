@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List / GraphDB</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      background-color: #f4f7fc;
+      color: #333;
+    }
+
+    h2 {
+      text-align: center;
+      color: #444;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      background: none;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      transition: transform 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.1);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: transparent;
+      margin-bottom: 6px;
+    }
+
+    li span {
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .edit-mode {
+      display: inline-block;
+      width: 70%;
+    }
+
+    .edit-buttons {
+      display: flex;
+      gap: 5px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .icon-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>To-Do List</h2>
+  <input type="text" id="taskInput" placeholder="Nueva tarea">
+  <ul id="taskList"></ul>
+  <script type="module">
+    import { GraphDB } from "../dist/index.js";
+    
+    const db = new GraphDB('todoList');
+
+    async function loadTasks() {
+      await db.ready;
+      document.getElementById('taskList').innerHTML = '';
+      await db.map((id, value) => {
+        renderTask(id, value.text, value.completed);
+      });
+    }
+
+    async function addTask() {
+      const input = document.getElementById('taskInput');
+      if (input.value.trim() === '') return;
+      const id = await db.put({ text: input.value.trim(), completed: false });
+      renderTask(id, input.value.trim(), false);
+      input.value = '';
+    }
+
+    async function toggleTask(id) {
+      const task = await db.get(id);
+      if (task) {
+        const updatedTask = { ...task.value, completed: !task.value.completed };
+        await db.update(id, updatedTask);
+        loadTasks();
+      }
+    }
+
+    async function deleteTask(id) {
+      await db.remove(id);
+      loadTasks();
+    }
+
+    function enableEditMode(li) {
+      const taskTextSpan = li.querySelector('span');
+      const taskEditTextInput = li.querySelector('.edit-mode');
+      const editButtonsContainer = li.querySelector('.edit-buttons');
+      const editButton = li.querySelector('.btn-edit');
+
+      taskTextSpan.classList.add('hidden');
+      taskEditTextInput.classList.remove('hidden');
+      editButtonsContainer.classList.remove('hidden');
+      editButton.style.display = 'none';
+      taskEditTextInput.focus();
+    }
+
+    async function saveEdit(id, newText, li) {
+      if (newText.trim() === '') return;
+      const task = await db.get(id);
+      if (task) {
+        const updatedTask = { ...task.value, text: newText.trim() };
+        await db.update(id, updatedTask);
+        loadTasks();
+      }
+    }
+
+    function cancelEdit(li) {
+      const taskTextSpan = li.querySelector('span');
+      const taskEditTextInput = li.querySelector('.edit-mode');
+      const editButtonsContainer = li.querySelector('.edit-buttons');
+      const editButton = li.querySelector('.btn-edit');
+
+      taskTextSpan.classList.remove('hidden');
+      taskEditTextInput.classList.add('hidden');
+      editButtonsContainer.classList.add('hidden');
+      editButton.style.display = 'inline-block';
+    }
+
+    function renderTask(id, text, completed) {
+      const li = document.createElement('li');
+
+      const taskTextSpan = document.createElement('span');
+      taskTextSpan.className = completed ? 'completed' : '';
+      taskTextSpan.textContent = text;
+      taskTextSpan.onclick = () => toggleTask(id);
+
+      const taskEditTextInput = document.createElement('input');
+      taskEditTextInput.type = 'text';
+      taskEditTextInput.value = text;
+      taskEditTextInput.className = 'edit-mode hidden';
+      taskEditTextInput.addEventListener('keypress', async (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          await saveEdit(id, taskEditTextInput.value, li);
+        }
+      });
+
+      const iconContainer = document.createElement('div');
+      iconContainer.className = 'icon-container';
+
+      const editButton = document.createElement('button');
+      editButton.innerHTML = '✏️';
+      editButton.className = 'btn-edit';
+      editButton.onclick = () => enableEditMode(li);
+
+      const saveButton = document.createElement('button');
+      saveButton.innerHTML = '💾';
+      saveButton.className = 'btn-save hidden';
+      saveButton.onclick = () => saveEdit(id, taskEditTextInput.value, li);
+
+      const cancelButton = document.createElement('button');
+      cancelButton.innerHTML = '❌';
+      cancelButton.className = 'btn-cancel hidden';
+      cancelButton.onclick = () => cancelEdit(li);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.innerHTML = '🗑️';
+      deleteButton.className = 'btn-delete';
+      deleteButton.onclick = () => deleteTask(id);
+
+      const editButtonsContainer = document.createElement('div');
+      editButtonsContainer.className = 'edit-buttons hidden';
+      editButtonsContainer.appendChild(saveButton);
+      editButtonsContainer.appendChild(cancelButton);
+
+      iconContainer.appendChild(editButton);
+      iconContainer.appendChild(editButtonsContainer);
+      iconContainer.appendChild(deleteButton);
+
+      li.appendChild(taskTextSpan);
+      li.appendChild(taskEditTextInput);
+      li.appendChild(iconContainer);
+
+      document.getElementById('taskList').appendChild(li);
+    }
+
+    document.getElementById('taskInput').addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addTask();
+      }
+    });
+
+    window.addTask = addTask;
+    window.toggleTask = toggleTask;
+    window.deleteTask = deleteTask;
+
+    // Cargar las tareas al iniciar
+    loadTasks();
+
+    db.on(() => loadTasks());
+
+  </script>
+</body>
+
+</html>
