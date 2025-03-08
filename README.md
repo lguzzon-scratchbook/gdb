@@ -293,3 +293,6 @@ Asegúrate de que tus cambios pasen todas las pruebas antes de enviar un PR.
 Si estás resolviendo un problema específico, menciona el número del issue relacionado en la descripción del PR.
 Para grandes cambios, abre un issue primero para discutir lo que te gustaría implementar.
 ¡Gracias por contribuir! 🚀
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_shield&issueType=security)
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_large&issueType=license)
