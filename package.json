@@ -1,0 +1,60 @@
+{
+  "name": "gdb-p2p",
+  "version": "0.0.18",
+  "description": "Distributed graph database (GraphDB/GDB) for real-time data modeling, scalable storage, and efficient querying of complex relationships.",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "bun esbun.js",
+    "dev": "bun run --watch",
+    "lint": "eslint ."
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/estebanrfp/gdb.git"
+  },
+  "keywords": [
+    "gdb",
+    "graph",
+    "database",
+    "realtime",
+    "decentralized",
+    "peer-to-peer",
+    "distributed",
+    "P2P",
+    "rbac"
+  ],
+  "author": {
+    "name": "Esteban Fuster Pozzi",
+    "email": "estebanrfp@gmail.com",
+    "url": "https://github.com/estebanrfp"
+  },
+  "license": "SEE LICENSE IN LICENSE FILE",
+  "bugs": {
+    "url": "https://github.com/estebanrfp/gdb/issues"
+  },
+  "homepage": "https://github.com/estebanrfp/gdb#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "3.1.0",
+    "ethers": "6.13.5",
+    "pako": "2.1.0",
+    "trystero": "^0.20.1",
+    "webtorrent": "2.5.19"
+  },
+  "devDependencies": {
+    "eslint": "9.22.0",
+    "eslint-config-standard": "17.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-n": "^17.16.2",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-promise": "7.2.1",
+    "eslint-plugin-standard": "5.0.0",
+    "javascript-obfuscator": "4.1.1"
+  }
+}
