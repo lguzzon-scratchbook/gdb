@@ -16,7 +16,7 @@ Graph database with Role-Based Access Control (RBAC), P2P synchronization, and l
 - Compressed serialization with MessagePack
 - Automatic indexing for fast searches
 
-## Advertencia
+## Warning
 
 This project is under active development. Do not use it in production environments until it reaches the beta or stable phase. Check the [Project Status](#project-status) section for more details.
 
