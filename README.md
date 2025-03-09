@@ -58,29 +58,15 @@ This project is under active development. Do not use it in production environmen
 npm install gdb-p2p
 ```
 
-## Basic Usage
-
-### Initialize Database
-
 ```javascript
 import { GraphDB } from "gdb-p2p"
-
-const db = new GraphDB("myDatabase")
-await db.ready // Wait for initialization
 ```
 
 ### 2. Direct use in browser from a CDN
 
 ```html
 <script type="module">
-  import {
-    GraphDB,
-    setCustomRoles,
-    executeWithPermission,
-  } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm"
-
-  const db = new GraphDB("myDatabase")
-  await db.ready // Wait for initialization
+  import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm"
 </script>
 ```
 
@@ -97,134 +83,9 @@ import { GraphDB } from "https://unpkg.com/gdb-p2p@latest"
 import { GraphDB } from "https://cdn.skypack.dev/gdb-p2p@latest"
 ```
 
-### Operaciones CRUD
+## Documentation
 
-```javascript
-// Insert / update node
-const nodeId = await db.put({ name: "Alice", age: 30 })
-
-// Get node by ID
-const node = await db.get(nodeId)
-
-// Search by value
-const found = await db.find({ name: "Alice" })
-
-// Create relationship between nodes
-await db.link(nodeId, "targetNodeId")
-
-// Delete node
-await db.remove(nodeId)
-```
-
-## Role-Based Access Control (RBAC)
-
-### Custom Roles Configuration
-
-```javascript
-import { setCustomRoles } from "gdb-p2p"
-
-// Custom roles definition
-const customRoles = {
-  admin: { can: ["delete", "assignRole"], inherits: ["editor"] },
-  editor: { can: ["edit", "write"], inherits: ["guest"] },
-  guest: { can: ["read"] },
-
-  // Override default roles with custom configurations.
-  // This allows for granular control over permissions and role inheritance.
-};
-
-setCustomRoles(customRoles)
-```
-
-### Authentication Flow
-
-1. The user initiates authentication via Metamask.
-2. The system verifies the user's credentials and signs the transaction cryptographically.
-3. Roles and permissions are fetched from the internal graph storage.
-4. Access is granted based on the user's role and permissions.
-
-> **Note**: Currently, this implementation is a proof of concept (PoC) where roles are managed locally. In the future, role verification will be performed through a smart contract to ensure decentralized and tamper-proof authorization.
-
-### Example: Protected Operation with Permission Verification
-
-The following example demonstrates how to use `executeWithPermission` to verify permissions via Metamask before performing a protected operation.
-
-Role assignments with expiration are useful for temporary access control. This implementation ensures that roles automatically expire after the specified duration, enhancing security in decentralized applications.
-
-```javascript
-import { executeWithPermission } from "gdb-p2p"
-
-// Connects with Metamask to sign and verify permissions before executing the function
-const userAddress = await executeWithPermission(db, "write")
-
-// Executes a protected operation
-await db.remove("nodeIdToDelete")
-```
-
-### Example: Assigning a Role with Expiration
-
-```javascript
-import { assignRole } from "gdb-p2p"
-
-// Assign 'admin' role with expiration in 30 days
-await assignRole(
-  db,
-  "0xUserAddress...",
-  "admin",
-  Date.now() + 30 * 24 * 60 * 60 * 1000
-)
-```
-
-> **Note**: The goal of this implementation is to avoid centralized servers entirely. All operations are executed client-side, ensuring decentralization. We are actively researching options to enhance security in distributed applications, including code obfuscation, smart contracts, and other decentralized solutions. For now, this remains a proof of concept.
-
-## Usage Examples
-
-You can find practical examples of how to use this library in the [examples](https://github.com/estebanrfp/gdb/tree/main/examples) folder.
-
-### Features
-
-The following capabilities are supported by the system:
-
-- **Basic Query**: Learn how to perform simple queries in the system.
-- **Distributed Storage**: Understand how to configure and manage a distributed database.
-
-Some examples include:
-- Querying nodes by ID or value.
-- Setting up peer-to-peer synchronization across devices.
-- Defining custom roles and permissions for secure access.
-
-## API Reference
-
-### GraphDB API Reference
-
-| Method                     | Description                                                                                                   |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `put(value, id)`           | Inserts or updates a node with the provided value. If `id` is not specified, it is automatically generated.  |
-| `get(id)`                  | Retrieves a node by its ID. Returns `null` if the node does not exist.                                       |
-| `find(value)`              | Searches for nodes that match the provided value. Returns the most recently found node.                      |
-| `link(sourceId, targetId)` | Creates a relationship between two nodes identified by `sourceId` and `targetId`.                            |
-| `map(callback)`            | Iterates over all nodes in the database. Executes `callback` for each node.                                  |
-| `remove(id)`               | Deletes a node by its ID. Also removes references to this node in other nodes.                               |
-| `update(id, newValue)`     | Updates the value of an existing node.                                                                        |
-| `clear()`                  | Deletes all nodes and relationships from the database.                                                       |
-
-### RBAC API Reference
-
-# RBAC API Reference
-
-This section provides a detailed reference for the Role-Based Access Control (RBAC) API.
-
-| Method                     | Description                                                                                                   |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `setCustomRoles(roles)`    | Defines custom roles and their associated permissions.                                                        |
-| `executeWithPermission(actionFunction)` | Executes a function after verifying the user's permissions via Metamask.                                      |
-| `assignRole(userAddress, role, expiration)` | Assigns a specific role to a user with an optional expiration time.                                           |
-### **Events and Synchronization**
-
-| Method/Event    | Description                                                                          |
-| --------------- | ------------------------------------------------------------------------------------ |
-| `on(callback)`  | Registers a listener for custom events (e.g., changes in the graph).                 |
-| `off(callback)` | Unregisters a specific listener or all listeners.                                    |
+For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
 
 ### **Internal Dependencies**
 
