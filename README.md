@@ -1,6 +1,7 @@
 # GDB (GraphDB) + RBAC (Role Based Access Control)
 
 Graph database with Role-Based Access Control (RBAC), P2P synchronization, and local storage in OPFS.
+
 ![GraphDB](https://i.imgur.com/7Xqrht1.png)
 
 ---
