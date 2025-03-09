@@ -1,6 +1,7 @@
 # GDB (GraphDB) + RBAC (Role Based Access Control)
 
 Graph database with Role-Based Access Control (RBAC), P2P synchronization, and local storage in OPFS.
+![GraphDB](https://i.imgur.com/7Xqrht1.png)
 
 ---
 
@@ -268,3 +269,12 @@ The source code of this project is licensed under the [MIT License](https://open
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_shield&issueType=security)
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_large&issueType=license)
+
+## Community
+
+We value community contributions and discussions! Here's how you can get involved:
+
+- **Ask questions or share ideas**: Join our [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions).
+- **Real-time chat**: For quick conversations, join us on [Gitter](https://app.gitter.im/#/room/#graphdb:gitter.im).
+
+For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/wiki/Contributing).
