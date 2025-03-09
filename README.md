@@ -64,7 +64,7 @@ npm install gdb-p2p
 import { GraphDB } from "gdb-p2p"
 
 const db = new GraphDB("myDatabase")
-await db.ready // Esperar inicialización
+await db.ready // Wait for initialization
 ```
 
 ### 2. Direct use in browser from a CDN
@@ -82,7 +82,7 @@ await db.ready // Esperar inicialización
 </script>
 ```
 
-**Nota**: CDNS disponibles:
+**Note**: Available CDNs:
 
 ```javascript
 // jsDelivr
@@ -208,17 +208,15 @@ Some examples include:
 
 ### RBAC API Reference
 
+# RBAC API Reference
+
+This section provides a detailed reference for the Role-Based Access Control (RBAC) API.
+
 | Method                     | Description                                                                                                   |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `put(value, id)`           | Inserts or updates a node with the provided value. If `id` is not specified, it is automatically generated.  |
-| `get(id)`                  | Retrieves a node by its ID. Returns `null` if the node does not exist.                                       |
-| `find(value)`              | Searches for nodes that match the provided value. Returns the most recently found node.                      |
-| `link(sourceId, targetId)` | Creates a relationship between two nodes identified by `sourceId` and `targetId`.                            |
-| `map(callback)`            | Iterates over all nodes in the database. Executes `callback` for each node.                                  |
-| `remove(id)`               | Deletes a node by its ID. Also removes references to this node in other nodes.                               |
-| `update(id, newValue)`     | Updates the value of an existing node.                                                                        |
-| `clear()`                  | Deletes all nodes and relationships from the database.                                                       |
-
+| `setCustomRoles(roles)`    | Defines custom roles and their associated permissions.                                                        |
+| `executeWithPermission(actionFunction)` | Executes a function after verifying the user's permissions via Metamask.                                      |
+| `assignRole(userAddress, role, expiration)` | Assigns a specific role to a user with an optional expiration time.                                           |
 ### **Events and Synchronization**
 
 | Method/Event    | Description                                                                          |
