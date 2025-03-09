@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Cursor Movement with GraphDB</title>
+</head>
+<style>
+  body {
+    cursor: none;
+    /* Hides the default cursor */
+  }
+
+  .cursor {
+    width: 20px;
+    height: 20px;
+    background-color: red;
+    border-radius: 50%;
+    position: absolute;
+    pointer-events: none;
+    /* The cursor should not interfere with pointer events */
+    transform: translate(-50%, -50%);
+    /* Centers the custom cursor at the contact point */
+  }
+</style>
+
+<body>
+  <div class="cursor" id="cursor"></div>
+  <script type="module">
+
+    import { GraphDB } from "../dist/index.js";
+
+    const db = new GraphDB('cursormove');
+    const [sendData, getData] = db.room.makeAction("cursormove");
+
+    const cursor = document.getElementById('cursor');
+
+    db.room.onPeerJoin(peerId => console.log(`${peerId} joined`))
+    db.room.onPeerLeave(peerId => console.log(`${peerId} left`))
+
+    setInterval(() => { console.log(db.room.getPeers()) }, 5000);
+
+    window.addEventListener('mousemove', e => {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top = e.clientY + 'px';
+
+      sendData([e.clientX, e.clientY])
+    })
+
+    getData(([x, y], peerId) => {
+      cursor.style.left = x + 'px';
+      cursor.style.top = y + 'px';
+      cursor.style.background = 'lightgreen';
+    })
+
+  </script>
+</body>
+
+</html>
