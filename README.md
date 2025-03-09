@@ -132,7 +132,7 @@ We value community contributions and discussions! Here's how you can get involve
 
 For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/wiki/Contributing).
 
-### Licenses
+## Licenses
 
 This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](https://github.com/estebanrfp/gdb/wiki/Licenses/) in the Wiki.
 
