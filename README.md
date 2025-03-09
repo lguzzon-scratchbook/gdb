@@ -61,7 +61,7 @@ npm install gdb-p2p
 ### Initialize Database
 
 ```javascript
-import GraphDB from "gdb-p2p"
+import { GraphDB } from "gdb-p2p"
 
 const db = new GraphDB("myDatabase")
 await db.ready // Esperar inicialización
