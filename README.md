@@ -1,52 +1,54 @@
-# GraphDB (Graph Database) + RBAC
+# GDB (GraphDB) + RBAC (Role Based Access Control)
 
-Base de datos gráfica cliente-servidor con control de acceso basado en roles (RBAC), sincronización P2P y almacenamiento en OPFS.
+Graph database with Role-Based Access Control (RBAC), P2P synchronization, and local storage in OPFS.
 
 ---
 
 [![](https://data.jsdelivr.com/v1/package/npm/gdb-p2p/badge)](https://www.jsdelivr.com/package/npm/gdb-p2p)
 
-## Características Principales
+## Main Features
 
-### ✅ **Núcleo de GraphDB**
+### ✅ **GraphDB Core**
 
-- Almacenamiento eficiente en OPFS
-- Sincronización en tiempo real entre pestañas y dispositivos
-- Operaciones CRUD para nodos y relaciones
-- Serialización comprimida con MessagePack
-- Indexación automática para búsquedas rápidas
+- Efficient storage in OPFS
+- Real-time synchronization between tabs and devices
+- CRUD operations for nodes and relationships
+- Compressed serialization with MessagePack
+- Automatic indexing for fast searches
 
 ## Advertencia
 
-Este proyecto está en desarrollo activo. No lo uses en entornos de producción hasta que alcance la fase beta o estable. Consulta la sección [Estado del Proyecto](#estado-del-proyecto) para más detalles.
+This project is under active development. Do not use it in production environments until it reaches the beta or stable phase. Check the [Project Status](#project-status) section for more details.
 
-## Estado del Proyecto
+## Project Status
 
-- **Fase**: Alfa
-- **Funcionalidades Completadas**:
-  - Consultas básicas.
-  - Almacenamiento distribuido.
-- **Funcionalidades Pendientes**:
-  - Módulo de resolución de conflictos.
-  - Optimización de rendimiento.
+- **Phase**: Alpha
+- **Completed Features**:
+  - Basic queries.
+  - Distributed storage.
+  
+- **Pending Features**:
+  - Conflict resolution module.
+  - Performance optimization.
 
-### ✅ **Sistema de Roles (RBAC)**
+### ✅ **Role Based Access Control (RBAC)**
 
-- Jerarquía de roles personalizable (`superadmin`, `admin`, etc)
-- Autenticación con Metamask
-- Permisos granulares (`read`/`write`/`delete`/`publish`)
-- Asignación de roles con caducidad automática
-- Verificación criptográfica de transacciones
+- Customizable role hierarchy (`superadmin`, `admin`, etc)
+- Authentication with Metamask
+- Granular permissions (`read`/`write`/`delete`/`publish`)
+- Role assignment with automatic expiration
+- Cryptographic transaction verification
 
-### ✅ **Seguridad**
+### ✅ **Security**
 
-- Firma digital de operaciones críticas
-- Validación de permisos en tiempo real
-- Almacenamiento seguro de roles en grafo interno
+- Digital signature of critical operations
+- Real-time permission validation
+- Secure storage of roles in internal graph
 
+> **Important Notice**: This project is currently in the research and development phase and is not yet ready for production use. Please wait until it reaches the beta or stable phase before deploying it in a live environment. Refer to the [Project Status](#project-status) section for more details.
 ---
 
-## Instalación
+## Installation
 
 ### 1. Via NPM
 
@@ -54,9 +56,9 @@ Este proyecto está en desarrollo activo. No lo uses en entornos de producción 
 npm install gdb-p2p
 ```
 
-## Uso Básico
+## Basic Usage
 
-### Inicializar Base de Datos
+### Initialize Database
 
 ```javascript
 import GraphDB from "gdb-p2p"
@@ -65,7 +67,7 @@ const db = new GraphDB("myDatabase")
 await db.ready // Esperar inicialización
 ```
 
-### 2. Uso directo en navegador desde un CDN
+### 2. Direct use in browser from a CDN
 
 ```html
 <script type="module">
@@ -76,7 +78,7 @@ await db.ready // Esperar inicialización
   } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm"
 
   const db = new GraphDB("myDatabase")
-  await db.ready // Esperar inicialización
+  await db.ready // Wait for initialization
 </script>
 ```
 
@@ -96,58 +98,73 @@ import { GraphDB } from "https://cdn.skypack.dev/gdb-p2p@latest"
 ### Operaciones CRUD
 
 ```javascript
-// Insertar/actualizar nodo
+// Insert / update node
 const nodeId = await db.put({ name: "Alice", age: 30 })
 
-// Obtener nodo por ID
+// Get node by ID
 const node = await db.get(nodeId)
 
-// Buscar por valor
+// Search by value
 const found = await db.find({ name: "Alice" })
 
-// Crear relación entre nodos
+// Create relationship between nodes
 await db.link(nodeId, "targetNodeId")
 
-// Eliminar nodo
+// Delete node
 await db.remove(nodeId)
 ```
 
-## Sistema de Roles
+## Role-Based Access Control (RBAC)
 
-### Configurar Roles Personalizados
+### Custom Roles Configuration
 
 ```javascript
 import { setCustomRoles } from "gdb-p2p"
 
-// Definir roles personalizados
+// Custom roles definition
 const customRoles = {
-  editor: { can: ["edit", "write"], inherits: ["reader"] },
-  reader: { can: ["read"] },
   admin: { can: ["delete", "assignRole"], inherits: ["editor"] },
-  // Sobreescribe roles predeterminados
-}
+  editor: { can: ["edit", "write"], inherits: ["guest"] },
+  guest: { can: ["read"] },
+
+  // Override default roles with custom configurations.
+  // This allows for granular control over permissions and role inheritance.
+};
 
 setCustomRoles(customRoles)
 ```
 
-### Flujo de Autenticación
+### Authentication Flow
+
+1. The user initiates authentication via Metamask.
+2. The system verifies the user's credentials and signs the transaction cryptographically.
+3. Roles and permissions are fetched from the internal graph storage.
+4. Access is granted based on the user's role and permissions.
+
+> **Note**: Currently, this implementation is a proof of concept (PoC) where roles are managed locally. In the future, role verification will be performed through a smart contract to ensure decentralized and tamper-proof authorization.
+
+### Example: Protected Operation with Permission Verification
+
+The following example demonstrates how to use `executeWithPermission` to verify permissions via Metamask before performing a protected operation.
+
+Role assignments with expiration are useful for temporary access control. This implementation ensures that roles automatically expire after the specified duration, enhancing security in decentralized applications.
 
 ```javascript
 import { executeWithPermission } from "gdb-p2p"
 
-// Conectar con Metamask verificando permisos
+// Connects with Metamask to sign and verify permissions before executing the function
 const userAddress = await executeWithPermission(db, "write")
 
-// Ejecutar operación protegida
+// Executes a protected operation
 await db.remove("nodeIdToDelete")
 ```
 
-### Asignar Roles
+### Example: Assigning a Role with Expiration
 
 ```javascript
 import { assignRole } from "gdb-p2p"
 
-// Asignar rol 'admin' con caducidad en 30 días
+// Assign 'admin' role with expiration in 30 days
 await assignRole(
   db,
   "0xUserAddress...",
@@ -156,9 +173,9 @@ await assignRole(
 )
 ```
 
-## API Reference
+> **Note**: The goal of this implementation is to avoid centralized servers entirely. All operations are executed client-side, ensuring decentralization. We are actively researching options to enhance security in distributed applications, including code obfuscation, smart contracts, and other decentralized solutions. For now, this remains a proof of concept.
 
-## Ejemplos de Uso
+## Usage Examples
 
 Puedes encontrar ejemplos prácticos de cómo usar esta biblioteca en la carpeta [examples](https://github.com/estebanrfp/gdb/tree/main/examples).
 
@@ -167,132 +184,82 @@ Algunos ejemplos incluyen:
 - **Consulta básica**: Cómo realizar consultas simples.
 - **Almacenamiento distribuido**: Cómo configurar una base de datos distribuida.
 
-### **GraphDB**
+## API Reference
 
-| Método                     | Descripción                                                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `put(value, id)`           | Inserta o actualiza un nodo con el valor proporcionado. Si no se especifica `id`, se genera automáticamente. |
-| `get(id)`                  | Obtiene un nodo por su ID. Retorna `null` si el nodo no existe.                                              |
-| `find(value)`              | Busca nodos que coincidan con el valor proporcionado. Retorna el nodo más reciente encontrado.               |
-| `link(sourceId, targetId)` | Crea una relación entre dos nodos identificados por `sourceId` y `targetId`.                                 |
-| `map(callback)`            | Itera sobre todos los nodos en la base de datos. Ejecuta `callback` para cada nodo.                          |
-| `remove(id)`               | Elimina un nodo por su ID. También elimina referencias a este nodo en otros nodos.                           |
-| `update(id, newValue)`     | Actualiza el valor de un nodo existente.                                                                     |
-| `clear()`                  | Elimina todos los nodos y relaciones de la base de datos.                                                    |
+### GraphDB API Reference
 
----
+| Method                     | Description                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `put(value, id)`           | Inserts or updates a node with the provided value. If `id` is not specified, it is automatically generated.  |
+| `get(id)`                  | Retrieves a node by its ID. Returns `null` if the node does not exist.                                       |
+| `find(value)`              | Searches for nodes that match the provided value. Returns the most recently found node.                      |
+| `link(sourceId, targetId)` | Creates a relationship between two nodes identified by `sourceId` and `targetId`.                            |
+| `map(callback)`            | Iterates over all nodes in the database. Executes `callback` for each node.                                  |
+| `remove(id)`               | Deletes a node by its ID. Also removes references to this node in other nodes.                               |
+| `update(id, newValue)`     | Updates the value of an existing node.                                                                        |
+| `clear()`                  | Deletes all nodes and relationships from the database.                                                       |
 
-### **Roles**
+### RBAC API Reference
 
-#### Funciones Principales
+| Method                     | Description                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `put(value, id)`           | Inserts or updates a node with the provided value. If `id` is not specified, it is automatically generated.  |
+| `get(id)`                  | Retrieves a node by its ID. Returns `null` if the node does not exist.                                       |
+| `find(value)`              | Searches for nodes that match the provided value. Returns the most recently found node.                      |
+| `link(sourceId, targetId)` | Creates a relationship between two nodes identified by `sourceId` and `targetId`.                            |
+| `map(callback)`            | Iterates over all nodes in the database. Executes `callback` for each node.                                  |
+| `remove(id)`               | Deletes a node by its ID. Also removes references to this node in other nodes.                               |
+| `update(id, newValue)`     | Updates the value of an existing node.                                                                        |
+| `clear()`                  | Deletes all nodes and relationships from the database.                                                       |
 
-| Función                                        | Descripción                                                                                              |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `setCustomRoles(customRoles)`                  | Define roles personalizados. Sobrescribe los roles predeterminados.                                      |
-| `can(role, operation)`                         | Verifica si un rol tiene permiso para realizar una operación específica.                                 |
-| `assignRole(db, userAddress, role, expiresAt)` | Asigna un rol a un usuario. Opcionalmente, permite establecer una fecha de caducidad.                    |
-| `executeWithPermission(db, operation, action)` | Verifica si el usuario tiene permiso para realizar una operación y ejecuta la acción si está autorizado. |
-| `authenticateWithMetamask()`                   | Autentica al usuario mediante Metamask y retorna su dirección y firma.                                   |
+### **Events and Synchronization**
 
----
-
-### **Eventos y Sincronización**
-
-| Método/Fecha    | Descripción                                                                          |
+| Method/Event    | Description                                                                          |
 | --------------- | ------------------------------------------------------------------------------------ |
-| `on(callback)`  | Registra un listener para eventos personalizados (por ejemplo, cambios en el grafo). |
-| `off(callback)` | Cancela el registro de un listener específico o todos los listeners.                 |
-| `emit()`        | Emite un evento personalizado a todos los listeners registrados.                     |
+| `on(callback)`  | Registers a listener for custom events (e.g., changes in the graph).                 |
+| `off(callback)` | Unregisters a specific listener or all listeners.                                    |
 
----
+### **Internal Dependencies**
 
-### **Dependencias Internas**
+Below is a list of internal dependencies and their purposes within the project:
 
-| Dependencia        | Uso                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| `@msgpack/msgpack` | Serialización/deserialización de datos en formato MessagePack.                        |
-| `pako`             | Compresión/descompresión de datos utilizando gzip.                                    |
-| `trystero`         | Sincronización P2P para compartir cambios en tiempo real entre pestañas/dispositivos. |
-| `BroadcastChannel` | Comunicación entre pestañas del navegador para notificar cambios locales.             |
+| Dependency         | Usage                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------|
+| `@msgpack/msgpack` | Data serialization/deserialization in MessagePack format.                              |
+| `pako`             | Data compression/decompression using gzip.                                            |
+| `trystero`         | P2P synchronization for sharing changes in real-time between tabs/devices.            |
+| `BroadcastChannel` | Communication between browser tabs to notify local changes.                           |
 
----
+#### Additional Information
 
-### **Errores Comunes**
+- **`@msgpack/msgpack`**:  
+  This library is used to efficiently serialize and deserialize data, reducing payload sizes for storage and transmission.
 
-| Error                  | Descripción                                                         |
-| ---------------------- | ------------------------------------------------------------------- |
-| `RoleDoesNotExist`     | El rol especificado no existe en la configuración actual.           |
-| `PermissionDenied`     | El usuario no tiene permisos para realizar la operación solicitada. |
-| `NodeNotFound`         | El nodo con el ID especificado no existe en la base de datos.       |
-| `MetamaskNotInstalled` | Metamask no está instalado o no está disponible en el navegador.    |
-| `OperationFailed`      | La operación no pudo completarse debido a un error interno.         |
+- **`pako`**:  
+  Provides gzip compression to optimize data storage and network communication.
 
-## Licencias
+- **`trystero`**:  
+  Enables peer-to-peer synchronization, ensuring real-time updates across multiple instances of the application.  
+  > **Note**: Among the available networks supported by Trystero, this project specifically uses the **Nostr** protocol for decentralized communication.  
+  >
+  > **What is Nostr?**  
+  > Nostr (Notes and Other Stuff Transmitted by Relays) is a decentralized protocol designed for censorship-resistant global communication. It operates without relying on centralized servers, instead using a network of relays to transmit signed messages between peers. Nostr is particularly well-suited for applications requiring secure, private, and scalable peer-to-peer interactions, such as social networks, messaging systems, or collaborative tools.
 
-Este proyecto incluye dependencias de terceros con las siguientes licencias:
+- **`BroadcastChannel`**:  
+  Facilitates lightweight communication between browser tabs, allowing seamless updates without relying on external servers.
 
-1. **@msgpack/msgpack**
+> **General Note**: These dependencies are integral to the project's performance and functionality, ensuring efficient data handling and real-time synchronization while leveraging decentralized technologies like Nostr.
 
-   - Licencia: [BSD 3-Clause](https://opensource.org/licenses/BSD-3-Clause)
-   - Fuente: [GitHub Repository](https://github.com/msgpack/msgpack-javascript)
-   - Texto completo: [licenses/msgpack-license.txt](licenses/msgpack-license.txt)
+### Contributing
 
-2. **pako**
+We welcome contributions to improve this project! Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/wiki/Contributing) for details on how to get started.
 
-   - Licencia: [MIT License](https://opensource.org/licenses/MIT)
-   - Fuente: [GitHub Repository](https://github.com/nodeca/pako)
-   - Texto completo: [licenses/pako-license.txt](licenses/pako-license.txt)
+### Licenses
 
-3. **trystero**
-   - Licencia: [MIT License](https://opensource.org/licenses/MIT)
-   - Fuente: [GitHub Repository](https://github.com/trystero/trystero)
-   - Texto completo: [licenses/trystero-license.txt](licenses/trystero-license.txt)
+This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](https://github.com/estebanrfp/gdb/wiki/Licenses/) in the Wiki.
 
-El código fuente de este proyecto está bajo la licencia [MIT](https://opensource.org/licenses/MIT). Para más detalles, consulta el archivo [LICENSE](LICENSE).
+The source code of this project is licensed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](LICENSE) file.
 
----
-
-## Contribuir
-
-Nos encantaría recibir tus contribuciones para mejorar este proyecto. Sigue estos pasos para colaborar:
-
-1. **Fork del Repositorio**  
-   Haz clic en el botón "Fork" en la esquina superior derecha de este repositorio para crear una copia en tu cuenta.
-
-2. **Clonar el Repositorio**  
-   Clona tu fork en tu máquina local:
-   ```bash
-   git clone https://github.com/estebanrfp/gdb.git
-   cd gdb
-   ```
-3. **Crear una Nueva Rama**
-   Crea una nueva rama para tu contribución:
-   ```bash
-   git checkout -b feature/AmazingFeature
-   ```
-4. **Realizar Cambios**
-   Implementa tus cambios o correcciones. Asegúrate de seguir las guías de estilo y documentación del proyecto.
-
-   ```
-
-   ```
-
-5. **Commit y Push**
-   Confirma tus cambios y sube la rama al repositorio remoto:
-   ```bash
-    git add .
-    git commit -m "Add AmazingFeature"
-    git push origin feature/AmazingFeature
-   ```
-6. **Crear un Pull Request**
-   Ve a la página de tu fork en GitHub y haz clic en "Compare & Pull Request". Describe tus cambios y envía el PR.
-
-## Notas Adicionales
-
-Asegúrate de que tus cambios pasen todas las pruebas antes de enviar un PR.
-Si estás resolviendo un problema específico, menciona el número del issue relacionado en la descripción del PR.
-Para grandes cambios, abre un issue primero para discutir lo que te gustaría implementar.
-¡Gracias por contribuir! 🚀
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_shield&issueType=security)
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_large&issueType=license)
