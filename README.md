@@ -118,7 +118,7 @@ Below is a list of internal dependencies and their purposes within the project:
 
 > **General Note**: These dependencies are integral to the project's performance and functionality, ensuring efficient data handling and real-time synchronization while leveraging decentralized technologies like Nostr.
 
-### Contributing
+## Contributing
 
 We welcome contributions to improve this project! Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/wiki/Contributing) for details on how to get started.
 
