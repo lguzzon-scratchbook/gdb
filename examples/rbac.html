@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphDB - Role-Based Access Control (RBAC Example)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    input[type="text"],
+    input[type="datetime-local"] {
+      margin-bottom: 10px;
+      padding: 5px;
+      width: 200px;
+    }
+
+    .record-list {
+      margin-top: 20px;
+    }
+
+    .record-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .record-item button {
+      margin-left: 10px;
+    }
+
+    .edit-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    .edit-dialog input {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>GraphDB - Database Role System</h1>
+  <button id="assignRole">Assign Role</button>
+  <input type="text" id="roleInput" placeholder="Enter the role here..." />
+  <input type="datetime-local" id="expirationInput" />
+  <br /><br />
+  <button id="insertData">Insert Data</button>
+  <h2>Records in the Database:</h2>
+  <div id="databaseOutput"></div>
+
+  <!-- Edit Dialog -->
+  <div class="overlay" id="editOverlay"></div>
+  <div class="edit-dialog" id="editDialog">
+    <h3>Edit Record</h3>
+    <input type="text" id="editValue" placeholder="New value" />
+    <button id="saveEdit">Save Changes</button>
+    <button id="cancelEdit">Cancel</button>
+  </div>
+
+  <script type="module">
+    import { GraphDB, setCustomRoles, executeWithPermission, assignRole } from "../dist/index.js";
+
+    let db;
+    let userAddress = null; // Define userAddress in the global scope
+    let currentEditId = null; // ID of the record being edited
+
+    // Define custom roles
+    // const customRoles = {
+      // editor: { can: ["edit", "write"], inherits: ["reader"] },
+      // reader: { can: ["read"] },
+      // admin: { can: ["delete", "assignRole"], inherits: ["editor"] },
+    // };
+
+    // Set custom roles
+    // setCustomRoles(customRoles);
+
+    // Initialize the database when the page loads
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        db = new GraphDB("example");
+        await db.ready; // Wait for the database to be ready
+        updateDatabaseOutput(); // Load data on startup
+        db.on(async () => await updateDatabaseOutput());
+      } catch (error) {
+        console.error("Error initializing the database:", error.message);
+        alert("Error loading the data.");
+      }
+    });
+
+    // Assign Role
+    document.getElementById("assignRole").addEventListener("click", async () => {
+      try {
+        userAddress = await ethereum.request({ method: "eth_requestAccounts" });
+
+        const role = document.getElementById("roleInput").value.trim();
+        if (!role) throw new Error("You must enter a valid role.");
+        const expiration = document.getElementById("expirationInput").value || null; // Expiration date (optional)
+        await assignRole(db, userAddress, role, expiration);
+
+        updateDatabaseOutput(); // Update the view to reflect the new role
+        
+        console.log(`Role '${role}' assigned successfully.${expiration ? ` Expires on ${expiration}` : ""}`)
+      } catch (error) {
+        console.error(error.message);
+        alert(error.message);
+      }
+    });
+
+    // Insert Data
+    document.getElementById("insertData").addEventListener("click", async () => {
+      try {
+        userAddress = await executeWithPermission(db, "write")
+        const value = { data: `Record created at ${new Date().toLocaleTimeString()}` };
+        const id = await db.put(value, undefined, userAddress);
+        console.log(`Data inserted with ID: ${id}`);
+        updateDatabaseOutput();
+
+      } catch (error) {
+        console.error(error.message);
+        alert(error.message);
+      }
+    });
+
+    // Save changes when editing
+    document.getElementById("saveEdit").addEventListener("click", async () => {
+      try {
+
+        const newValue = document.getElementById("editValue").value.trim();
+        if (!newValue) throw new Error("The new value cannot be empty.");
+
+        await executeWithPermission(db, "write");
+        await db.update(currentEditId, { data: newValue });
+
+        console.log(`Record with ID '${currentEditId}' updated.`);
+        closeEditDialog();
+        updateDatabaseOutput();
+
+      } catch (error) {
+        console.error(error.message);
+        alert(error.message);
+      }
+    });
+
+    // Cancel editing
+    document.getElementById("cancelEdit").addEventListener("click", () => {
+      closeEditDialog();
+    });
+
+    // Update the database output
+    async function updateDatabaseOutput() {
+      const outputDiv = document.getElementById("databaseOutput");
+      outputDiv.innerHTML = ""; // Clear previous content
+
+      const nodes = [];
+      await db.map((id, value, edges, timestamp) => {
+        nodes.push({ id, value, edges, timestamp });
+      });
+
+      if (nodes.length === 0) {
+        outputDiv.textContent = "No records in the database.";
+        return;
+      }
+
+      const recordList = document.createElement("div");
+      recordList.className = "record-list";
+
+      nodes.forEach(({ id, value, timestamp }) => {
+        const recordItem = document.createElement("div");
+        recordItem.className = "record-item";
+
+        const recordText = document.createElement("span");
+        recordText.textContent = `ID: ${id}, Value: ${JSON.stringify(value)}, Timestamp: ${timestamp}`;
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.onclick = () => openEditDialog(id, value.data);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.onclick = async () => {
+          try {
+            await executeWithPermission(db, "delete");
+            await db.remove(id);
+            console.log(`Data with ID '${id}' deleted.`);
+            updateDatabaseOutput(); // Update the view after deletion
+          } catch (error) {
+            console.error(error.message);
+            alert(error.message);
+          }
+        };
+
+        recordItem.appendChild(recordText);
+        recordItem.appendChild(editButton);
+        recordItem.appendChild(deleteButton);
+        recordList.appendChild(recordItem);
+      });
+
+      // Show information about the current user's role (if connected)
+      if (userAddress) {
+        const userNodeKey = `user:${userAddress}`;
+        const userNode = db.graph.get(userNodeKey);
+        if (userNode) {
+          const roleInfo = document.createElement("p");
+          roleInfo.textContent = `Your role: ${userNode.value.role}${userNode.value.expiresAt ? `, Expires: ${new Date(userNode.value.expiresAt).toLocaleString()}` : ""}`;
+          outputDiv.appendChild(roleInfo);
+        }
+      }
+
+      outputDiv.appendChild(recordList);
+    }
+
+    // Open the edit dialog
+    function openEditDialog(id, currentValue) {
+      currentEditId = id;
+      document.getElementById("editValue").value = currentValue;
+      document.getElementById("editOverlay").style.display = "block";
+      document.getElementById("editDialog").style.display = "block";
+    }
+
+    // Close the edit dialog
+    function closeEditDialog() {
+      currentEditId = null;
+      document.getElementById("editValue").value = "";
+      document.getElementById("editOverlay").style.display = "none";
+      document.getElementById("editDialog").style.display = "none";
+    }
+  </script>
+</body>
+
+</html>
