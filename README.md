@@ -177,12 +177,19 @@ await assignRole(
 
 ## Usage Examples
 
-Puedes encontrar ejemplos prácticos de cómo usar esta biblioteca en la carpeta [examples](https://github.com/estebanrfp/gdb/tree/main/examples).
+You can find practical examples of how to use this library in the [examples](https://github.com/estebanrfp/gdb/tree/main/examples) folder.
 
-Algunos ejemplos incluyen:
+### Features
 
-- **Consulta básica**: Cómo realizar consultas simples.
-- **Almacenamiento distribuido**: Cómo configurar una base de datos distribuida.
+The following capabilities are supported by the system:
+
+- **Basic Query**: Learn how to perform simple queries in the system.
+- **Distributed Storage**: Understand how to configure and manage a distributed database.
+
+Some examples include:
+- Querying nodes by ID or value.
+- Setting up peer-to-peer synchronization across devices.
+- Defining custom roles and permissions for secure access.
 
 ## API Reference
 
