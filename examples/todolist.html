@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -92,78 +92,86 @@
 
 <body>
   <h2>To-Do List</h2>
-  <input type="text" id="taskInput" placeholder="Nueva tarea">
+  <input type="text" id="taskInput" placeholder="New task">
   <ul id="taskList"></ul>
   <script type="module">
-    import { GraphDB } from "../dist/index.js";
+    import { GraphDB } from "../dist/index.js"; // Import the GraphDB library
     
-    const db = new GraphDB('todoList');
+    const db = new GraphDB('todoList'); // Initialize a GraphDB instance with the namespace 'todoList'
 
+    // Load tasks from the database and render them on the page
     async function loadTasks() {
-      await db.ready;
-      document.getElementById('taskList').innerHTML = '';
+      document.getElementById('taskList').innerHTML = ''; // Clear the current task list
+
       await db.map((id, value) => {
-        renderTask(id, value.text, value.completed);
+        renderTask(id, value.text, value.completed); // Render each task stored in the database
       });
     }
 
+    // Add a new task to the database
     async function addTask() {
       const input = document.getElementById('taskInput');
-      if (input.value.trim() === '') return;
-      const id = await db.put({ text: input.value.trim(), completed: false });
-      renderTask(id, input.value.trim(), false);
-      input.value = '';
+      if (input.value.trim() === '') return; // Ignore empty input
+      const id = await db.put({ text: input.value.trim(), completed: false }); // Save the new task to the database
+      renderTask(id, input.value.trim(), false); // Render the newly added task
+      input.value = ''; // Clear the input field
     }
 
+    // Toggle the completion status of a task in the database
     async function toggleTask(id) {
-      const task = await db.get(id);
+      const task = await db.get(id); // Retrieve the task by its ID
       if (task) {
-        const updatedTask = { ...task.value, completed: !task.value.completed };
-        await db.update(id, updatedTask);
-        loadTasks();
+        const updatedTask = { ...task.value, completed: !task.value.completed }; // Toggle the 'completed' status
+        await db.update(id, updatedTask); // Update the task in the database
+        loadTasks(); // Reload tasks to reflect changes
       }
     }
 
+    // Delete a task from the database
     async function deleteTask(id) {
-      await db.remove(id);
-      loadTasks();
+      await db.remove(id); // Remove the task from the database
+      loadTasks(); // Reload tasks to reflect changes
     }
 
+    // Enable edit mode for a task
     function enableEditMode(li) {
       const taskTextSpan = li.querySelector('span');
       const taskEditTextInput = li.querySelector('.edit-mode');
       const editButtonsContainer = li.querySelector('.edit-buttons');
       const editButton = li.querySelector('.btn-edit');
 
-      taskTextSpan.classList.add('hidden');
-      taskEditTextInput.classList.remove('hidden');
-      editButtonsContainer.classList.remove('hidden');
-      editButton.style.display = 'none';
-      taskEditTextInput.focus();
+      taskTextSpan.classList.add('hidden'); // Hide the task text
+      taskEditTextInput.classList.remove('hidden'); // Show the edit input
+      editButtonsContainer.classList.remove('hidden'); // Show save/cancel buttons
+      editButton.style.display = 'none'; // Hide the edit button
+      taskEditTextInput.focus(); // Focus on the input field
     }
 
+    // Save changes made during edit mode to the database
     async function saveEdit(id, newText, li) {
-      if (newText.trim() === '') return;
-      const task = await db.get(id);
+      if (newText.trim() === '') return; // Ignore empty text
+      const task = await db.get(id); // Retrieve the task by its ID
       if (task) {
-        const updatedTask = { ...task.value, text: newText.trim() };
-        await db.update(id, updatedTask);
-        loadTasks();
+        const updatedTask = { ...task.value, text: newText.trim() }; // Update the task text
+        await db.update(id, updatedTask); // Save the updated task to the database
+        loadTasks(); // Reload tasks to reflect changes
       }
     }
 
+    // Cancel edit mode without saving changes
     function cancelEdit(li) {
       const taskTextSpan = li.querySelector('span');
       const taskEditTextInput = li.querySelector('.edit-mode');
       const editButtonsContainer = li.querySelector('.edit-buttons');
       const editButton = li.querySelector('.btn-edit');
 
-      taskTextSpan.classList.remove('hidden');
-      taskEditTextInput.classList.add('hidden');
-      editButtonsContainer.classList.add('hidden');
-      editButton.style.display = 'inline-block';
+      taskTextSpan.classList.remove('hidden'); // Show the task text
+      taskEditTextInput.classList.add('hidden'); // Hide the edit input
+      editButtonsContainer.classList.add('hidden'); // Hide save/cancel buttons
+      editButton.style.display = 'inline-block'; // Show the edit button
     }
 
+    // Render a single task in the list
     function renderTask(id, text, completed) {
       const li = document.createElement('li');
 
@@ -179,7 +187,7 @@
       taskEditTextInput.addEventListener('keypress', async (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
-          await saveEdit(id, taskEditTextInput.value, li);
+          await saveEdit(id, taskEditTextInput.value, li); // Save changes when pressing Enter
         }
       });
 
@@ -189,22 +197,22 @@
       const editButton = document.createElement('button');
       editButton.innerHTML = '✏️';
       editButton.className = 'btn-edit';
-      editButton.onclick = () => enableEditMode(li);
+      editButton.onclick = () => enableEditMode(li); // Enable edit mode when clicking the edit button
 
       const saveButton = document.createElement('button');
       saveButton.innerHTML = '💾';
       saveButton.className = 'btn-save hidden';
-      saveButton.onclick = () => saveEdit(id, taskEditTextInput.value, li);
+      saveButton.onclick = () => saveEdit(id, taskEditTextInput.value, li); // Save changes when clicking the save button
 
       const cancelButton = document.createElement('button');
       cancelButton.innerHTML = '❌';
       cancelButton.className = 'btn-cancel hidden';
-      cancelButton.onclick = () => cancelEdit(li);
+      cancelButton.onclick = () => cancelEdit(li); // Cancel edit mode when clicking the cancel button
 
       const deleteButton = document.createElement('button');
       deleteButton.innerHTML = '🗑️';
       deleteButton.className = 'btn-delete';
-      deleteButton.onclick = () => deleteTask(id);
+      deleteButton.onclick = () => deleteTask(id); // Delete the task when clicking the delete button
 
       const editButtonsContainer = document.createElement('div');
       editButtonsContainer.className = 'edit-buttons hidden';
@@ -222,6 +230,7 @@
       document.getElementById('taskList').appendChild(li);
     }
 
+    // Add a task when pressing Enter in the input field
     document.getElementById('taskInput').addEventListener('keypress', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -233,11 +242,9 @@
     window.toggleTask = toggleTask;
     window.deleteTask = deleteTask;
 
-    // Cargar las tareas al iniciar
-    loadTasks();
+    loadTasks(); // Load tasks when the page loads
 
-    db.on(() => loadTasks());
-
+    db.on(() => loadTasks()); // Listen for database changes and reload tasks when they occur
   </script>
 </body>
 
