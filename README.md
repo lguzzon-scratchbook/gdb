@@ -70,22 +70,25 @@ import { GraphDB } from "gdb-p2p"
 </script>
 ```
 
-**Note**: Available CDNs:
+### **Available CDNs**
 
-```javascript
-// jsDelivr
-import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm"
+### **Available CDNs**
 
-// UNPKG
-import { GraphDB } from "https://unpkg.com/gdb-p2p@latest"
-
-// Skypack
-import { GraphDB } from "https://cdn.skypack.dev/gdb-p2p@latest"
-```
+| CDN          | URL                                                                                     |
+|--------------|-----------------------------------------------------------------------------------------|
+| **jsDelivr** | [`https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm`](https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm) |
+| **UNPKG**    | [`https://unpkg.com/gdb-p2p@latest`](https://unpkg.com/gdb-p2p@latest)                  |
+| **Skypack**  | [`https://cdn.skypack.dev/gdb-p2p`](https://cdn.skypack.dev/gdb-p2p)                    |
 
 ## Documentation
 
 For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
+
+## Examples
+
+We’ve created a collection of interactive examples to help you understand how GDB works in real-world scenarios. These examples cover everything from basic setup to advanced features like RBAC and P2P synchronization.
+
+👉 [Explore Examples on CodePen](https://codepen.io/collection/ZQQeMB)
 
 ### **Internal Dependencies**
 
@@ -129,6 +132,14 @@ We value community contributions and discussions! Here's how you can get involve
 
 - **Ask questions or share ideas**: Join our [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions).
 - **Real-time chat**: For quick conversations, join us on [Gitter](https://app.gitter.im/#/room/#graphdb:gitter.im).
+
+  Here’s how you can participate in the Gitter room:
+  
+  - `[DEV]`: Discussions about project development, new features, and technical improvements.
+  - `[ANNOUNCEMENT]`: Official updates, new releases, and important news about GDB.
+  - `[HELP]`: Technical support and troubleshooting for GDB-related questions.
+
+Feel free to ask questions, share ideas, or just say hello! 👋
 
 For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/wiki/Contributing).
 
