@@ -9,7 +9,6 @@
 <style>
   body {
     cursor: none;
-    /* Hides the default cursor */
   }
 
   .cursor {
@@ -19,41 +18,48 @@
     border-radius: 50%;
     position: absolute;
     pointer-events: none;
-    /* The cursor should not interfere with pointer events */
     transform: translate(-50%, -50%);
-    /* Centers the custom cursor at the contact point */
   }
 </style>
 
 <body>
   <div class="cursor" id="cursor"></div>
   <script type="module">
-
+    // Import GraphDB library for real-time communication
     import { GraphDB } from "../dist/index.js";
 
+    // Initialize GraphDB instance for the "cursormove" room
     const db = new GraphDB('cursormove');
+
+    // Create actions for sending and receiving cursor data
     const [sendData, getData] = db.room.makeAction("cursormove");
 
     const cursor = document.getElementById('cursor');
 
-    db.room.onPeerJoin(peerId => console.log(`${peerId} joined`))
-    db.room.onPeerLeave(peerId => console.log(`${peerId} left`))
+    // Log when a peer joins the room
+    db.room.onPeerJoin(peerId => console.log(`${peerId} joined`));
 
+    // Log when a peer leaves the room
+    db.room.onPeerLeave(peerId => console.log(`${peerId} left`));
+
+    // Periodically log the list of connected peers
     setInterval(() => { console.log(db.room.getPeers()) }, 5000);
+
 
     window.addEventListener('mousemove', e => {
       cursor.style.left = e.clientX + 'px';
       cursor.style.top = e.clientY + 'px';
 
-      sendData([e.clientX, e.clientY])
-    })
+      // Send the cursor's position to other peers in the room
+      sendData([e.clientX, e.clientY]);
+    });
 
+    // Handle incoming cursor data from other peers
     getData(([x, y], peerId) => {
       cursor.style.left = x + 'px';
       cursor.style.top = y + 'px';
       cursor.style.background = 'lightgreen';
-    })
-
+    });
   </script>
 </body>
 
