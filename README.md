@@ -72,8 +72,6 @@ import { GraphDB } from "gdb-p2p"
 
 ### **Available CDNs**
 
-### **Available CDNs**
-
 | CDN          | URL                                                                                     |
 |--------------|-----------------------------------------------------------------------------------------|
 | **jsDelivr** | [`https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm`](https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm) |
@@ -131,7 +129,7 @@ We welcome contributions to improve this project! Please read our [Contribution 
 We value community contributions and discussions! Here's how you can get involved:
 
 - **Ask questions or share ideas**: Join our [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions).
-- **Real-time chat**: For quick conversations, join us on [Gitter](https://app.gitter.im/#/room/#graphdb:gitter.im).
+- **Real-time chat**: For quick conversations, join us on [Gitter](https://app.gitter.im/#/room/#GDB:gitter.im).
 
   Here’s how you can participate in the Gitter room:
   
