@@ -2,7 +2,9 @@
 [![NPM Version](https://img.shields.io/npm/v/gdb-p2p.svg?style=for-the-badge)](https://www.npmjs.org/package/gdb-p2p)
 [![NPM License](https://img.shields.io/npm/l/gdb-p2p.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
 
-![Estado del Proyecto](https://img.shields.io/badge/estado-en%20desarrollo-blue)
+![Project Status](https://img.shields.io/badge/estado-en%20desarrollo-blue)
+
+![Downloads on NPM](https://img.shields.io/npm/dw/gdb-p2p)
 
 Graph database with Role-Based Access Control (RBAC), P2P synchronization, and local storage in OPFS.
 
