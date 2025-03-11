@@ -1,5 +1,5 @@
 # GDB (GraphDB) + RBAC (Role Based Access Control)
-[![NPM Version](https://img.shields.io/npm/v/gdb-p2p.svg?style=for-the-badge)](https://www.npmjs.org/package/estebanrfp)
+[![NPM Version](https://img.shields.io/npm/v/gdb-p2p.svg?style=for-the-badge)](https://www.npmjs.org/package/gdb-p2p)
 [![NPM License](https://img.shields.io/npm/l/gdb-p2p.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
 
 ![Estado del Proyecto](https://img.shields.io/badge/estado-en%20desarrollo-blue)
