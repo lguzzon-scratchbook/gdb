@@ -15,6 +15,18 @@ Graph database with Role-Based Access Control (RBAC), P2P synchronization, and l
 
 ![Project Status](https://img.shields.io/badge/state-development-green)
 
+
+
+![NPM Unpacked Size (with version)](https://img.shields.io/npm/unpacked-size/gdb-p2p/latest)
+
+![npm package minimized gzipped size](https://img.shields.io/bundlejs/size/gdb-p2p)
+
+<!-- ### Nostr.band Followers
+
+![Nostr.band Followers](https://img.shields.io/nostr-band/followers/npub18c556t7n8xa3df2q82rwxejfglw5przds7sqvefylzjh8tjne28qld0we7) -->
+
+<!-- ![GitHub Sponsors](https://img.shields.io/github/sponsors/estebanrfp) -->
+
 ## Main Features
 
 ### ✅ **GraphDB Core**
