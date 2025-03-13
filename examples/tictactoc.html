@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe con GraphDB</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+      margin: 20px auto;
+      width: 320px;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      border: 2px solid black;
+      cursor: pointer;
+      background-color: lightgray;
+    }
+    .cell.taken {
+      cursor: not-allowed;
+    }
+    #role-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    #role-selection button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic Tac Toe con GunDB</h1>
+  <div id="role-selection">
+    <p>Selecciona tu rol:</p>
+    <button id="select-x">X</button>
+    <button id="select-o">O</button>
+  </div>
+  <div class="board" id="board"></div>
+  <p id="status">Esperando jugadores...</p>
+  <button id="reset-button">Resetear</button>
+  <script type="module">
+    import { GraphDB } from "../dist/index.js";
+    
+    const db = new GraphDB('tic-tac-toe');
+    const [sendData, getData] = db.room.makeAction("syncGame");
+    const boardElement = document.getElementById('board');
+    const statusElement = document.getElementById('status');
+    const roleSelection = document.getElementById('role-selection');
+    const selectXButton = document.getElementById('select-x');
+    const selectOButton = document.getElementById('select-o');
+
+    let boardState = Array(9).fill(null);
+    let player = null; // Rol del jugador (X o O)
+    let currentPlayer = 'X'; // Jugador actual
+
+    // Mostrar el menú de selección al inicio
+    roleSelection.style.display = 'block';
+
+    // Manejar la selección de rol
+    selectXButton.addEventListener('click', () => {
+      player = 'X';
+      startGame();
+    });
+
+    selectOButton.addEventListener('click', () => {
+      player = 'O';
+      startGame();
+    });
+
+    function startGame() {
+      roleSelection.style.display = 'none'; // Ocultar el menú de selección
+      statusElement.textContent = `Eres el jugador ${player}`;
+      sendData({ role: player }); // Notificar a otros jugadores sobre el rol seleccionado
+    }
+
+    db.room.onPeerJoin(peerId => {
+      const peers = db.room.getPeers();
+      const count = Object.keys(peers).length;
+
+      if (count === 2 && !player) {
+        alert("Esperando al otro jugador para seleccionar su rol...");
+      }
+    });
+
+    db.room.onPeerLeave(peerId => {
+      resetGame();
+    });
+
+    function createBoard() {
+      boardElement.innerHTML = '';
+      boardState.forEach((mark, index) => {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        if (mark) {
+          cell.textContent = mark;
+          cell.classList.add('taken');
+        }
+        cell.addEventListener('click', () => makeMove(index));
+        boardElement.appendChild(cell);
+      });
+    }
+
+    function checkWinner() {
+      const winningCombos = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+        [0, 4, 8], [2, 4, 6] // Diagonals
+      ];
+      for (let combo of winningCombos) {
+        const [a, b, c] = combo;
+        if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+          return boardState[a];
+        }
+      }
+      return boardState.includes(null) ? null : 'T'; // 'T' for Tie
+    }
+
+    function makeMove(index) {
+      // Verificar si la casilla ya está ocupada o si no es el turno del jugador actual
+      if (boardState[index] || currentPlayer !== player) return;
+
+      // Actualizar el estado del tablero
+      boardState[index] = player;
+
+      // Actualizar el tablero visualmente para el jugador actual
+      createBoard();
+
+      // Notificar a los demás jugadores sobre el movimiento
+      const winner = checkWinner();
+      if (winner) {
+        sendData({ board: JSON.stringify(boardState), winner });
+      } else {
+        sendData({ board: JSON.stringify(boardState), turn: player === 'X' ? 'O' : 'X' });
+      }
+    }
+
+    getData(data => {
+      if (data.role) {
+        const peers = db.room.getPeers();
+        const count = Object.keys(peers).length;
+
+        // Si hay dos jugadores, asignar roles automáticamente si no se han seleccionado
+        if (count === 2 && !player) {
+          player = data.role === 'X' ? 'O' : 'X';
+          statusElement.textContent = `Eres el jugador ${player}`;
+        }
+      }
+
+      if (data.board) boardState = JSON.parse(data.board);
+      if (data.turn) currentPlayer = data.turn;
+      if (data.winner) {
+        statusElement.textContent = data.winner === 'T' ? "¡Empate!" : `¡${data.winner} ha ganado!`;
+        showRestartButton();
+      } else {
+        createBoard();
+        statusElement.textContent = `Turno de: ${currentPlayer}`;
+      }
+    });
+
+    function showRestartButton() {
+      const restartButton = document.createElement('button');
+      restartButton.textContent = "Jugar de nuevo";
+      restartButton.id = 'reset-button';
+      restartButton.addEventListener('click', resetGame);
+      document.body.appendChild(restartButton);
+    }
+
+    function resetGame() {
+      boardState = Array(9).fill(null);
+      currentPlayer = 'X';
+      sendData({ board: JSON.stringify(boardState), turn: 'X', winner: null });
+      document.querySelectorAll("button").forEach(btn => btn.remove());
+      createBoard();
+    }
+
+    document.getElementById('reset-button').addEventListener('click', resetGame);
+    createBoard();
+  </script>
+</body>
+</html>
