@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<ul id='list'></ul>
+<form id='form'>
+  <input id='who' placeholder='name'>
+  <input id='what' placeholder='say'>
+  <input type='submit' value='send'>
+</form>
+<script type="module"> import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm";
+  let db = new GraphDB('chat9linescode'), chat = db.get("note" + location.hash.replace('#', '/')), view = document;
+  let read = async () => await db.map((id, value) => {
+    (view.line = view.getElementById(id) || view.createElement("li")).id = id;
+    list.appendChild(view.line).innerText = value.msg
+    window.scroll(0, list.offsetHeight);
+    // (list.beep = new SpeechSynthesisUtterance()).text = "new";
+    // list.beep.rate = 10, list.beep.pitch = 2, window.speechSynthesis.speak(list.beep)
+  })
+  form.onsubmit = (eve) => { db.put({ msg: who.value + ': ' + what.value }), eve.preventDefault(what.value = ""), read() }
+  db.on((e) => console.log(e), read()) // read() // db.clear()
+
+</script>
