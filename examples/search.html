@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GDB Browser Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #results {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .result-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h2>➕ Insert Item</h2>
+        <input type="text" id="name" placeholder="Name">
+        <input type="number" id="age" placeholder="Age">
+        <input type="color" id="color">
+        <button onclick="insertItem()">Insert</button>
+    </div>
+
+    <div class="panel">
+        <h2>🔍 Search by Name</h2>
+        <input type="text" id="searchInput" placeholder="Name to search">
+        <button onclick="searchItem()">Search</button>
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { GraphDB } from "../dist/index.js";
+        
+        const db = new GraphDB('test-db');
+
+        // Function to insert an item into the database
+        window.insertItem = async () => {
+            const name = document.getElementById('name').value;
+            const age = document.getElementById('age').value;
+            const color = document.getElementById('color').value;
+            
+            if (!name || !age || !color) return;
+            
+            const person = { 
+                name, 
+                age: parseInt(age), 
+                color 
+            };
+            
+            await db.put(person); // Save the person object in the database
+            document.getElementById('name').value = ''; // Clear the name input
+            document.getElementById('age').value = ''; // Clear the age input
+            document.getElementById('color').value = '#000000'; // Reset the color picker
+        };
+
+        // Function to search for an item by name
+        window.searchItem = async () => {
+            const searchName = document.getElementById('searchInput').value;
+            const result = await db.find({ name: searchName }); // Query the database
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            if (result) {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML = `
+                    <div>
+                        <strong>${result.value.name}</strong><br>
+                        Age: ${result.value.age}
+                    </div>
+                    <div class="color-box" style="background: ${result.value.color};"></div>
+                `;
+                resultsDiv.appendChild(item); // Display the found item
+            } else {
+                resultsDiv.innerHTML = '<div class="result-item">No results found</div>';
+            }
+        };
+    </script>
+</body>
+</html>
