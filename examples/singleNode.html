@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphDB - Real-Time Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    input {
+      padding: 10px;
+      width: 80%;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .output {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GraphDB - Real-Time Example</h1>
+    <p>Update the record value and observe the changes in real time.</p>
+
+    <!-- Text input -->
+    <input type="text" id="valueInput" placeholder="Enter a new value">
+
+    <!-- Update button -->
+    <button id="updateButton">Update Record</button>
+
+    <!-- Real-time output -->
+    <div class="output">
+      <strong>Current Value:</strong> <span id="currentValue">(No value)</span>
+    </div>
+  </div>
+
+  <!-- Import GraphDB -->
+  <script type="module">
+    // Import the GraphDB class from your file
+    import { GraphDB } from "../dist/index.js";
+
+    // Create an instance of GraphDB
+    const db = new GraphDB('test-db');
+  
+    // Unique record ID
+    const recordId = 'unique-record-id';
+
+    // Function to load the initial value
+    async function loadInitialValue() {
+      await db.ready; // Wait for the database to be ready
+      // db.clear()
+      await db.get(recordId, (node)=>{
+        if (node) {
+          document.getElementById('currentValue').textContent = node.value;
+        } else {
+          document.getElementById('currentValue').textContent = '(No value)';
+        }
+      });
+    }
+
+    // Load the initial value on startup
+    loadInitialValue();
+
+    // Handle click on the update button
+    document.getElementById('updateButton').addEventListener('click', async () => {
+      const newValue = document.getElementById('valueInput').value.trim();
+      if (!newValue) {
+        alert('Please, enter a value.');
+        return;
+      }
+
+      // Update the value in the database
+      await db.put(newValue, recordId);
+
+      // Clear the input field
+      document.getElementById('valueInput').value = '';
+    });
+  </script>
+</body>
+</html>
