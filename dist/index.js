@@ -12382,6 +12382,66 @@ var resolveConflict = (currentNode, incomingChange) => {
   return { resolved: false };
 };
 
+// lib/components/workerCode.js
+var workerCode_default = () => {
+  const openHandles = {};
+  const onMessage = async ({ data }) => {
+    const { type, name, content } = data;
+    if (!name) {
+      self.postMessage({ type: "error", message: "Invalid file name" });
+      return;
+    }
+    try {
+      const root = await navigator.storage.getDirectory();
+      switch (type) {
+        case "save":
+          if (!content || openHandles[name]) {
+            self.postMessage({ type: "error", message: openHandles[name] ? "File already open" : "Invalid content" });
+            return;
+          }
+          openHandles[name] = true;
+          const saveHandle = await root.getFileHandle(name, { create: true });
+          const writer = await saveHandle.createSyncAccessHandle();
+          writer.write(content, { at: 0 });
+          writer.flush();
+          writer.close();
+          self.postMessage({ type: "saved", name });
+          break;
+        case "load":
+          if (openHandles[name]) {
+            self.postMessage({ type: "error", message: "File already open" });
+            return;
+          }
+          openHandles[name] = true;
+          const loadHandle = await root.getFileHandle(name, { create: false });
+          const access = await loadHandle.createSyncAccessHandle();
+          const fileSize = access.getSize();
+          const buffer = new ArrayBuffer(fileSize);
+          access.read(buffer, { at: 0 });
+          access.close();
+          self.postMessage({ type: "loaded", name, data: Array.from(new Uint8Array(buffer)) });
+          break;
+        case "delete":
+          await root.removeEntry(name);
+          self.postMessage({ type: "deleted", name });
+          break;
+        default:
+          self.postMessage({ type: "error", message: "Unknown operation" });
+      }
+    } catch (error) {
+      if (error.name === "NotFoundError") {
+        self.postMessage({ type: "loaded", name, data: [] });
+      } else {
+        console.error(`Error processing '${type}' for file '${name}':`, error.message);
+        self.postMessage({ type: "error", message: `Error processing '${type}' for file '${name}'` });
+      }
+    } finally {
+      delete openHandles[name];
+    }
+  };
+  self.addEventListener("message", onMessage);
+};
+
 // lib/components/gdb.js
 async function checkOPFS() {
   console.log("\u26A1 GDB-P2P: Empowering distributed graph databases with real-time synchronization and scalability. Learn more: https://github.com/estebanrfp/gdb \u26A1");
@@ -12395,28 +12455,6 @@ async function checkOPFS() {
 if (Symbol.dispose === undefined) {
   Object.defineProperty(Symbol, "dispose", { value: Symbol.for("Symbol.dispose") });
 }
-var loadFile = async (fileName) => {
-  try {
-    const rootDirectory = await navigator.storage.getDirectory();
-    const fileHandle = await rootDirectory.getFileHandle(fileName, { create: false });
-    const file = await fileHandle.getFile();
-    return await file.arrayBuffer();
-  } catch (error) {
-    console.error(`Error al cargar el archivo '${fileName}': ${error.message}`);
-    return new Uint8Array;
-  }
-};
-var saveFile = async (fileName, content) => {
-  try {
-    const rootDirectory = await navigator.storage.getDirectory();
-    const fileHandle = await rootDirectory.getFileHandle(fileName, { create: true });
-    const writableStream = await fileHandle.createWritable();
-    await writableStream.write(content);
-    await writableStream.close();
-  } catch (error) {
-    console.error(`Error al guardar el archivo '${fileName}': ${error.message}`);
-  }
-};
 
 class Graph {
   constructor() {
@@ -12455,9 +12493,13 @@ class GraphDB {
     this.password = password;
     this.graph = new Graph;
     this.index = {};
-    this.ready = this.loadGraphFromOPFS();
     this.eventListeners = [];
     this.localHash;
+    this.localTime = Date.now();
+    this.initWorker();
+    this.ready = (async () => {
+      await this.loadGraphFromOPFS();
+    })();
     const key = `graph-sync-room-${this.name}`;
     const roomConfig = { appId: "1234", ...this.password && { password: this.password } };
     const room2 = joinRoom(roomConfig, key);
@@ -12469,7 +12511,6 @@ class GraphDB {
     window.addEventListener("offline", async () => {
       console.log("\u274C Disconnected from the network.");
     });
-    let isOnline = navigator.onLine;
     checkOPFS();
     room2.onPeerJoin(async (peerId) => {
       console.log("\u26A1 New pair connected:", peerId);
@@ -12490,8 +12531,23 @@ class GraphDB {
       }
     };
   }
+  initWorker = async () => {
+    try {
+      const blob = new Blob([`(${workerCode_default.toString()})()`], { type: "application/javascript" });
+      const url = URL.createObjectURL(blob);
+      this.worker = new Worker(url);
+      URL.revokeObjectURL(url);
+      this.worker.addEventListener("message", (event) => {
+        console.log("Worker message:", event.data);
+      });
+      console.log("Worker inicializado correctamente.");
+    } catch (error) {
+      console.error("Error al inicializar el worker:", error.message);
+    }
+  };
   emit() {
-    this.eventListeners.forEach((listener) => listener());
+    const currentNodes = this.graph.getAllNodes();
+    this.eventListeners.forEach((listener) => listener(currentNodes));
   }
   on(callback) {
     this.eventListeners.push(callback);
@@ -12512,38 +12568,98 @@ class GraphDB {
     const serializedGraph = this.graph.serialize();
     return await this.generateHash(serializedGraph);
   }
-  async saveGraphToOPFS() {
-    const serializedGraph = this.graph.serialize();
-    const serializedIndex = encode(this.index);
-    await saveFile(`${this.name}_graph.msgpack`, serializedGraph);
-    await saveFile(`${this.name}_index.msgpack`, serializedIndex);
-    this.channel.postMessage("update");
-    this.localHash = await this.generateGraphHash();
-    this.localTime = Date.now();
-  }
   async loadGraphFromOPFS() {
     try {
-      const graphContent = await loadFile(`${this.name}_graph.msgpack`);
-      const indexContent = await loadFile(`${this.name}_index.msgpack`);
-      if (graphContent.byteLength > 0)
+      const loadFileFromWorker = (fileName) => {
+        return new Promise((resolve, reject) => {
+          this.worker.postMessage({ type: "load", name: fileName });
+          const handleMessage = (event) => {
+            if (event.data.type === "loaded" && event.data.name === fileName) {
+              this.worker.removeEventListener("message", handleMessage);
+              resolve(new Uint8Array(event.data.data));
+            } else if (event.data.type === "error") {
+              this.worker.removeEventListener("message", handleMessage);
+              reject(new Error(event.data.message || "Error desconocido al cargar el archivo."));
+            }
+          };
+          this.worker.addEventListener("message", handleMessage);
+        });
+      };
+      const [graphContent, indexContent] = await Promise.all([
+        loadFileFromWorker(`${this.name}_graph.msgpack`).catch(() => new Uint8Array),
+        loadFileFromWorker(`${this.name}_index.msgpack`).catch(() => new Uint8Array)
+      ]);
+      if (graphContent.byteLength > 0) {
         this.graph.deserialize(graphContent);
-      if (indexContent.byteLength > 0)
-        this.index = decode(new Uint8Array(indexContent));
+      } else {
+        console.warn("The file '_graph.msgpack' is empty or could not be loaded.");
+      }
+      if (indexContent.byteLength > 0) {
+        this.index = decode(indexContent);
+      } else {
+        console.warn("The file '_index.msgpack' is empty or could not be loaded.");
+      }
       this.localHash = await this.generateGraphHash();
       this.localTime = Date.now();
+      console.log(`Graph loaded from OPFS: [ ${this.graph.getAllNodes().length} nodes ]`);
     } catch (error) {
-      console.error("Error loading the graph from OPFS:", error.message);
+      console.error("General error loading the graph from OPFS:", error.message);
+    }
+  }
+  async saveGraphToOPFS() {
+    try {
+      const serializedGraph = this.graph.serialize();
+      const serializedIndex = encode(this.index);
+      const saveFile = (fileName, content) => new Promise((resolve, reject) => {
+        this.worker.postMessage({ type: "save", name: fileName, content });
+        const handleMessage = ({ data }) => {
+          if (data.type === "saved" && data.name === fileName) {
+            this.worker.removeEventListener("message", handleMessage);
+            resolve();
+          } else if (data.type === "error") {
+            this.worker.removeEventListener("message", handleMessage);
+            reject(new Error(data.message || "Error al guardar"));
+          }
+        };
+        this.worker.addEventListener("message", handleMessage);
+      });
+      await Promise.all([
+        saveFile(`${this.name}_graph.msgpack`, serializedGraph),
+        saveFile(`${this.name}_index.msgpack`, serializedIndex)
+      ]);
+      this.localHash = await this.generateGraphHash();
+      this.localTime = Date.now();
+      this.channel.postMessage("update");
+      return true;
+    } catch (error) {
+      console.error("Error guardando:", error);
+      throw new Error("Guardado fallido");
     }
   }
   async put(value, id) {
     await this.ready;
     id ??= await this.generateHash(encode(value));
-    const existingNode = this.graph.get(id);
-    if (!existingNode) {
+    const node = this.graph.get(id);
+    if (!node) {
       this.graph.insert(id, value);
     } else {
-      existingNode.value = value;
-      existingNode.timestamp = Date.now();
+      const incomingChange = {
+        id,
+        newValue: value,
+        timestamp: Date.now()
+      };
+      const resolution = resolveConflict(node, incomingChange);
+      if (resolution.resolved) {
+        node.value = resolution.value;
+        node.timestamp = resolution.timestamp;
+        const encodedOldValue = encode(node.value);
+        if (this.index[encodedOldValue]) {
+          this.index[encodedOldValue] = this.index[encodedOldValue].filter((nodeId) => nodeId !== id);
+          if (this.index[encodedOldValue].length === 0) {
+            delete this.index[encodedOldValue];
+          }
+        }
+      }
     }
     const encodedValue = encode(value);
     if (!this.index[encodedValue]) {
@@ -12551,7 +12667,12 @@ class GraphDB {
     }
     this.index[encodedValue].push(id);
     await this.saveGraphToOPFS();
-    this.sendData([{ type: "insert", id, value, timestamp: Date.now() }]);
+    if (!node) {
+      this.sendData([{ type: "insert", id, value, timestamp: Date.now() }]);
+    } else {
+      this.sendData([{ type: "update", id, newValue: value, timestamp: Date.now() }]);
+    }
+    this.emit();
     return id;
   }
   async find(value) {
@@ -12560,15 +12681,46 @@ class GraphDB {
     const ids = this.index[encodedValue] || [];
     return ids.map((id) => this.graph.get(id)).reduce((latest, current) => current.timestamp > latest.timestamp ? current : latest, null);
   }
-  async get(id) {
+  async get(id, callback = null) {
     await this.ready;
-    return this.graph.get(id);
+    const node = this.graph.get(id);
+    if (!node) {
+      console.error(`Nodo con ID '${id}' no encontrado.`);
+      return null;
+    }
+    if (!callback) {
+      return node;
+    }
+    callback(node);
+    const listener = (nodes) => {
+      const updatedNode = nodes.find((n) => n.id === id);
+      if (updatedNode) {
+        callback(updatedNode);
+      }
+    };
+    this.eventListeners.push(listener);
   }
-  async map(callback) {
+  async map(callback, realtime = false, iterable = true) {
     await this.ready;
-    const allNodes = this.graph.getAllNodes();
-    for (const node of allNodes) {
-      callback(node.id, node.value, node.edges, node.timestamp);
+    if (iterable) {
+      const iterateNodes = (nodes) => {
+        nodes.forEach((node) => {
+          callback(node.id, node.value, node.edges, node.timestamp);
+        });
+      };
+      iterateNodes(this.graph.getAllNodes());
+      if (realtime) {
+        this.eventListeners.push(() => {
+          iterateNodes(this.graph.getAllNodes());
+        });
+      }
+    } else {
+      callback(this.graph.getAllNodes());
+      if (realtime) {
+        this.eventListeners.push(() => {
+          callback(this.graph.getAllNodes());
+        });
+      }
     }
   }
   async remove(id) {
@@ -12587,35 +12739,8 @@ class GraphDB {
       otherNode.edges = otherNode.edges.filter((edgeId) => edgeId !== id);
     }
     await this.saveGraphToOPFS();
-    this.sendData([{ type: "remove", id }]);
-  }
-  async update(id, newValue) {
-    await this.ready;
-    const node = this.graph.get(id);
-    if (!node)
-      return console.error(`Nodo con ID '${id}' no encontrado.`);
-    const incomingChange = {
-      id,
-      newValue,
-      timestamp: Date.now()
-    };
-    const resolution = resolveConflict(node, incomingChange);
-    if (resolution.resolved) {
-      node.value = resolution.value;
-      node.timestamp = resolution.timestamp;
-      const encodedOldValue = encode(node.value);
-      const encodedNewValue = encode(newValue);
-      if (this.index[encodedOldValue]) {
-        this.index[encodedOldValue] = this.index[encodedOldValue].filter((nodeId) => nodeId !== id);
-        if (this.index[encodedOldValue].length === 0)
-          delete this.index[encodedOldValue];
-      }
-      if (!this.index[encodedNewValue])
-        this.index[encodedNewValue] = [];
-      this.index[encodedNewValue].push(id);
-      await this.saveGraphToOPFS();
-      this.sendData([{ type: "update", id, newValue, timestamp: Date.now() }]);
-    }
+    this.sendData([{ type: "remove", id, value: node.value, timestamp: Date.now() }]);
+    this.emit();
   }
   async clear() {
     await this.ready;
@@ -12639,6 +12764,7 @@ class GraphDB {
     this.graph.link(sourceId, targetId);
     await this.saveGraphToOPFS();
     this.sendData([{ type: "link", sourceId, targetId, timestamp: Date.now() }]);
+    this.emit();
   }
   async applyFullGraph(remoteGraph) {
     try {
@@ -12671,8 +12797,6 @@ class GraphDB {
           if (this.localTime > change.ts) {
             console.log("Sending recent data to remote node.");
             this.sendData([{ type: "syncReceive", graph: this.graph }]);
-          } else {
-            console.log("Remote node is up-to-date. No action needed.");
           }
         }
       } else if (change.type === "syncReceive") {
