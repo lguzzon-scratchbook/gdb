@@ -110,19 +110,129 @@
   <div class="kanban-board" id="kanbanBoard"></div>
   <script type="module">
     import { GraphDB } from "../dist/index.js";
-
+  
     const db = new GraphDB("kanbanGraph");
+    // db.clear()
     const columns = ["To Do", "In Progress", "Done"];
     const kanbanBoard = document.getElementById("kanbanBoard");
-
-    // Render initial columns
+  
+    // Objeto para realizar un seguimiento de las tareas renderizadas
+    const renderedNodes = {};
+  
+    // Función para limpiar tareas eliminadas del DOM
+    function cleanUpTasks(nodes) {
+      const currentIds = new Set(nodes.map(node => node.id));
+      document.querySelectorAll(".task").forEach(taskElement => {
+        const id = taskElement.getAttribute("data-id");
+        if (!currentIds.has(id)) {
+          taskElement.remove(); // Eliminar la tarea del DOM si no existe en la base de datos
+          delete renderedNodes[id]; // Eliminarla del seguimiento
+        }
+      });
+    }
+  
+    // Función para renderizar una tarea en una columna específica
+    function renderTask(column, id, text) {
+      const columnElement = document.querySelector(`[data-column="${column}"] .tasks`);
+      const existingTask = document.querySelector(`[data-id="${id}"]`);
+  
+      if (existingTask) {
+        // Si la tarea ya existe, actualizar su contenido
+        const taskTextSpan = existingTask.querySelector("span");
+        taskTextSpan.textContent = text;
+  
+        // Mover la tarea al contenedor correcto si es necesario
+        if (!columnElement.contains(existingTask)) {
+          columnElement.appendChild(existingTask);
+        }
+      } else {
+        // Si la tarea no existe, crear un nuevo elemento
+        const taskDiv = document.createElement("div");
+        taskDiv.className = "task";
+        taskDiv.setAttribute("data-id", id);
+        taskDiv.setAttribute("draggable", true); // Habilitar arrastre
+        taskDiv.innerHTML = `
+          <span>${text}</span>
+          <button class="delete-button" onclick="deleteTask('${id}')">×</button>
+        `;
+        taskDiv.addEventListener("dragstart", (e) => handleDragStart(e, id)); // Asignar evento dragstart
+        columnElement.appendChild(taskDiv);
+  
+        // Marcar la tarea como renderizada
+        renderedNodes[id] = true;
+      }
+    }
+  
+    // Cargar tareas desde la base de datos
+    async function init() {
+      await db.map((id, value) => {
+        if (value && value.column && value.text) {
+          renderTask(value.column, id, value.text);
+        }
+      }, true, true); // Habilitar sincronización en tiempo real
+    }
+  
+    // Agregar una nueva tarea
+    window.addTask = async (column, text) => {
+      if (!text) return;
+      const task = { column, text };
+      const id = await db.put(task);
+      renderTask(column, id, text);
+    };
+  
+    // Mover una tarea entre columnas
+    window.moveTask = async (id, newColumn) => {
+      const task = await db.get(id);
+      if (task) {
+        task.value.column = newColumn;
+        await db.put(task.value, id);
+  
+        // Actualizar la tarea en el DOM sin eliminarla ni recrearla
+        const taskElement = document.querySelector(`[data-id="${id}"]`);
+        if (taskElement) {
+          const newText = task.value.text;
+          const newColumnElement = document.querySelector(`[data-column="${newColumn}"] .tasks`);
+          const taskTextSpan = taskElement.querySelector("span");
+          taskTextSpan.textContent = newText;
+  
+          // Mover la tarea al contenedor correcto si es necesario
+          if (!newColumnElement.contains(taskElement)) {
+            newColumnElement.appendChild(taskElement);
+          }
+        }
+      }
+    };
+  
+    // Eliminar una tarea
+    window.deleteTask = async (id) => {
+      const task = await db.get(id);
+      if (task) {
+        await db.remove(id);
+        document.querySelector(`[data-id="${id}"]`)?.remove();
+        delete renderedNodes[id];
+      }
+    };
+  
+    // Manejar el inicio del arrastre
+    function handleDragStart(event, taskId) {
+      event.dataTransfer.setData("text/plain", taskId);
+    }
+  
+    // Manejar la colocación de una tarea
+    function handleDrop(event, targetColumn) {
+      event.preventDefault(); // Permitir la colocación
+      const taskId = event.dataTransfer.getData("text/plain");
+      moveTask(taskId, targetColumn);
+    }
+  
+    // Renderizar las columnas iniciales
     function renderColumns() {
       kanbanBoard.innerHTML = "";
       columns.forEach((column) => {
         const columnDiv = document.createElement("div");
         columnDiv.className = "column";
-        columnDiv.setAttribute("data-column", column); // Add attribute to identify the column
-        columnDiv.draggable = true; // Enable drag for columns
+        columnDiv.setAttribute("data-column", column);
+        columnDiv.draggable = true;
         columnDiv.innerHTML = `
           <div class="column-header">${column}</div>
           <div class="tasks" data-column="${column}"></div>
@@ -131,97 +241,26 @@
           </div>
         `;
         kanbanBoard.appendChild(columnDiv);
-
-        // Configure drag and drop events
-        columnDiv.addEventListener("dragover", (e) => e.preventDefault());
+  
+        // Configurar eventos de arrastre
+        columnDiv.addEventListener("dragover", (e) => e.preventDefault()); // Permitir la colocación
         columnDiv.addEventListener("drop", (e) => handleDrop(e, column));
-
-        // Listen for the Enter key to add tasks
+  
+        // Escuchar el Enter para agregar tareas
         const input = columnDiv.querySelector("input");
         input.addEventListener("keydown", (event) => {
           if (event.key === "Enter") {
-            event.preventDefault(); // Prevent default behavior
+            event.preventDefault();
             addTask(column, input.value.trim());
-            input.value = ""; // Clear the field after adding the task
+            input.value = "";
           }
         });
       });
-      loadTasks();
     }
-
-    // Load tasks from the database
-    async function loadTasks() {
-      document.querySelectorAll(".tasks").forEach((taskContainer) => {
-        taskContainer.innerHTML = "";
-      });
-      await db.map(async (id, value, edges, timestamp) => {
-        if (value && value.column && value.text) {
-          addTaskToColumn(value.column, id, value.text);
-        }
-      });
-    }
-
-    // Add a task to a specific column
-    function addTaskToColumn(column, id, text) {
-      const columnElement = document.querySelector(`[data-column="${column}"] .tasks`);
-      const taskDiv = document.createElement("div");
-      taskDiv.className = "task";
-      taskDiv.setAttribute("data-id", id);
-      taskDiv.setAttribute("draggable", true); // Make the task draggable
-      taskDiv.innerHTML = `
-        <span>${text}</span>
-        <button class="delete-button" onclick="deleteTask('${id}')">×</button>
-      `;
-      taskDiv.addEventListener("dragstart", (e) => handleDragStart(e, id));
-      columnElement.appendChild(taskDiv);
-    }
-
-    // Add a new task
-    window.addTask = async (column, text) => {
-      if (!text) return;
-      const task = { column, text };
-      const id = await db.put(task); // Save the task in the database
-      addTaskToColumn(column, id, text);
-    };
-
-    // Handle the start of dragging
-    function handleDragStart(event, taskId) {
-      event.dataTransfer.setData("text/plain", taskId);
-    }
-
-    // Handle dropping a task
-    function handleDrop(event, targetColumn) {
-      const taskId = event.dataTransfer.getData("text/plain");
-      moveTask(taskId, targetColumn);
-    }
-
-    // Move a task between columns
-    window.moveTask = async (id, newColumn) => {
-      const task = await db.get(id);
-      if (task) {
-        task.value.column = newColumn;
-        await db.update(id, task.value);
-        // Remove the task from its current column
-        document.querySelector(`[data-id="${id}"]`)?.remove();
-        // Add the task to the new column
-        addTaskToColumn(newColumn, id, task.value.text);
-      }
-    };
-
-    // Delete a task
-    window.deleteTask = async (id) => {
-      const task = await db.get(id);
-      if (task) {
-        await db.remove(id); // Delete the task from the database
-        document.querySelector(`[data-id="${id}"]`)?.remove(); // Remove the task from the UI
-      }
-    };
-
-    // Initialize the board
+  
+    // Inicializar el tablero
     renderColumns();
-
-    // Listen for changes in the database from other tabs or browsers
-    db.on(() => loadTasks());
+    init();
   </script>
 </body>
 
