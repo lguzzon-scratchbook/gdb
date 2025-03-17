@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scroll Infinito</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #004a9a;
+    }
+
+    h3 {
+      position: relative;
+      /* white-space: nowrap; */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: #004a9a;
+      color: white;
+      position: relative;
+      padding: 0.5rem;
+      text-align: center;
+    }
+
+    /* Estilo para los posts */
+    #posts-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .post {
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      background: #FF9800;
+    }
+
+    .post:hover {
+      transform: scale(1.02);
+    }
+
+    .post img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      display: none;
+    }
+
+    #add-data-btn {
+      display: block;
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      position: fixed;
+      right: 0;
+      margin: 20px;
+      z-index: 10000;
+    }
+
+    #add-data-btn:hover {
+      background-color: #0056b3;
+    }
+
+    /* Estilos para la barra flotante */
+    #floating-bar {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #007bff;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      font-size: 1rem;
+      z-index: 1000;
+    }
+
+    /* Estilos para el modal */
+    #modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1001;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+    }
+
+    #modal-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    #close-modal {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    #close-modal:hover {
+      background-color: #cc0000;
+    }
+  </style>
+</head>
+
+<body>
+  <button id="add-data-btn">Agregar Datos de Ejemplo</button>
+  <div id="posts-container"></div>
+  <div id="loading" class="loading">Cargando más publicaciones...</div>
+
+  <!-- Barra flotante -->
+  <div id="floating-bar">Página: 1</div>
+
+  <!-- Modal -->
+  <div id="modal">
+    <div id="modal-content">
+      <button id="close-modal">X</button>
+      <h2 id="modal-title"></h2>
+      <p id="modal-body"></p>
+      <img id="modal-image" src="" alt="Imagen del post">
+    </div>
+  </div>
+
+  <script type="module">
+    import { GraphDB } from "../dist/index.js";
+
+    const db = new GraphDB('blog-db');
+    // db.clear()
+    let currentCursor = null; // Cursor para seguir la paginación
+    let isLoading = false; // Para evitar múltiples cargas simultáneas
+    let currentPage = 0; // Contador de página actual
+
+    // Función para cargar datos desde la base de datos
+    async function loadPosts(cursor) {
+      console.log("Cargando datos desde la base de datos...");
+      const options = {
+        $after: cursor, // Cursor para paginación
+        $limit: 20       // Límite de resultados por carga
+      };
+
+      try {
+        const results = await db.map({}, options);
+        if (results.length === 0) {
+          console.log("No hay más datos para cargar.");
+          return null; // No hay más datos
+        }
+
+        console.log("Datos cargados:", results);
+
+        // Actualizar el cursor para la próxima carga
+        currentCursor = results[results.length - 1].id;
+
+        // Mostrar los resultados en la página
+        const container = document.getElementById('posts-container');
+        results.forEach(post => {
+          const postElement = createPostElement(post);
+          container.appendChild(postElement);
+        });
+
+        // Actualizar la página actual
+        currentPage++;
+        updateFloatingBar();
+
+        return true; // Indica que se cargaron datos correctamente
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+        return null;
+      }
+    }
+
+    // Función para crear un elemento de post
+    function createPostElement(post) {
+      const postElement = document.createElement('div');
+      postElement.className = 'post';
+
+      // Crear el contenido del post
+      postElement.innerHTML = `
+        
+        <img src="${post.value.image}" alt="Imagen del post">
+        <h3>${post.value.title}</h3>
+      `;
+
+      // Abrir modal al hacer clic en el post
+      postElement.addEventListener('click', () => openModal(post));
+
+      return postElement;
+    }
+
+    // Función para abrir el modal
+    function openModal(post) {
+      const modal = document.getElementById('modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalBody = document.getElementById('modal-body');
+      const modalImage = document.getElementById('modal-image');
+
+      // Rellenar el contenido del modal
+      modalTitle.textContent = post.value.title;
+      modalBody.textContent = post.value.body;
+      modalImage.src = post.value.image;
+
+      // Mostrar el modal
+      modal.style.display = 'flex';
+    }
+
+    // Función para cerrar el modal
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.style.display = 'none';
+    }
+
+    // Función para manejar el scroll infinito
+    function handleScroll() {
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+      // Verificar si el usuario está cerca del final de la página
+      if (scrollTop + clientHeight >= scrollHeight - 10 && !isLoading) {
+        isLoading = true;
+        document.getElementById('loading').style.display = 'block';
+
+        // Cargar más datos
+        loadPosts(currentCursor).then(hasMoreData => {
+          isLoading = false;
+          document.getElementById('loading').style.display = 'none';
+
+          if (!hasMoreData) {
+            console.log("Se han cargado todos los datos disponibles.");
+            window.removeEventListener('scroll', handleScroll); // Detener el scroll infinito
+          }
+        });
+      }
+    }
+
+    // Función para agregar datos de ejemplo a la base de datos
+    async function addSampleData() {
+      console.log("Cargando datos de ejemplo desde JSONPlaceholder...");
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        const posts = await response.json();
+
+        console.log("Guardando datos en la base de datos...");
+        for (const post of posts) {
+          await db.put({
+            id: Date.now(), // post.id.toString(), // Asegúrate de que el ID sea una cadena
+            title: post.title,
+            body: post.body,
+            image: `https://picsum.photos/seed/${post.id}/600/400` // Imagen aleatoria basada en el ID
+          });
+        }
+
+        console.log("Datos guardados exitosamente.");
+        // alert("¡Datos de ejemplo agregados correctamente!");
+        handleScroll()
+      } catch (error) {
+        console.error("Error al agregar datos:", error);
+        alert("Ocurrió un error al agregar los datos.");
+      }
+    }
+
+    // Función para actualizar la barra flotante
+    function updateFloatingBar() {
+      const floatingBar = document.getElementById('floating-bar');
+      floatingBar.textContent = `Página: ${currentPage}`;
+    }
+
+    // Inicializar la aplicación
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log("Iniciando la aplicación...");
+
+      // Agregar listener al botón para cargar datos de ejemplo
+      document.getElementById('add-data-btn').addEventListener('click', addSampleData);
+
+      // Agregar listener para cerrar el modal
+      document.getElementById('close-modal').addEventListener('click', closeModal);
+      document.getElementById('modal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('modal')) {
+          closeModal();
+        }
+      });
+
+      // Cargar los primeros datos sin cursor
+      loadPosts(null).then(() => {
+        window.addEventListener('scroll', handleScroll); // Activar el scroll infinito
+      });
+    });
+  </script>
+</body>
+
+</html>
