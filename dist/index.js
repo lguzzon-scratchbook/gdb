@@ -12383,64 +12383,41 @@ var resolveConflict = (currentNode, incomingChange) => {
 };
 
 // lib/components/workerCode.js
-var workerCode_default = () => {
-  const openHandles = {};
-  const onMessage = async ({ data }) => {
-    const { type, name, content } = data;
-    if (!name) {
-      self.postMessage({ type: "error", message: "Invalid file name" });
-      return;
-    }
+var workerCode = () => {
+  const loadFile = async (fileName) => {
     try {
-      const root = await navigator.storage.getDirectory();
-      switch (type) {
-        case "save":
-          if (!content || openHandles[name]) {
-            self.postMessage({ type: "error", message: openHandles[name] ? "File already open" : "Invalid content" });
-            return;
-          }
-          openHandles[name] = true;
-          const saveHandle = await root.getFileHandle(name, { create: true });
-          const writer = await saveHandle.createSyncAccessHandle();
-          writer.write(content, { at: 0 });
-          writer.flush();
-          writer.close();
-          self.postMessage({ type: "saved", name });
-          break;
-        case "load":
-          if (openHandles[name]) {
-            self.postMessage({ type: "error", message: "File already open" });
-            return;
-          }
-          openHandles[name] = true;
-          const loadHandle = await root.getFileHandle(name, { create: false });
-          const access = await loadHandle.createSyncAccessHandle();
-          const fileSize = access.getSize();
-          const buffer = new ArrayBuffer(fileSize);
-          access.read(buffer, { at: 0 });
-          access.close();
-          self.postMessage({ type: "loaded", name, data: Array.from(new Uint8Array(buffer)) });
-          break;
-        case "delete":
-          await root.removeEntry(name);
-          self.postMessage({ type: "deleted", name });
-          break;
-        default:
-          self.postMessage({ type: "error", message: "Unknown operation" });
-      }
+      const accessHandle = await (await navigator.storage.getDirectory()).getFileHandle(fileName, { create: false }).then((fh) => fh.createSyncAccessHandle());
+      const buffer = new Uint8Array(accessHandle.getSize());
+      accessHandle.read(buffer, { at: 0 });
+      accessHandle.close();
+      return { type: "loaded", name: fileName, data: buffer };
     } catch (error) {
-      if (error.name === "NotFoundError") {
-        self.postMessage({ type: "loaded", name, data: [] });
-      } else {
-        console.error(`Error processing '${type}' for file '${name}':`, error.message);
-        self.postMessage({ type: "error", message: `Error processing '${type}' for file '${name}'` });
-      }
-    } finally {
-      delete openHandles[name];
+      return { type: "error", name: fileName, message: error.message || "File not found" };
     }
   };
-  self.addEventListener("message", onMessage);
+  const saveFile = async (fileName, content) => {
+    if (!(content instanceof Uint8Array))
+      throw new Error("Content must be a Uint8Array");
+    try {
+      const accessHandle = await (await navigator.storage.getDirectory()).getFileHandle(fileName, { create: true }).then((fh) => fh.createSyncAccessHandle());
+      accessHandle.write(content, { at: 0 });
+      accessHandle.truncate(content.byteLength);
+      accessHandle.close();
+      return { type: "saved", name: fileName };
+    } catch (error) {
+      return { type: "error", name: fileName, message: error.message || "Error saving the file" };
+    }
+  };
+  self.onmessage = async ({ data: { type, name, content } }) => {
+    try {
+      const result = type === "load" ? await loadFile(name) : type === "save" ? await saveFile(name, content) : { type: "error", message: "Unrecognized action" };
+      self.postMessage(result);
+    } catch (error) {
+      self.postMessage({ type: "error", message: error.message || "Unexpected error" });
+    }
+  };
 };
+var workerCode_default = workerCode;
 
 // lib/components/gdb.js
 async function checkOPFS() {
@@ -12492,7 +12469,6 @@ class GraphDB {
     this.name = name;
     this.password = password;
     this.graph = new Graph;
-    this.index = {};
     this.eventListeners = [];
     this.localHash;
     this.localTime = Date.now();
@@ -12510,6 +12486,14 @@ class GraphDB {
     });
     window.addEventListener("offline", async () => {
       console.log("\u274C Disconnected from the network.");
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        console.log("La pesta\xF1a es visible nuevamente.");
+        this.sendData([{ type: "sync", hash: this.localHash, ts: this.localTime }]);
+      } else if (document.visibilityState === "hidden") {
+        console.log("La pesta\xF1a ya no es visible.");
+      }
     });
     checkOPFS();
     room2.onPeerJoin(async (peerId) => {
@@ -12538,7 +12522,7 @@ class GraphDB {
       this.worker = new Worker(url);
       URL.revokeObjectURL(url);
       this.worker.addEventListener("message", (event) => {
-        console.log("Worker message:", event.data);
+        console.log("Worker message:", `${event.data.name} ${event.data.type}`);
       });
       console.log("Worker inicializado correctamente.");
     } catch (error) {
@@ -12558,6 +12542,10 @@ class GraphDB {
     } else {
       this.eventListeners = [];
     }
+  }
+  async getAllNodes() {
+    await this.ready;
+    return this.graph.getAllNodes();
   }
   async generateHash(value) {
     const encoder3 = new TextEncoder;
@@ -12585,22 +12573,12 @@ class GraphDB {
           this.worker.addEventListener("message", handleMessage);
         });
       };
-      const [graphContent, indexContent] = await Promise.all([
-        loadFileFromWorker(`${this.name}_graph.msgpack`).catch(() => new Uint8Array),
-        loadFileFromWorker(`${this.name}_index.msgpack`).catch(() => new Uint8Array)
-      ]);
+      const graphContent = await loadFileFromWorker(`${this.name}_graph.msgpack`).catch(() => new Uint8Array);
       if (graphContent.byteLength > 0) {
         this.graph.deserialize(graphContent);
       } else {
         console.warn("The file '_graph.msgpack' is empty or could not be loaded.");
       }
-      if (indexContent.byteLength > 0) {
-        this.index = decode(indexContent);
-      } else {
-        console.warn("The file '_index.msgpack' is empty or could not be loaded.");
-      }
-      this.localHash = await this.generateGraphHash();
-      this.localTime = Date.now();
       console.log(`Graph loaded from OPFS: [ ${this.graph.getAllNodes().length} nodes ]`);
     } catch (error) {
       console.error("General error loading the graph from OPFS:", error.message);
@@ -12609,7 +12587,6 @@ class GraphDB {
   async saveGraphToOPFS() {
     try {
       const serializedGraph = this.graph.serialize();
-      const serializedIndex = encode(this.index);
       const saveFile = (fileName, content) => new Promise((resolve, reject) => {
         this.worker.postMessage({ type: "save", name: fileName, content });
         const handleMessage = ({ data }) => {
@@ -12623,10 +12600,7 @@ class GraphDB {
         };
         this.worker.addEventListener("message", handleMessage);
       });
-      await Promise.all([
-        saveFile(`${this.name}_graph.msgpack`, serializedGraph),
-        saveFile(`${this.name}_index.msgpack`, serializedIndex)
-      ]);
+      await saveFile(`${this.name}_graph.msgpack`, serializedGraph);
       this.localHash = await this.generateGraphHash();
       this.localTime = Date.now();
       this.channel.postMessage("update");
@@ -12652,20 +12626,8 @@ class GraphDB {
       if (resolution.resolved) {
         node.value = resolution.value;
         node.timestamp = resolution.timestamp;
-        const encodedOldValue = encode(node.value);
-        if (this.index[encodedOldValue]) {
-          this.index[encodedOldValue] = this.index[encodedOldValue].filter((nodeId) => nodeId !== id);
-          if (this.index[encodedOldValue].length === 0) {
-            delete this.index[encodedOldValue];
-          }
-        }
       }
     }
-    const encodedValue = encode(value);
-    if (!this.index[encodedValue]) {
-      this.index[encodedValue] = [];
-    }
-    this.index[encodedValue].push(id);
     await this.saveGraphToOPFS();
     if (!node) {
       this.sendData([{ type: "insert", id, value, timestamp: Date.now() }]);
@@ -12675,53 +12637,179 @@ class GraphDB {
     this.emit();
     return id;
   }
-  async find(value) {
+  async get(idOrQuery, callback = null) {
     await this.ready;
-    const encodedValue = encode(value);
-    const ids = this.index[encodedValue] || [];
-    return ids.map((id) => this.graph.get(id)).reduce((latest, current) => current.timestamp > latest.timestamp ? current : latest, null);
-  }
-  async get(id, callback = null) {
-    await this.ready;
-    const node = this.graph.get(id);
-    if (!node) {
-      console.error(`Nodo con ID '${id}' no encontrado.`);
-      return null;
+    let resultNode = null;
+    let isQuery = false;
+    if (typeof idOrQuery === "object" && idOrQuery !== null) {
+      isQuery = true;
+      const allNodes = this.graph.getAllNodes();
+      const matches = allNodes.filter((node) => {
+        return Object.entries(idOrQuery).every(([key, value]) => {
+          return JSON.stringify(node.value[key]) === JSON.stringify(value);
+        });
+      });
+      resultNode = matches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
+    } else {
+      const id = idOrQuery;
+      resultNode = this.graph.get(id);
+      if (!resultNode) {
+        console.error(`Node with ID '${id}' not found.`);
+        return null;
+      }
     }
     if (!callback) {
-      return node;
+      return resultNode;
     }
-    callback(node);
+    callback(resultNode);
     const listener = (nodes) => {
-      const updatedNode = nodes.find((n) => n.id === id);
-      if (updatedNode) {
-        callback(updatedNode);
+      if (isQuery) {
+        const newMatches = nodes.filter((node) => {
+          return Object.entries(idOrQuery).every(([key, value]) => {
+            return JSON.stringify(node.value[key]) === JSON.stringify(value);
+          });
+        });
+        const newResult = newMatches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
+        if (JSON.stringify(newResult) !== JSON.stringify(resultNode)) {
+          resultNode = newResult;
+          callback(newResult);
+        }
+      } else {
+        const updatedNode = nodes.find((n) => n.id === idOrQuery);
+        if (updatedNode)
+          callback(updatedNode);
       }
     };
     this.eventListeners.push(listener);
   }
-  async map(callback, realtime = false, iterable = true) {
+  async map(...args) {
     await this.ready;
-    if (iterable) {
-      const iterateNodes = (nodes) => {
-        nodes.forEach((node) => {
-          callback(node.id, node.value, node.edges, node.timestamp);
-        });
-      };
-      iterateNodes(this.graph.getAllNodes());
-      if (realtime) {
-        this.eventListeners.push(() => {
-          iterateNodes(this.graph.getAllNodes());
-        });
+    const operators = {
+      $eq: (a2, b2) => a2 === b2,
+      $ne: (a2, b2) => a2 !== b2,
+      $gt: (a2, b2) => a2 > b2,
+      $gte: (a2, b2) => a2 >= b2,
+      $lt: (a2, b2) => a2 < b2,
+      $lte: (a2, b2) => a2 <= b2,
+      $in: (a2, b2) => Array.isArray(b2) && b2.includes(a2),
+      $between: (a2, [min, max]) => a2 >= min && a2 <= max,
+      $exists: (val, shouldExist) => shouldExist ? val !== undefined : val === undefined,
+      $text: (text, search) => text?.toLowerCase().includes(search?.toLowerCase()),
+      $and: (node, conditions) => conditions.every((cond) => this.filterNode(node, cond)),
+      $or: (node, conditions) => conditions.some((cond) => this.filterNode(node, cond)),
+      $not: (node, condition) => !this.filterNode(node, condition)
+    };
+    const defaultOptions = {
+      realtime: false,
+      field: null,
+      order: "asc",
+      $limit: null,
+      $after: null,
+      $before: null
+    };
+    let query = {};
+    let options = { ...defaultOptions };
+    let callback = null;
+    args.forEach((arg) => {
+      if (typeof arg === "function") {
+        callback = arg;
+      } else if (arg && typeof arg === "object") {
+        const isOptionsObject = Object.keys(arg).some((k) => Object.hasOwnProperty.call(defaultOptions, k));
+        isOptionsObject ? Object.assign(options, arg) : Object.assign(query, arg);
       }
-    } else {
-      callback(this.graph.getAllNodes());
-      if (realtime) {
-        this.eventListeners.push(() => {
-          callback(this.graph.getAllNodes());
+    });
+    const filterNode = (node, currentQuery = query) => {
+      return Object.entries(currentQuery).every(([key, condition]) => {
+        if (key.startsWith("$")) {
+          if (!operators[key])
+            throw new Error(`Unsupported operator: ${key}`);
+          return operators[key](node, condition);
+        }
+        const nodeValue = node.value[key];
+        if (typeof condition !== "object" || condition === null) {
+          return operators.$eq(nodeValue, condition);
+        }
+        return Object.entries(condition).every(([op, value]) => {
+          if (!operators[op])
+            throw new Error(`Unsupported operator: ${op}`);
+          if (op === "$between" && typeof value?.[0] === "string") {
+            const min = new Date(value[0]);
+            const max = new Date(value[1]);
+            const nodeDate = nodeValue instanceof Date ? nodeValue : new Date(nodeValue);
+            return !isNaN(nodeDate) && operators.$between(nodeDate, [min, max]);
+          }
+          return operators[op](nodeValue, value);
         });
+      });
+    };
+    const sorter = (a2, b2) => {
+      const { field, order } = options;
+      const dir = order === "asc" ? 1 : -1;
+      const aVal = a2.value[field];
+      const bVal = b2.value[field];
+      if (aVal === undefined)
+        return 1 * dir;
+      if (bVal === undefined)
+        return -1 * dir;
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return aVal.localeCompare(bVal) * dir;
+      }
+      return (aVal > bVal ? 1 : -1) * dir;
+    };
+    const processNodes = (nodes) => {
+      const filtered = Object.values(nodes).filter((node) => filterNode(node));
+      const sorted = options.field ? filtered.sort(sorter) : filtered;
+      let cursorProcessed = sorted;
+      const cursor = options.$after || options.$before;
+      if (cursor) {
+        const cursorIndex = sorted.findIndex((n) => n.id === cursor);
+        if (cursorIndex === -1) {
+          if (options.realtime)
+            return [];
+          throw new Error(`Cursor not found: ${cursor}`);
+        }
+        cursorProcessed = options.$after ? sorted.slice(cursorIndex + 1) : sorted.slice(0, cursorIndex);
+      }
+      return options.$limit ? cursorProcessed.slice(0, options.$limit) : cursorProcessed;
+    };
+    let currentResults = processNodes(this.graph.nodes);
+    let currentHandler = null;
+    const notifyChanges = (newResults) => {
+      const changes = {
+        added: newResults.filter((n) => !currentResults.some((c) => c.id === n.id)),
+        removed: currentResults.filter((c) => !newResults.some((n) => n.id === c.id))
+      };
+      changes.removed.forEach((n) => callback(n.id, null, null, null, "removed"));
+      changes.added.forEach((n) => callback(n.id, n.value, n.edges, n.timestamp, "added"));
+    };
+    if (callback) {
+      const isIterableMode = callback.length > 1;
+      if (isIterableMode) {
+        currentResults.forEach((node) => {
+          callback(node.id, node.value, node.edges, node.timestamp, "initial");
+        });
+      } else {
+        callback(currentResults);
+      }
+      if (options.realtime) {
+        currentHandler = (newNodes) => {
+          const newResults = processNodes(newNodes);
+          if (JSON.stringify(newResults) !== JSON.stringify(currentResults)) {
+            if (isIterableMode) {
+              notifyChanges(newResults);
+            } else {
+              callback(newResults);
+            }
+            currentResults = newResults;
+          }
+        };
+        this.on("update", currentHandler);
       }
     }
+    return options.realtime ? {
+      results: currentResults,
+      unsubscribe: () => this.off("update", currentHandler)
+    } : currentResults;
   }
   async remove(id) {
     await this.ready;
@@ -12729,12 +12817,6 @@ class GraphDB {
     if (!node)
       return console.error(`Nodo con ID '${id}' no encontrado.`);
     delete this.graph.nodes[id];
-    const encodedValue = encode(node.value);
-    if (this.index[encodedValue]) {
-      this.index[encodedValue] = this.index[encodedValue].filter((nodeId) => nodeId !== id);
-      if (this.index[encodedValue].length === 0)
-        delete this.index[encodedValue];
-    }
     for (const otherNode of Object.values(this.graph.nodes)) {
       otherNode.edges = otherNode.edges.filter((edgeId) => edgeId !== id);
     }
@@ -12745,13 +12827,11 @@ class GraphDB {
   async clear() {
     await this.ready;
     this.graph.nodes = {};
-    this.index = {};
     const rootDirectory = await navigator.storage.getDirectory();
     try {
       await rootDirectory.removeEntry(`${this.name}_graph.msgpack`);
-      await rootDirectory.removeEntry(`${this.name}_index.msgpack`);
     } catch (error) {
-      console.warn(`Error al eliminar archivos: ${error.message}`);
+      console.warn(`Error deleting _graph.msgpack: ${error.message}`);
     }
     console.log("All data has been deleted.");
   }
