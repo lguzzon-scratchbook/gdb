@@ -98,7 +98,7 @@
     import { GraphDB } from "../dist/index.js"; // Import the GraphDB library
 
     const db = new GraphDB('todoList'); // Initialize a GraphDB instance with the namespace 'todoList'
-
+    // db.clear()
     // Local state to track rendered nodes
     const renderedNodes = {};
 
@@ -269,9 +269,27 @@
     }
 
     // Subscribe to real-time changes using map
-    db.map((id, value) => {
+    const { unsubscribe } = await db.map((id, value) => {
       renderTask(id, value.text, value.completed); // Render each task stored in the database
-    }, true, true);
+    });
+
+    // setTimeout(() => {
+    //   unsubscribe()
+    // }, 8000);
+
+    // // Todas estas llamadas son válidas
+    // db.map((id, value) => { });                       // callback + realtime auto
+    // db.map({ realtime: true }, (id, value) => { });    // opciones primero
+    // db.map((id, value) => { }, { query: { text: 'pedro' }, field: 'name', order: 'asc' });     // callback primero
+    // const { unsubscribe } = await db.map((id, value) => {
+    //   console.log('Cambio:', id, value);
+    // });
+
+    // console.log(results)
+
+    // db.map((id, value) => {
+    //   console.log(value.text)
+    // })
 
     // Add a task when pressing Enter in the input field
     document.getElementById('taskInput').addEventListener('keypress', (event) => {
