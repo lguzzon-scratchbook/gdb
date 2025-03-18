@@ -15,7 +15,7 @@ Graph database with Role-Based Access Control (RBAC), P2P synchronization, and l
 
 ![Project Status](https://img.shields.io/badge/state-development-green)
 
-
+<!-- [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/estebanrfp/gdb&build=dist) -->
 
 ![NPM Unpacked Size (with version)](https://img.shields.io/npm/unpacked-size/gdb-p2p/latest)
 
@@ -105,7 +105,7 @@ For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrf
 
 We’ve created a collection of interactive examples to help you understand how GDB works in real-world scenarios. These examples cover everything from basic setup to advanced features like RBAC and P2P synchronization.
 
-👉 [Explore Examples on CodePen](https://codepen.io/collection/ZQQeMB)
+👉 [Explore Examples](https://estebanrfp.github.io/gdb/dist/)
 
 ### **Internal Dependencies**
 
