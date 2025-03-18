@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>GDB Browser Test</title>
     <style>
@@ -15,11 +16,11 @@
             background: white;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
 
-        input, button {
+        input, button, select {
             padding: 10px;
             margin: 5px;
             border: 1px solid #ddd;
@@ -54,74 +55,125 @@
             justify-content: space-between;
             align-items: center;
         }
-
-        .color-box {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
+        
+        .sort-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
         }
     </style>
 </head>
+
 <body>
     <div class="panel">
         <h2>➕ Insert Item</h2>
-        <input type="text" id="name" placeholder="Name">
-        <input type="number" id="age" placeholder="Age">
-        <input type="color" id="color">
+        <input type="text" id="name" placeholder="Name (required)" required>
+        <input type="number" id="age" placeholder="Age (required)" required>
+        <input type="text" id="country" placeholder="Country (optional)" required>
         <button onclick="insertItem()">Insert</button>
     </div>
 
     <div class="panel">
-        <h2>🔍 Search by Name</h2>
-        <input type="text" id="searchInput" placeholder="Name to search">
-        <button onclick="searchItem()">Search</button>
+        <h2>🔍 Search by Criteria</h2>
+        <input type="text" id="searchName" placeholder="Name (optional)">
+        <input type="text" id="searchCountry" placeholder="Country (optional)">
+        <input type="number" id="minAge" placeholder="Min Age (optional)">
+        <input type="number" id="maxAge" placeholder="Max Age (optional)">
+        
+        <div class="sort-container">
+            <label>Sort by Age:</label>
+            <select id="sortOrder">
+                <option value="none">None</option>
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </div>
+        
+        <button onclick="searchByCriteria()">Search</button>
         <div id="results"></div>
     </div>
 
     <script type="module">
         import { GraphDB } from "../dist/index.js";
-        
-        const db = new GraphDB('test-db');
+
+        const db = new GraphDB('search-db');
 
         // Function to insert an item into the database
         window.insertItem = async () => {
             const name = document.getElementById('name').value;
-            const age = document.getElementById('age').value;
-            const color = document.getElementById('color').value;
-            
-            if (!name || !age || !color) return;
-            
-            const person = { 
-                name, 
-                age: parseInt(age), 
-                color 
+            const age = parseInt(document.getElementById('age').value);
+            const country = document.getElementById('country').value || "Unknown";
+
+            if (!name || !age) return;
+
+            const person = {
+                name,
+                age,
+                country
             };
-            
-            await db.put(person); // Save the person object in the database
-            document.getElementById('name').value = ''; // Clear the name input
-            document.getElementById('age').value = ''; // Clear the age input
-            document.getElementById('color').value = '#000000'; // Reset the color picker
+
+            await db.put(person);
+            document.getElementById('name').value = '';
+            document.getElementById('age').value = '';
+            document.getElementById('country').value = '';
         };
 
-        // Function to search for an item by name
-        window.searchItem = async () => {
-            const searchName = document.getElementById('searchInput').value;
-            const result = await db.find({ name: searchName }); // Query the database
-            
+        // Function to search for items by criteria
+        window.searchByCriteria = async () => {
+            const searchName = document.getElementById('searchName').value || undefined;
+            const searchCountry = document.getElementById('searchCountry').value || undefined;
+            const minAge = parseInt(document.getElementById('minAge').value) || undefined;
+            const maxAge = parseInt(document.getElementById('maxAge').value) || undefined;
+            const sortOrder = document.getElementById('sortOrder').value;
+
+            // Build the query dynamically
+            const query = {};
+
+            if (searchName) {
+                query.name = { $eq: searchName };
+            }
+
+            if (searchCountry) {
+                query.country = { $eq: searchCountry };
+            }
+
+            if (!isNaN(minAge) && !isNaN(maxAge)) {
+                query.age = { $between: [minAge, maxAge] };
+            } else if (!isNaN(minAge)) {
+                query.age = { $gte: minAge };
+            } else if (!isNaN(maxAge)) {
+                query.age = { $lte: maxAge };
+            }
+
+            let { results } = await db.map({query: query});
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '';
-            
-            if (result) {
-                const item = document.createElement('div');
-                item.className = 'result-item';
-                item.innerHTML = `
-                    <div>
-                        <strong>${result.value.name}</strong><br>
-                        Age: ${result.value.age}
-                    </div>
-                    <div class="color-box" style="background: ${result.value.color};"></div>
-                `;
-                resultsDiv.appendChild(item); // Display the found item
+
+            // Apply sorting
+            if (sortOrder !== 'none') {
+                results = results.sort((a, b) => {
+                    if (sortOrder === 'asc') {
+                        return a.value.age - b.value.age;
+                    } else {
+                        return b.value.age - a.value.age;
+                    }
+                });
+            }
+
+            if (results.length > 0) {
+                results.forEach(result => {
+                    const item = document.createElement('div');
+                    item.className = 'result-item';
+                    item.innerHTML = `
+                        <div>
+                            <strong>${result.value.name}</strong><br>
+                            Age: ${result.value.age}<br>
+                            Country: ${result.value.country}
+                        </div>
+                    `;
+                    resultsDiv.appendChild(item);
+                });
             } else {
                 resultsDiv.innerHTML = '<div class="result-item">No results found</div>';
             }
