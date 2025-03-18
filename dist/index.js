@@ -12473,9 +12473,7 @@ class GraphDB {
     this.localHash;
     this.localTime = Date.now();
     this.initWorker();
-    this.ready = (async () => {
-      await this.loadGraphFromOPFS();
-    })();
+    this.ready = this.loadGraphFromOPFS();
     const key = `graph-sync-room-${this.name}`;
     const roomConfig = { appId: "1234", ...this.password && { password: this.password } };
     const room2 = joinRoom(roomConfig, key);
@@ -12547,14 +12545,17 @@ class GraphDB {
     await this.ready;
     return this.graph.getAllNodes();
   }
-  async generateHash(value) {
-    const encoder3 = new TextEncoder;
-    const hashBuffer = await crypto.subtle.digest("SHA-256", encoder3.encode(value));
-    return `0x${Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  async generateHash() {
+    return crypto.randomUUID();
+  }
+  async hashValue(value) {
+    const data = new TextEncoder().encode(value);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
   }
   async generateGraphHash() {
     const serializedGraph = this.graph.serialize();
-    return await this.generateHash(serializedGraph);
+    return await this.hashValue(serializedGraph);
   }
   async loadGraphFromOPFS() {
     try {
@@ -12586,6 +12587,7 @@ class GraphDB {
   }
   async saveGraphToOPFS() {
     try {
+      console.log("graph hash: ", await this.generateGraphHash());
       const serializedGraph = this.graph.serialize();
       const saveFile = (fileName, content) => new Promise((resolve, reject) => {
         this.worker.postMessage({ type: "save", name: fileName, content });
@@ -12655,32 +12657,40 @@ class GraphDB {
       resultNode = this.graph.get(id);
       if (!resultNode) {
         console.error(`Node with ID '${id}' not found.`);
-        return null;
+        return { result: null };
       }
     }
     if (!callback) {
-      return resultNode;
+      return { result: resultNode };
     }
     callback(resultNode);
     const listener = (nodes) => {
+      let newResult = null;
       if (isQuery) {
         const newMatches = nodes.filter((node) => {
           return Object.entries(idOrQuery).every(([key, value]) => {
             return JSON.stringify(node.value[key]) === JSON.stringify(value);
           });
         });
-        const newResult = newMatches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
-        if (JSON.stringify(newResult) !== JSON.stringify(resultNode)) {
-          resultNode = newResult;
-          callback(newResult);
-        }
+        newResult = newMatches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
       } else {
-        const updatedNode = nodes.find((n) => n.id === idOrQuery);
-        if (updatedNode)
-          callback(updatedNode);
+        newResult = nodes.find((n) => n.id === idOrQuery);
+      }
+      if (newResult && JSON.stringify(newResult) !== JSON.stringify(resultNode)) {
+        resultNode = newResult;
+        callback(newResult);
       }
     };
     this.eventListeners.push(listener);
+    return {
+      result: resultNode,
+      ...callback && { unsubscribe: () => {
+        const index = this.eventListeners.indexOf(listener);
+        if (index > -1) {
+          this.eventListeners.splice(index, 1);
+        }
+      } }
+    };
   }
   async map(...args) {
     await this.ready;
