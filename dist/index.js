@@ -12684,6 +12684,31 @@ class GraphDB {
   }
   async map(...args) {
     await this.ready;
+    const defaultOptions = {
+      realtime: false,
+      query: {},
+      field: null,
+      order: "asc",
+      $limit: null,
+      $after: null,
+      $before: null,
+      strictMode: false
+    };
+    let options = { ...defaultOptions };
+    let callback = null;
+    let explicitRealtime = false;
+    args.forEach((arg) => {
+      if (typeof arg === "function") {
+        callback = arg;
+      } else if (arg && typeof arg === "object") {
+        if ("realtime" in arg)
+          explicitRealtime = true;
+        Object.assign(options, arg);
+      }
+    });
+    if (callback && !explicitRealtime) {
+      options.realtime = true;
+    }
     const operators = {
       $eq: (a2, b2) => a2 === b2,
       $ne: (a2, b2) => a2 !== b2,
@@ -12694,122 +12719,140 @@ class GraphDB {
       $in: (a2, b2) => Array.isArray(b2) && b2.includes(a2),
       $between: (a2, [min, max]) => a2 >= min && a2 <= max,
       $exists: (val, shouldExist) => shouldExist ? val !== undefined : val === undefined,
-      $text: (text, search) => text?.toLowerCase().includes(search?.toLowerCase()),
-      $and: (node, conditions) => conditions.every((cond) => this.filterNode(node, cond)),
-      $or: (node, conditions) => conditions.some((cond) => this.filterNode(node, cond)),
-      $not: (node, condition) => !this.filterNode(node, condition)
-    };
-    const defaultOptions = {
-      realtime: false,
-      field: null,
-      order: "asc",
-      $limit: null,
-      $after: null,
-      $before: null
-    };
-    let query = {};
-    let options = { ...defaultOptions };
-    let callback = null;
-    args.forEach((arg) => {
-      if (typeof arg === "function") {
-        callback = arg;
-      } else if (arg && typeof arg === "object") {
-        const isOptionsObject = Object.keys(arg).some((k) => Object.hasOwnProperty.call(defaultOptions, k));
-        isOptionsObject ? Object.assign(options, arg) : Object.assign(query, arg);
+      $text: {
+        global: (nodeValue, search) => {
+          const normalize = (str) => String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^\w\s]/g, "");
+          const searchNormalized = normalize(search);
+          return Object.values(nodeValue).some((value) => {
+            if (typeof value === "object")
+              return this.fieldSearch(value, searchNormalized);
+            return normalize(value).includes(searchNormalized);
+          });
+        },
+        field: (fieldValue, search) => {
+          const normalize = (str) => String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^\w\s]/g, "");
+          return Array.isArray(fieldValue) ? fieldValue.some((v2) => normalize(v2).includes(normalize(search))) : normalize(fieldValue).includes(normalize(search));
+        }
+      },
+      $and: (node, conditions, ctx) => conditions.every((cond) => {
+        const subFilter = ctx.createFilter(cond);
+        return subFilter(node);
+      }),
+      $or: (node, conditions, ctx) => conditions.some((cond) => {
+        const subFilter = ctx.createFilter(cond);
+        return subFilter(node);
+      }),
+      $not: (node, condition, ctx) => {
+        const subFilter = ctx.createFilter(condition);
+        return !subFilter(node);
       }
-    });
-    const filterNode = (node, currentQuery = query) => {
-      return Object.entries(currentQuery).every(([key, condition]) => {
-        if (key.startsWith("$")) {
-          if (!operators[key])
-            throw new Error(`Unsupported operator: ${key}`);
-          return operators[key](node, condition);
-        }
-        const nodeValue = node.value[key];
-        if (typeof condition !== "object" || condition === null) {
-          return operators.$eq(nodeValue, condition);
-        }
-        return Object.entries(condition).every(([op, value]) => {
-          if (!operators[op])
-            throw new Error(`Unsupported operator: ${op}`);
-          if (op === "$between" && typeof value?.[0] === "string") {
-            const min = new Date(value[0]);
-            const max = new Date(value[1]);
-            const nodeDate = nodeValue instanceof Date ? nodeValue : new Date(nodeValue);
-            return !isNaN(nodeDate) && operators.$between(nodeDate, [min, max]);
+    };
+    const getNestedValue = (obj, path) => {
+      try {
+        return path.split(".").reduce((acc, key) => {
+          if (acc && typeof acc === "object" && (key in acc))
+            return acc[key];
+          if (options.strictMode)
+            throw new Error(`Campo no encontrado: ${path}`);
+          return;
+        }, obj);
+      } catch (error) {
+        if (options.strictMode)
+          throw error;
+        return;
+      }
+    };
+    const createFilter = (currentQuery) => {
+      const filterNode = (node) => {
+        return Object.entries(currentQuery).every(([key, condition]) => {
+          if (key.startsWith("$")) {
+            return operators[key](node, condition, {
+              filterNode,
+              createFilter
+            });
           }
-          return operators[op](nodeValue, value);
+          const nodeValue = getNestedValue(node.value, key);
+          if (typeof condition !== "object" || condition === null) {
+            return operators.$eq(nodeValue, condition);
+          }
+          return Object.entries(condition).every(([op, value]) => {
+            if (op === "$text") {
+              return operators.$text.field(nodeValue, value);
+            }
+            if (op === "$between" && value.every((v2) => v2 instanceof Date)) {
+              const nodeDate = new Date(nodeValue);
+              return operators.$between(nodeDate, value);
+            }
+            return operators[op]?.(nodeValue, value) ?? false;
+          });
         });
-      });
+      };
+      return filterNode;
     };
-    const sorter = (a2, b2) => {
-      const { field, order } = options;
-      const dir = order === "asc" ? 1 : -1;
-      const aVal = a2.value[field];
-      const bVal = b2.value[field];
-      if (aVal === undefined)
-        return 1 * dir;
-      if (bVal === undefined)
-        return -1 * dir;
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        return aVal.localeCompare(bVal) * dir;
-      }
-      return (aVal > bVal ? 1 : -1) * dir;
-    };
+    const filter = createFilter(options.query);
     const processNodes = (nodes) => {
-      const filtered = Object.values(nodes).filter((node) => filterNode(node));
-      const sorted = options.field ? filtered.sort(sorter) : filtered;
-      let cursorProcessed = sorted;
-      const cursor = options.$after || options.$before;
-      if (cursor) {
-        const cursorIndex = sorted.findIndex((n) => n.id === cursor);
-        if (cursorIndex === -1) {
-          if (options.realtime)
-            return [];
-          throw new Error(`Cursor not found: ${cursor}`);
-        }
-        cursorProcessed = options.$after ? sorted.slice(cursorIndex + 1) : sorted.slice(0, cursorIndex);
+      let results = Object.values(nodes).filter(filter);
+      if (options.field) {
+        results.sort((a2, b2) => {
+          const aVal = getNestedValue(a2.value, options.field);
+          const bVal = getNestedValue(b2.value, options.field);
+          const dir = options.order === "asc" ? 1 : -1;
+          if (typeof aVal === "string" && typeof bVal === "string") {
+            return aVal.localeCompare(bVal) * dir;
+          }
+          return ((aVal ?? 0) - (bVal ?? 0)) * dir;
+        });
       }
-      return options.$limit ? cursorProcessed.slice(0, options.$limit) : cursorProcessed;
+      if (options.$after) {
+        const index = results.findIndex((n) => n.id === options.$after);
+        results = index >= 0 ? results.slice(index + 1) : [];
+      }
+      if (options.$before) {
+        const index = results.findIndex((n) => n.id === options.$before);
+        results = index >= 0 ? results.slice(0, index) : [];
+      }
+      return options.$limit ? results.slice(0, options.$limit) : results;
     };
     let currentResults = processNodes(this.graph.nodes);
-    let currentHandler = null;
+    let handler = null;
     const notifyChanges = (newResults) => {
-      const changes = {
-        added: newResults.filter((n) => !currentResults.some((c) => c.id === n.id)),
-        removed: currentResults.filter((c) => !newResults.some((n) => n.id === c.id))
-      };
-      changes.removed.forEach((n) => callback(n.id, null, null, null, "removed"));
-      changes.added.forEach((n) => callback(n.id, n.value, n.edges, n.timestamp, "added"));
+      const added = newResults.filter((n) => !currentResults.some((c) => c.id === n.id));
+      const removed = currentResults.filter((c) => !newResults.some((n) => n.id === c.id));
+      const updated = newResults.filter((n) => {
+        const oldNode = currentResults.find((c) => c.id === n.id);
+        return oldNode && JSON.stringify(n.value) !== JSON.stringify(oldNode.value);
+      });
+      if (callback) {
+        if (callback.length > 1) {
+          added.forEach((n) => callback(n.id, n.value, "added"));
+          removed.forEach((n) => callback(n.id, null, "removed"));
+          updated.forEach((n) => callback(n.id, n.value, "updated"));
+        } else {
+          callback(newResults);
+        }
+      }
     };
     if (callback) {
-      const isIterableMode = callback.length > 1;
-      if (isIterableMode) {
-        currentResults.forEach((node) => {
-          callback(node.id, node.value, node.edges, node.timestamp, "initial");
-        });
+      if (callback.length > 1) {
+        currentResults.forEach((n) => callback(n.id, n.value, "initial"));
       } else {
         callback(currentResults);
       }
       if (options.realtime) {
-        currentHandler = (newNodes) => {
+        handler = (newNodes) => {
           const newResults = processNodes(newNodes);
           if (JSON.stringify(newResults) !== JSON.stringify(currentResults)) {
-            if (isIterableMode) {
-              notifyChanges(newResults);
-            } else {
-              callback(newResults);
-            }
+            notifyChanges(newResults);
             currentResults = newResults;
           }
         };
-        this.on("update", currentHandler);
+        this.on(handler);
       }
     }
-    return options.realtime ? {
+    return {
       results: currentResults,
-      unsubscribe: () => this.off("update", currentHandler)
-    } : currentResults;
+      ...options.realtime && { unsubscribe: () => handler && this.off(handler) }
+    };
   }
   async remove(id) {
     await this.ready;
