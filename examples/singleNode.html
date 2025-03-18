@@ -66,8 +66,6 @@
 
     // Function to load the initial value
     async function loadInitialValue() {
-      await db.ready; // Wait for the database to be ready
-      // db.clear()
       await db.get(recordId, (node)=>{
         if (node) {
           document.getElementById('currentValue').textContent = node.value;
@@ -76,7 +74,7 @@
         }
       });
     }
-
+    
     // Load the initial value on startup
     loadInitialValue();
 
