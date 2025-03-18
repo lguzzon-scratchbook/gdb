@@ -12,7 +12,7 @@
       padding: 20px;
       background: #004a9a;
     }
-
+    
     h3 {
       position: relative;
       /* white-space: nowrap; */
@@ -167,13 +167,13 @@
     // Function to load data from the database
     async function loadPosts(cursor) {
       console.log("Loading data from the database...");
-      const options = {
+      const options = { 
         $after: cursor, // Cursor for pagination
         $limit: 20       // Limit of results per load
       };
 
       try {
-        const results = await db.map({}, options);
+        const { results } = await db.map(options);
         if (results.length === 0) {
           console.log("No more data to load.");
           return null; // No more data
