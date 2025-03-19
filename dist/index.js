@@ -12684,12 +12684,14 @@ class GraphDB {
     this.eventListeners.push(listener);
     return {
       result: resultNode,
-      ...callback && { unsubscribe: () => {
-        const index = this.eventListeners.indexOf(listener);
-        if (index > -1) {
-          this.eventListeners.splice(index, 1);
+      ...callback && {
+        unsubscribe: () => {
+          const index = this.eventListeners.indexOf(listener);
+          if (index > -1) {
+            this.eventListeners.splice(index, 1);
+          }
         }
-      } }
+      }
     };
   }
   async map(...args) {
@@ -12744,6 +12746,13 @@ class GraphDB {
           return Array.isArray(fieldValue) ? fieldValue.some((v2) => normalize(v2).includes(normalize(search))) : normalize(fieldValue).includes(normalize(search));
         }
       },
+      $like: (nodeValue, pattern) => {
+        if (typeof nodeValue !== "string" || typeof pattern !== "string")
+          return false;
+        const regex = new RegExp(`^${pattern.replace(/%/g, ".*").replace(/_/g, ".")}\$`, "i");
+        return regex.test(nodeValue);
+      },
+      $regex: (nodeValue, query) => typeof nodeValue === "string" && new RegExp(query.$regex || query, "i").test(nodeValue),
       $and: (node, conditions, ctx) => conditions.every((cond) => {
         const subFilter = ctx.createFilter(cond);
         return subFilter(node);
