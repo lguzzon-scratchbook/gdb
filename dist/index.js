@@ -12648,7 +12648,7 @@ class GraphDB {
       const allNodes = this.graph.getAllNodes();
       const matches = allNodes.filter((node) => {
         return Object.entries(idOrQuery).every(([key, value]) => {
-          return JSON.stringify(node.value[key]) === JSON.stringify(value);
+          return encode(node.value[key]).equals(encode(value));
         });
       });
       resultNode = matches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
@@ -12669,14 +12669,14 @@ class GraphDB {
       if (isQuery) {
         const newMatches = nodes.filter((node) => {
           return Object.entries(idOrQuery).every(([key, value]) => {
-            return JSON.stringify(node.value[key]) === JSON.stringify(value);
+            return encode(node.value[key]).equals(encode(value));
           });
         });
         newResult = newMatches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
       } else {
         newResult = nodes.find((n) => n.id === idOrQuery);
       }
-      if (newResult && JSON.stringify(newResult) !== JSON.stringify(resultNode)) {
+      if (newResult) {
         resultNode = newResult;
         callback(newResult);
       }
@@ -12839,7 +12839,7 @@ class GraphDB {
       const removed = currentResults.filter((c) => !newResults.some((n) => n.id === c.id));
       const updated = newResults.filter((n) => {
         const oldNode = currentResults.find((c) => c.id === n.id);
-        return oldNode && JSON.stringify(n.value) !== JSON.stringify(oldNode.value);
+        return oldNode;
       });
       if (callback) {
         if (callback.length > 1) {
@@ -12860,10 +12860,8 @@ class GraphDB {
       if (options.realtime) {
         handler = (newNodes) => {
           const newResults = processNodes(newNodes);
-          if (JSON.stringify(newResults) !== JSON.stringify(currentResults)) {
-            notifyChanges(newResults);
-            currentResults = newResults;
-          }
+          notifyChanges(newResults);
+          currentResults = newResults;
         };
         this.on(handler);
       }
