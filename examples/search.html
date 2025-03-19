@@ -1,19 +1,94 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* max-width: 800px; */
             background: #f0f2f5;
+            margin: 0;
+            display: grid;
+            height: 100vh;
+            grid-template-rows: auto 1fr;
         }
-        .panel {
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .search-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
             background: white;
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
+
+        .search-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .query-display {
+            background: #f8f9fa;
+            color: #4444;
+            border-radius: 5px;
+            padding: 10px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+
+        .sort-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .results-panel {
+            display: grid;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .result-item {
+            background: #027bff;
+            color: white;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .result-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .result-item img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            object-fit: cover;
+        }
+
         input,
         button,
         select {
@@ -22,6 +97,7 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
+
         button {
             background: #007bff;
             color: white;
@@ -30,94 +106,75 @@
             position: relative;
             overflow: hidden;
         }
+
         button:hover {
             background: #0056b3;
         }
+
         button:disabled {
             background: #ccc;
             cursor: not-allowed;
         }
+
         button.loading {
-            background: cyan; /* Cyan background when loading */
+            background: cyan;
+            /* Cyan background when loading */
             animation: blink 1s infinite alternate ease-in-out;
         }
+
         @keyframes blink {
             0% {
                 background: cyan;
             }
+
             100% {
-                background: #00ffff80; /* Semi-transparent cyan */
+                background: #00ffff80;
+                /* Semi-transparent cyan */
             }
-        }
-        #results {
-            height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-top: 10px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .result-item {
-            background: #f8f9fa;
-            border-radius: 5px;
-            padding: 10px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .result-item img {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            margin: 0 auto 10px;
-            object-fit: cover;
-        }
-        .sort-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 10px 0;
         }
     </style>
 </head>
+
 <body>
-    <div class="panel">
-        <button id="insertButton" onclick="insertRandomUsers()">Insert Random Users (50)</button>
-        <button onclick="resetDatabase()">Reset Database</button>
-    </div>
-    <div class="panel">
-        <input type="text" id="searchName" placeholder="Name (optional)">
-        <!-- Select for Country -->
-        <select id="searchCountry" placeholder="Select Country (optional)">
-            <option value="">Country (optional)</option>
-        </select>
-        <input type="number" id="minAge" placeholder="Min Age (optional)">
-        <input type="number" id="maxAge" placeholder="Max Age (optional)">
-        <!-- Date Range Inputs -->
-        <input type="date" id="startDate" placeholder="Start Date (optional)">
-        <input type="date" id="endDate" placeholder="End Date (optional)">
-        <!-- Gender Filter -->
-        <select id="searchGender" placeholder="Select Gender (optional)">
-            <option value="">Gender (optional)</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-        </select>
-        <div class="sort-container">
-            <select id="sortField">
-                <option value="none">Sort by:</option>
-                <option value="name">Name (A-Z)</option>
-                <option value="age">Age</option>
-                <option value="dob">Date of Birth</option>
-            </select>
-            <select id="sortOrder">
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-            </select>
+    <div class="container">
+        <div class="panel">
+            <button id="insertButton" onclick="insertRandomUsers()">Insert Random Users (50)</button>
+            <button onclick="resetDatabase()">Reset Database</button>
             <button onclick="searchByCriteria()">Search</button>
         </div>
-        
-        <div id="results"></div>
+        <div class="search-panel">
+            <div class="search-options">
+                <input type="text" id="searchName" placeholder="Name (optional)">
+                <select id="searchCountry" placeholder="Select Country (optional)">
+                    <option value="">Country (optional)</option>
+                </select>
+                <input type="number" id="minAge" placeholder="Min Age (optional)">
+                <input type="number" id="maxAge" placeholder="Max Age (optional)">
+                <input type="date" id="startDate" placeholder="Start Date (optional)">
+                <input type="date" id="endDate" placeholder="End Date (optional)">
+                <select id="searchGender" placeholder="Select Gender (optional)">
+                    <option value="">Gender (optional)</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+                <div class="sort-container">
+                    <select id="sortField">
+                        <option value="none">Sort by:</option>
+                        <option value="name">Name (A-Z)</option>
+                        <option value="age">Age</option>
+                        <option value="dob">Date of Birth</option>
+                    </select>
+                    <select id="sortOrder">
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                    </select>
+                </div>
+            </div>
+            <div class="query-display" id="queryDisplay">Query will appear here...</div>
+        </div>
+        <div class="results-panel">
+            <div class="results-grid" id="results"></div>
+        </div>
     </div>
     <script type="module">
         import { GraphDB } from "../dist/index.js";
@@ -147,11 +204,9 @@
         // Function to fetch random users from the API and insert them into the database
         window.insertRandomUsers = async () => {
             const insertButton = document.getElementById('insertButton');
-
             // Add loading class and disable the button immediately
             insertButton.classList.add('loading');
             insertButton.disabled = true;
-
             try {
                 const response = await fetch('https://randomuser.me/api/?nat=es,us,mx&results=50');
                 const data = await response.json();
@@ -174,7 +229,6 @@
                     // Insert the person into the database
                     await db.put(person);
                 }
-                // alert(`Inserted 500 random users from Spain, United States, and Mexico.`);
                 checkDatabaseStatus(); // Check database status after insertion
             } catch (error) {
                 console.error('Error fetching random users:', error);
@@ -189,7 +243,6 @@
         window.resetDatabase = async () => {
             try {
                 await db.clear();
-                // alert('Database has been reset successfully.');
                 checkDatabaseStatus(); // Check database status after reset
             } catch (error) {
                 console.error('Error resetting database:', error);
@@ -270,9 +323,13 @@
             } else {
                 resultsDiv.innerHTML = 'No results found';
             }
+            // Update query display
+            const queryDisplay = document.getElementById('queryDisplay');
+            queryDisplay.textContent = JSON.stringify(query, null, 2);
         };
         // Initial check of database status on page load
         checkDatabaseStatus();
     </script>
 </body>
+
 </html>
