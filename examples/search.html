@@ -20,7 +20,9 @@
             margin-bottom: 20px;
         }
 
-        input, button, select {
+        input,
+        button,
+        select {
             padding: 10px;
             margin: 5px;
             border: 1px solid #ddd;
@@ -38,6 +40,11 @@
             background: #0056b3;
         }
 
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
         #results {
             height: 300px;
             overflow-y: auto;
@@ -52,10 +59,21 @@
             background: #f8f9fa;
             border-radius: 5px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
         }
-        
+
+        .result-item img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-right: 15px;
+            object-fit: cover;
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
         .sort-container {
             display: flex;
             align-items: center;
@@ -67,29 +85,39 @@
 
 <body>
     <div class="panel">
-        <h2>➕ Insert Item</h2>
-        <input type="text" id="name" placeholder="Name (required)" required>
-        <input type="number" id="age" placeholder="Age (required)" required>
-        <input type="text" id="country" placeholder="Country (optional)" required>
-        <button onclick="insertItem()">Insert</button>
+        <button id="insertButton" onclick="insertRandomUsers()">Insert Random Users (10)</button>
+        <button onclick="resetDatabase()">Reset Database</button>
     </div>
 
     <div class="panel">
-        <h2>🔍 Search by Criteria</h2>
         <input type="text" id="searchName" placeholder="Name (optional)">
-        <input type="text" id="searchCountry" placeholder="Country (optional)">
+        
+        <!-- Select for Country -->
+        <select id="searchCountry" placeholder="Select Country (optional)">
+            <option value="">Select Country (optional)</option>
+        </select>
+
         <input type="number" id="minAge" placeholder="Min Age (optional)">
         <input type="number" id="maxAge" placeholder="Max Age (optional)">
-        
+
+        <!-- Date Range Inputs -->
+        <input type="date" id="startDate" placeholder="Start Date (optional)">
+        <input type="date" id="endDate" placeholder="End Date (optional)">
+
         <div class="sort-container">
-            <label>Sort by Age:</label>
-            <select id="sortOrder">
+            <label>Sort by:</label>
+            <select id="sortField">
                 <option value="none">None</option>
+                <option value="name">Name (A-Z)</option>
+                <option value="age">Age</option>
+                <option value="dob">Date of Birth</option>
+            </select>
+            <select id="sortOrder">
                 <option value="asc">Ascending</option>
                 <option value="desc">Descending</option>
             </select>
         </div>
-        
+
         <button onclick="searchByCriteria()">Search</button>
         <div id="results"></div>
     </div>
@@ -99,24 +127,78 @@
 
         const db = new GraphDB('search-db');
 
-        // Function to insert an item into the database
-        window.insertItem = async () => {
-            const name = document.getElementById('name').value;
-            const age = parseInt(document.getElementById('age').value);
-            const country = document.getElementById('country').value || "Unknown";
+        // List of allowed countries
+        const allowedCountries = [
+            "Spain", "United States", "Mexico"
+        ];
 
-            if (!name || !age) return;
+        // Function to populate the country dropdown
+        function populateCountries() {
+            const countrySelect = document.getElementById('searchCountry');
+            allowedCountries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countrySelect.appendChild(option);
+            });
+        }
 
-            const person = {
-                name,
-                age,
-                country
-            };
+        // Call the function to populate countries on page load
+        populateCountries();
 
-            await db.put(person);
-            document.getElementById('name').value = '';
-            document.getElementById('age').value = '';
-            document.getElementById('country').value = '';
+        // Function to check if the database has data
+        async function checkDatabaseStatus() {
+            const { results } = await db.map({});
+            const insertButton = document.getElementById('insertButton');
+            insertButton.disabled = results.length > 0; // Disable if there are records
+        }
+
+        // Function to fetch random users from the API and insert them into the database
+        window.insertRandomUsers = async () => {
+            try {
+                const response = await fetch('https://randomuser.me/api/?nat=es,us,mx&results=10');
+                const data = await response.json();
+
+                // Extract relevant data from the API response
+                const users = data.results;
+
+                // Insert each user into the database
+                for (const user of users) {
+                    const name = `${user.name.first} ${user.name.last}`;
+                    const age = user.dob.age;
+                    const country = user.location.country;
+
+                    // Create a person object
+                    const person = {
+                        name,
+                        age,
+                        country,
+                        dob: user.dob.date, // Store the date of birth as a string
+                        picture: user.picture.large // Use the large image URL
+                    };
+
+                    // Insert the person into the database
+                    await db.put(person);
+                }
+
+                alert(`Inserted 10 random users from Spain, United States, and Mexico.`);
+                checkDatabaseStatus(); // Check database status after insertion
+            } catch (error) {
+                console.error('Error fetching random users:', error);
+                alert('Failed to fetch and insert random users.');
+            }
+        };
+
+        // Function to reset the database
+        window.resetDatabase = async () => {
+            try {
+                await db.clear();
+                alert('Database has been reset successfully.');
+                checkDatabaseStatus(); // Check database status after reset
+            } catch (error) {
+                console.error('Error resetting database:', error);
+                alert('Failed to reset the database.');
+            }
         };
 
         // Function to search for items by criteria
@@ -125,7 +207,12 @@
             const searchCountry = document.getElementById('searchCountry').value || undefined;
             const minAge = parseInt(document.getElementById('minAge').value) || undefined;
             const maxAge = parseInt(document.getElementById('maxAge').value) || undefined;
+            const sortField = document.getElementById('sortField').value;
             const sortOrder = document.getElementById('sortOrder').value;
+
+            // Get date range values
+            const startDate = document.getElementById('startDate').value || undefined;
+            const endDate = document.getElementById('endDate').value || undefined;
 
             // Build the query dynamically
             const query = {};
@@ -146,30 +233,46 @@
                 query.age = { $lte: maxAge };
             }
 
-            let { results } = await db.map({query: query});
+            // Add date range query
+            if (startDate && endDate) {
+                query.dob = { $between: [new Date(startDate).toISOString(), new Date(endDate).toISOString()] };
+            } else if (startDate) {
+                query.dob = { $gte: new Date(startDate).toISOString() };
+            } else if (endDate) {
+                query.dob = { $lte: new Date(endDate).toISOString() };
+            }
+
+            // Determine the field to sort by
+            let field = "name"; // Default sort field
+            if (sortField === "age") {
+                field = "age";
+            } else if (sortField === "dob") {
+                field = "dob";
+            } else if (sortField === "none") {
+                field = null; // No sorting
+            }
+
+            // Fetch results with sorting
+            let { results } = await db.map({
+                query,
+                order: sortOrder, // 'asc' or 'desc'
+                field: field // Field to sort by
+            });
+
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '';
-
-            // Apply sorting
-            if (sortOrder !== 'none') {
-                results = results.sort((a, b) => {
-                    if (sortOrder === 'asc') {
-                        return a.value.age - b.value.age;
-                    } else {
-                        return b.value.age - a.value.age;
-                    }
-                });
-            }
 
             if (results.length > 0) {
                 results.forEach(result => {
                     const item = document.createElement('div');
                     item.className = 'result-item';
                     item.innerHTML = `
-                        <div>
+                        <img src="${result.value.picture}" alt="User Image">
+                        <div class="result-info">
                             <strong>${result.value.name}</strong><br>
                             Age: ${result.value.age}<br>
-                            Country: ${result.value.country}
+                            Country: ${result.value.country}<br>
+                            DOB: ${new Date(result.value.dob).toLocaleDateString()}
                         </div>
                     `;
                     resultsDiv.appendChild(item);
@@ -178,6 +281,10 @@
                 resultsDiv.innerHTML = '<div class="result-item">No results found</div>';
             }
         };
+
+        // Initial check of database status on page load
+        checkDatabaseStatus();
     </script>
 </body>
+
 </html>
