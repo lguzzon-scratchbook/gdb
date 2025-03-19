@@ -261,6 +261,27 @@
         <strong>Country IN ["Spain", "France", "Italy"]</strong><br>
         Searches for users who live in Spain, France, or Italy.
       </li>
+      <!-- Ejemplo 13: $like -->
+      <li class="query-item" data-query='{"query": {"name": {"$like": "%Jo%"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Contains "Jo" (Partial Match)</strong><br>
+        Searches for users whose name contains the substring "Jo" (e.g., "John", "Jonathan", "Joseph").
+      </li>
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "jo"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Contains "jo"</strong><br>
+        Searches for users whose name contains the substring "jo" (e.g., "john", "jonathan", "joseph").
+      </li>
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "^j"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Starts With "j"</strong><br>
+        Searches for users whose name starts with the letter "j" (e.g., "john", "james", "julia").
+      </li>
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "n$"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Ends With "n"</strong><br>
+        Searches for users whose name ends with the letter "n" (e.g., "john", "brian", "leon").
+      </li>
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "^.{5}$"}}, "order": "asc", "field": "name"}'>
+        <strong>Name with Exactly 5 Letters</strong><br>
+        Searches for users whose name has exactly 5 characters (e.g., "alice", "peter").
+      </li>
     </ul>
   </div>
   <div class="main-content">
@@ -333,6 +354,7 @@
     // Function to execute a query and display results
     async function executeQuery(obj) {
       let { results } = await db.map(obj);
+      
 
       const resultsDiv = document.getElementById('results');
       const statusBar = document.getElementById('statusBar');
