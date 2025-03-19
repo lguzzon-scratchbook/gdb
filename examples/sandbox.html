@@ -261,26 +261,54 @@
         <strong>Country IN ["Spain", "France", "Italy"]</strong><br>
         Searches for users who live in Spain, France, or Italy.
       </li>
-      <!-- Ejemplo 13: $like -->
-      <li class="query-item" data-query='{"query": {"name": {"$like": "%Jo%"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Contains "Jo" (Partial Match)</strong><br>
-        Searches for users whose name contains the substring "Jo" (e.g., "John", "Jonathan", "Joseph").
-      </li>
+
+      <!-- Ejemplo 14: Name Contains "jo" (Regex) -->
       <li class="query-item" data-query='{"query": {"name": {"$regex": "jo"}}, "order": "asc", "field": "name"}'>
         <strong>Name Contains "jo"</strong><br>
         Searches for users whose name contains the substring "jo" (e.g., "john", "jonathan", "joseph").
       </li>
+
+      <!-- Ejemplo 15: Name Starts With "j" (Regex) -->
       <li class="query-item" data-query='{"query": {"name": {"$regex": "^j"}}, "order": "asc", "field": "name"}'>
         <strong>Name Starts With "j"</strong><br>
         Searches for users whose name starts with the letter "j" (e.g., "john", "james", "julia").
       </li>
+
+      <!-- Ejemplo 16: Name Ends With "n" (Regex) -->
       <li class="query-item" data-query='{"query": {"name": {"$regex": "n$"}}, "order": "asc", "field": "name"}'>
         <strong>Name Ends With "n"</strong><br>
         Searches for users whose name ends with the letter "n" (e.g., "john", "brian", "leon").
       </li>
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "^.{5}$"}}, "order": "asc", "field": "name"}'>
+
+      <!-- Ejemplo 17: Name with Exactly 5 Letters (Regex) -->
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "^.{12}$"}}, "order": "asc", "field": "name"}'>
         <strong>Name with Exactly 5 Letters</strong><br>
         Searches for users whose name has exactly 5 characters (e.g., "alice", "peter").
+      </li>
+
+      <!-- Ejemplo 18: Name Contains a Digit (Regex) -->
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "\\d"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Contains a Digit</strong><br>
+        Searches for users whose name contains at least one digit (e.g., "john123", "a4lice").
+      </li>
+
+      <!-- Ejemplo 19: Name Contains Only Letters (Regex) -->
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "^[a-z]+$"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Contains Only Letters</strong><br>
+        Searches for users whose name consists only of letters (e.g., "john", "alice", "zoe").
+      </li>
+
+      <!-- Ejemplo 20: Name Contains a Hyphen (-) (Regex) -->
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "-"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Contains a Hyphen (-)</strong><br>
+        Searches for users whose name contains a hyphen (e.g., "mary-jane", "jean-luc").
+      </li>
+
+      <!-- Ejemplo 21: Name Contains Consecutive Vowels (Regex) -->
+      <li class="query-item"
+        data-query='{"query": {"name": {"$regex": "[aeiou]{2}"}}, "order": "asc", "field": "name"}'>
+        <strong>Name Contains Consecutive Vowels</strong><br>
+        Searches for users whose name contains two consecutive vowels (e.g., "aaron", "eleanor").
       </li>
     </ul>
   </div>
@@ -354,7 +382,7 @@
     // Function to execute a query and display results
     async function executeQuery(obj) {
       let { results } = await db.map(obj);
-      
+
 
       const resultsDiv = document.getElementById('results');
       const statusBar = document.getElementById('statusBar');
