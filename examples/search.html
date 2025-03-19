@@ -64,6 +64,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
+            height: 100vh;
         }
 
         .result-item {
@@ -159,7 +160,6 @@
                 </select>
                 <div class="sort-container">
                     <select id="sortField">
-                        <option value="none">Sort by:</option>
                         <option value="name">Name (A-Z)</option>
                         <option value="age">Age</option>
                         <option value="dob">Date of Birth</option>
@@ -262,6 +262,7 @@
             const startDate = document.getElementById('startDate').value || undefined;
             const endDate = document.getElementById('endDate').value || undefined;
             // Build the query dynamically
+
             const query = {};
             if (searchName) {
                 query.name = { $eq: searchName };
@@ -296,12 +297,15 @@
             } else if (sortField === "none") {
                 field = null; // No sorting
             }
-            // Fetch results with sorting
-            let { results } = await db.map({
+
+            const obj = {
                 query,
                 order: sortOrder, // 'asc' or 'desc'
                 field: field // Field to sort by
-            });
+            };
+
+            // Fetch results with sorting
+            let { results } = await db.map(obj);
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '';
             if (results.length > 0) {
@@ -325,7 +329,7 @@
             }
             // Update query display
             const queryDisplay = document.getElementById('queryDisplay');
-            queryDisplay.textContent = JSON.stringify(query, null, 2);
+            queryDisplay.textContent = JSON.stringify(obj, null, 2);
         };
         // Initial check of database status on page load
         checkDatabaseStatus();
