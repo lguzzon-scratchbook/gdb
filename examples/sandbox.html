@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <style>
     body {
@@ -8,19 +9,23 @@
       margin: 0;
       display: grid;
       height: 100vh;
-      grid-template-rows: 1fr auto; /* Ajuste para incluir la barra de estado */
+      grid-template-rows: 1fr auto;
+      /* Ajuste para incluir la barra de estado */
       grid-template-columns: 350px 1fr;
     }
+
     .sidebar {
       background: white;
       border-right: .5rem solid #ddd;
       padding: 20px;
       overflow-y: auto;
     }
+
     .query-list {
       list-style-type: none;
       padding: 0;
     }
+
     .query-item {
       display: flex;
       flex-direction: column;
@@ -38,26 +43,33 @@
       -moz-user-select: none;
       -ms-user-select: none;
     }
+
     .query-item:hover {
       background: #e9ecef;
     }
+
     .query-item.active {
       background: #007bff;
       color: white;
     }
+
     .query-item strong {
       pointer-events: none;
     }
+
     .query-item br {
       display: none;
     }
+
     .main-content {
       display: grid;
-      grid-template-rows: auto 1fr auto; /* Añadimos espacio para la barra de estado */
+      grid-template-rows: auto 1fr auto;
+      /* Añadimos espacio para la barra de estado */
       gap: 20px;
       padding: 20px;
       overflow: hidden;
     }
+
     .query-display {
       border: 0;
       border-radius: 8px;
@@ -70,17 +82,20 @@
       color: #444;
       white-space: pre-wrap;
     }
+
     .results-panel {
       display: grid;
       border-radius: 10px;
       padding: 20px;
       overflow-y: auto;
     }
+
     .results-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 10px;
     }
+
     .result-item {
       background: #027bff;
       color: white;
@@ -90,10 +105,12 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
+
     .result-item:hover {
       transform: translateY(-5px);
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
+
     .result-item img {
       width: 80px;
       height: 80px;
@@ -101,6 +118,7 @@
       margin: 0 auto 10px;
       object-fit: cover;
     }
+
     input,
     button,
     select {
@@ -109,6 +127,7 @@
       border: 1px solid #ddd;
       border-radius: 5px;
     }
+
     button {
       background: #007bff;
       color: white;
@@ -117,25 +136,31 @@
       position: relative;
       overflow: hidden;
     }
+
     button:hover {
       background: #0056b3;
     }
+
     button:disabled {
       background: #ccc;
       cursor: not-allowed;
     }
+
     button.loading {
       background: cyan;
       animation: blink 1s infinite alternate ease-in-out;
     }
+
     @keyframes blink {
       0% {
         background: cyan;
       }
+
       100% {
         background: #00ffff80;
       }
     }
+
     .status-bar {
       border-top: 1px solid #ddd;
       padding: 10px;
@@ -146,32 +171,95 @@
     }
   </style>
 </head>
+
 <body>
+
   <div class="sidebar">
     <ul class="query-list" id="queryList">
-      <li class="query-item" data-query='{"name": {"$eq": "John Doe"}}'>
+      <!-- Ejemplo 1: Name Equals "John Doe" -->
+      <li class="query-item" data-query='{"query": {"name": {"$eq": "John Doe"}}, "order": "asc", "field": "name"}'>
         <strong>Name Equals "John Doe"</strong><br>
         Searches for users with the exact name "John Doe".
       </li>
-      <li class="query-item" data-query='{"age": {"$between": [20, 30]}}'>
+
+      <!-- Ejemplo 2: Age Between 20 and 30 -->
+      <li class="query-item" data-query='{"query": {"age": {"$between": [20, 30]}}, "order": "asc", "field": "name"}'>
         <strong>Age Between 20 and 30</strong><br>
         Searches for users whose age is between 20 and 30 years.
       </li>
-      <li class="query-item" data-query='{"country": {"$eq": "Spain"}}'>
+
+      <!-- Ejemplo 3: Country Equals "Spain" -->
+      <li class="query-item" data-query='{"query": {"country": {"$eq": "Spain"}}, "order": "asc", "field": "name"}'>
         <strong>Country Equals "Spain"</strong><br>
         Searches for users living in Spain.
       </li>
-      <li class="query-item" data-query='{"gender": {"$eq": "male"}}'>
+
+      <!-- Ejemplo 4: Gender Equals "Male" -->
+      <li class="query-item" data-query='{"query": {"gender": {"$eq": "male"}}, "order": "asc", "field": "name"}'>
         <strong>Gender Equals "Male"</strong><br>
         Searches for male users.
       </li>
-      <li class="query-item" data-query='{"dob": {"$gte": "1990-01-01T00:00:00Z"}}'>
+
+      <!-- Ejemplo 5: Date of Birth After 1990 -->
+      <li class="query-item"
+        data-query='{"query": {"dob": {"$gte": "1990-01-01T00:00:00Z"}}, "order": "asc", "field": "name"}'>
         <strong>Date of Birth After 1990</strong><br>
         Searches for users born after January 1, 1990.
       </li>
-      <li class="query-item" data-query='{"age": {"$gte": 40}, "country": {"$eq": "United States"}}'>
+
+      <!-- Ejemplo 6: Age >= 40 AND Country = "US" -->
+      <li class="query-item"
+        data-query='{"query": {"age": {"$gte": 40}, "country": {"$eq": "United States"}}, "order": "asc", "field": "name"}'>
         <strong>Age >= 40 AND Country = "US"</strong><br>
         Searches for users older than 40 years living in the USA.
+      </li>
+
+      <!-- Ejemplo 7: Users from Spain, Ordered by Age (ASC), Limited to 5 Results -->
+      <li class="query-item"
+        data-query='{"query": {"country": {"$eq": "Spain"}}, "order": "asc", "field": "age", "$limit": 5}'>
+        <strong>Users from Spain, Ordered by Age (ASC), Limited to 5 Results</strong><br>
+        Searches for users living in Spain, orders them by age in ascending order, and limits the results to the first 5
+        users.
+      </li>
+
+      <!-- Ejemplo 8: $and -->
+      <li class="query-item"
+        data-query='{"query": {"$and": [{"age": {"$gte": 25}}, {"country": {"$eq": "Spain"}}]}, "order": "asc", "field": "name"}'>
+        <strong>Age >= 25 AND Country = "Spain"</strong><br>
+        Searches for users who are at least 25 years old and live in Spain.
+      </li>
+
+      <!-- Ejemplo 9: $or -->
+      <li class="query-item"
+        data-query='{"query": {"$or": [{"gender": {"$eq": "male"}}, {"age": {"$lt": 30}}]}, "order": "asc", "field": "name"}'>
+        <strong>Gender = Male OR Age < 30</strong><br>
+            Searches for users who are either male or younger than 30 years old.
+      </li>
+
+      <!-- Ejemplo 10: $between -->
+      <li class="query-item" data-query='{"query": {"age": {"$between": [25, 40]}}, "order": "asc", "field": "name"}'>
+        <strong>Age Between 25 and 40</strong><br>
+        Searches for users whose age is between 25 and 40 (inclusive).
+      </li>
+
+      <!-- Ejemplo 11: $not -->
+      <li class="query-item"
+        data-query='{"query": {"country": {"$not": {"$eq": "United States"}}}, "order": "asc", "field": "name"}'>
+        <strong>Country NOT "United States"</strong><br>
+        Searches for users who do NOT live in the United States.
+      </li>
+
+      <!-- Ejemplo 12: $exists -->
+      <li class="query-item" data-query='{"query": {"email": {"$exists": true}}, "order": "asc", "field": "name"}'>
+        <strong>Email Exists</strong><br>
+        Searches for users who have an email address field defined.
+      </li>
+
+      <!-- Ejemplo 13: $in -->
+      <li class="query-item"
+        data-query='{"query": {"country": {"$in": ["Spain", "France", "Italy"]}}, "order": "asc", "field": "name"}'>
+        <strong>Country IN ["Spain", "France", "Italy"]</strong><br>
+        Searches for users who live in Spain, France, or Italy.
       </li>
     </ul>
   </div>
@@ -243,13 +331,9 @@
     };
 
     // Function to execute a query and display results
-    async function executeQuery(query) {
-      const obj = {
-        query,
-        order: "asc",
-        field: "name"
-      };
+    async function executeQuery(obj) {
       let { results } = await db.map(obj);
+
       const resultsDiv = document.getElementById('results');
       const statusBar = document.getElementById('statusBar');
       resultsDiv.innerHTML = '';
@@ -305,4 +389,5 @@
     checkDatabaseStatus();
   </script>
 </body>
+
 </html>
