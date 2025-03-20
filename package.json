@@ -1,6 +1,6 @@
 {
   "name": "gdb-p2p",
-  "version": "0.0.33",
+  "version": "0.0.40",
   "description": "Distributed graph database (GraphDB/GDB) for real-time data modeling, scalable storage, and efficient querying of complex relationships.",
   "main": "dist/index.js",
   "type": "module",
