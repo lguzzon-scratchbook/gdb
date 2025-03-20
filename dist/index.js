@@ -12438,10 +12438,7 @@ class Graph {
     this.nodes = {};
   }
   insert(id, value) {
-    const timestamp2 = Date.now();
-    if (!this.nodes[id] || this.nodes[id].timestamp < timestamp2) {
-      this.nodes[id] = { id, value, edges: [], timestamp: timestamp2 };
-    }
+    this.nodes[id] = { id, value, edges: [], timestamp: Date.now() };
   }
   get(id) {
     return this.nodes[id] || null;
@@ -12616,26 +12613,9 @@ class GraphDB {
     await this.ready;
     id ??= await this.generateHash(encode(value));
     const node = this.graph.get(id);
-    if (!node) {
-      this.graph.insert(id, value);
-    } else {
-      const incomingChange = {
-        id,
-        newValue: value,
-        timestamp: Date.now()
-      };
-      const resolution = resolveConflict(node, incomingChange);
-      if (resolution.resolved) {
-        node.value = resolution.value;
-        node.timestamp = resolution.timestamp;
-      }
-    }
+    this.graph.insert(id, value);
     await this.saveGraphToOPFS();
-    if (!node) {
-      this.sendData([{ type: "insert", id, value, timestamp: Date.now() }]);
-    } else {
-      this.sendData([{ type: "update", id, newValue: value, timestamp: Date.now() }]);
-    }
+    this.sendData([{ type: "insert", id, value, timestamp: Date.now() }]);
     this.emit();
     return id;
   }
@@ -12809,6 +12789,15 @@ class GraphDB {
       return filterNode;
     };
     const filter = createFilter(options.query);
+    function arraysEqual(a2, b2) {
+      if (a2.length !== b2.length)
+        return false;
+      for (let i = 0;i < a2.length; i++) {
+        if (a2[i] !== b2[i])
+          return false;
+      }
+      return true;
+    }
     const processNodes = (nodes) => {
       let results = Object.values(nodes).filter(filter);
       if (options.field) {
@@ -12839,7 +12828,7 @@ class GraphDB {
       const removed = currentResults.filter((c) => !newResults.some((n) => n.id === c.id));
       const updated = newResults.filter((n) => {
         const oldNode = currentResults.find((c) => c.id === n.id);
-        return oldNode;
+        return oldNode && !arraysEqual(encode(n.value), encode(oldNode.value));
       });
       if (callback) {
         if (callback.length > 1) {
@@ -12860,8 +12849,10 @@ class GraphDB {
       if (options.realtime) {
         handler = (newNodes) => {
           const newResults = processNodes(newNodes);
-          notifyChanges(newResults);
-          currentResults = newResults;
+          if (!arraysEqual(encode(newResults), encode(currentResults))) {
+            notifyChanges(newResults);
+            currentResults = newResults;
+          }
         };
         this.on(handler);
       }
