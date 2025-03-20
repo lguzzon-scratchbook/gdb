@@ -12384,29 +12384,45 @@ var resolveConflict = (currentNode, incomingChange) => {
 
 // lib/components/workerCode.js
 var workerCode = () => {
-  const loadFile = async (fileName) => {
+  let isLocked = false;
+  const withLock = async (operation) => {
+    while (isLocked) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    isLocked = true;
     try {
-      const accessHandle = await (await navigator.storage.getDirectory()).getFileHandle(fileName, { create: false }).then((fh) => fh.createSyncAccessHandle());
-      const buffer = new Uint8Array(accessHandle.getSize());
-      accessHandle.read(buffer, { at: 0 });
-      accessHandle.close();
-      return { type: "loaded", name: fileName, data: buffer };
-    } catch (error) {
-      return { type: "error", name: fileName, message: error.message || "File not found" };
+      return await operation();
+    } finally {
+      isLocked = false;
     }
   };
+  const loadFile = async (fileName) => {
+    return withLock(async () => {
+      try {
+        const accessHandle = await (await navigator.storage.getDirectory()).getFileHandle(fileName, { create: false }).then((fh) => fh.createSyncAccessHandle());
+        const buffer = new Uint8Array(accessHandle.getSize());
+        accessHandle.read(buffer, { at: 0 });
+        accessHandle.close();
+        return { type: "loaded", name: fileName, data: buffer };
+      } catch (error) {
+        return { type: "error", name: fileName, message: error.message || "File not found" };
+      }
+    });
+  };
   const saveFile = async (fileName, content) => {
-    if (!(content instanceof Uint8Array))
-      throw new Error("Content must be a Uint8Array");
-    try {
-      const accessHandle = await (await navigator.storage.getDirectory()).getFileHandle(fileName, { create: true }).then((fh) => fh.createSyncAccessHandle());
-      accessHandle.write(content, { at: 0 });
-      accessHandle.truncate(content.byteLength);
-      accessHandle.close();
-      return { type: "saved", name: fileName };
-    } catch (error) {
-      return { type: "error", name: fileName, message: error.message || "Error saving the file" };
-    }
+    return withLock(async () => {
+      if (!(content instanceof Uint8Array))
+        throw new Error("Content must be a Uint8Array");
+      try {
+        const accessHandle = await (await navigator.storage.getDirectory()).getFileHandle(fileName, { create: true }).then((fh) => fh.createSyncAccessHandle());
+        accessHandle.write(content, { at: 0 });
+        accessHandle.truncate(content.byteLength);
+        accessHandle.close();
+        return { type: "saved", name: fileName };
+      } catch (error) {
+        return { type: "error", name: fileName, message: error.message || "Error saving the file" };
+      }
+    });
   };
   self.onmessage = async ({ data: { type, name, content } }) => {
     try {
@@ -12619,59 +12635,31 @@ class GraphDB {
     this.emit();
     return id;
   }
-  async get(idOrQuery, callback = null) {
+  async get(id, callback = null) {
     await this.ready;
-    let resultNode = null;
-    let isQuery = false;
-    if (typeof idOrQuery === "object" && idOrQuery !== null) {
-      isQuery = true;
-      const allNodes = this.graph.getAllNodes();
-      const matches = allNodes.filter((node) => {
-        return Object.entries(idOrQuery).every(([key, value]) => {
-          return encode(node.value[key]).equals(encode(value));
-        });
-      });
-      resultNode = matches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
-    } else {
-      const id = idOrQuery;
-      resultNode = this.graph.get(id);
-      if (!resultNode) {
-        console.error(`Node with ID '${id}' not found.`);
-        return { result: null };
-      }
+    if (typeof id !== "string") {
+      console.error("El par\xE1metro debe ser un ID v\xE1lido (cadena).");
+      return { result: null };
     }
-    if (!callback) {
+    const resultNode = this.graph.get(id);
+    if (!resultNode) {
+      console.error(`Nodo con ID '${id}' no encontrado.`);
+      return { result: null };
+    }
+    if (!callback)
       return { result: resultNode };
-    }
     callback(resultNode);
     const listener = (nodes) => {
-      let newResult = null;
-      if (isQuery) {
-        const newMatches = nodes.filter((node) => {
-          return Object.entries(idOrQuery).every(([key, value]) => {
-            return encode(node.value[key]).equals(encode(value));
-          });
-        });
-        newResult = newMatches.sort((a2, b2) => b2.timestamp - a2.timestamp)[0] || null;
-      } else {
-        newResult = nodes.find((n) => n.id === idOrQuery);
-      }
-      if (newResult) {
-        resultNode = newResult;
+      const newResult = nodes.find((n) => n.id === id);
+      if (newResult?.value !== resultNode.value) {
+        resultNode.value = newResult.value;
         callback(newResult);
       }
     };
     this.eventListeners.push(listener);
     return {
       result: resultNode,
-      ...callback && {
-        unsubscribe: () => {
-          const index = this.eventListeners.indexOf(listener);
-          if (index > -1) {
-            this.eventListeners.splice(index, 1);
-          }
-        }
-      }
+      ...callback && { unsubscribe: () => this.eventListeners.splice(this.eventListeners.indexOf(listener), 1) }
     };
   }
   async map(...args) {
@@ -12790,13 +12778,7 @@ class GraphDB {
     };
     const filter = createFilter(options.query);
     function arraysEqual(a2, b2) {
-      if (a2.length !== b2.length)
-        return false;
-      for (let i = 0;i < a2.length; i++) {
-        if (a2[i] !== b2[i])
-          return false;
-      }
-      return true;
+      return a2.length === b2.length && a2.every((val, i) => val === b2[i]);
     }
     const processNodes = (nodes) => {
       let results = Object.values(nodes).filter(filter);
@@ -12909,31 +12891,20 @@ class GraphDB {
     }
   }
   async receiveChanges(changes) {
-    for (const change of changes) {
-      if (change.type === "insert") {
-        this.graph.insert(change.id, change.value);
-      } else if (change.type === "update") {
+    const handlers = {
+      insert: (change) => this.graph.insert(change.id, change.value),
+      update: (change) => {
         const node = this.graph.get(change.id);
         const resolution = resolveConflict(node, change);
-        if (resolution.resolved) {
-          node.value = resolution.value;
-          node.timestamp = resolution.timestamp;
-        }
-      } else if (change.type === "remove") {
-        delete this.graph.nodes[change.id];
-      } else if (change.type === "link") {
-        this.graph.link(change.sourceId, change.targetId);
-      } else if (change.type === "sync") {
-        if (this.localHash !== change.hash) {
-          if (this.localTime > change.ts) {
-            console.log("Sending recent data to remote node.");
-            this.sendData([{ type: "syncReceive", graph: this.graph }]);
-          }
-        }
-      } else if (change.type === "syncReceive") {
-        await this.applyFullGraph(change.graph);
-      }
-    }
+        resolution.resolved && Object.assign(node, { value: resolution.value, timestamp: resolution.timestamp });
+      },
+      remove: (change) => delete this.graph.nodes[change.id],
+      link: (change) => this.graph.link(change.sourceId, change.targetId),
+      sync: (change) => this.localHash !== change.hash && this.localTime > change.ts && (console.log("Sending recent data to remote node."), this.sendData([{ type: "syncReceive", graph: this.graph }])),
+      syncReceive: async (change) => await this.applyFullGraph(change.graph)
+    };
+    for (const change of changes)
+      handlers[change.type]?.(change);
     await this.saveGraphToOPFS();
     this.emit();
   }
