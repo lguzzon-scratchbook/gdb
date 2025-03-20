@@ -103,9 +103,9 @@
 
     // Define custom roles
     // const customRoles = {
-      // editor: { can: ["edit", "write"], inherits: ["reader"] },
-      // reader: { can: ["read"] },
-      // admin: { can: ["delete", "assignRole"], inherits: ["editor"] },
+    // editor: { can: ["edit", "write"], inherits: ["reader"] },
+    // reader: { can: ["read"] },
+    // admin: { can: ["delete", "assignRole"], inherits: ["editor"] },
     // };
 
     // Set custom roles
@@ -117,7 +117,7 @@
         db = new GraphDB("example");
         await db.ready; // Wait for the database to be ready
         updateDatabaseOutput(); // Load data on startup
-        db.on(async () => await updateDatabaseOutput());
+        // db.on(async () => await updateDatabaseOutput());
       } catch (error) {
         console.error("Error initializing the database:", error.message);
         alert("Error loading the data.");
@@ -135,7 +135,7 @@
         await assignRole(db, userAddress, role, expiration);
 
         updateDatabaseOutput(); // Update the view to reflect the new role
-        
+
         console.log(`Role '${role}' assigned successfully.${expiration ? ` Expires on ${expiration}` : ""}`)
       } catch (error) {
         console.error(error.message);
@@ -148,7 +148,8 @@
       try {
         userAddress = await executeWithPermission(db, "write")
         const value = { data: `Record created at ${new Date().toLocaleTimeString()}` };
-        const id = await db.put(value, undefined, userAddress);
+        // const id = await db.put(value, undefined, userAddress);
+        const id = await db.put(value);
         console.log(`Data inserted with ID: ${id}`);
         updateDatabaseOutput();
 
@@ -166,7 +167,7 @@
         if (!newValue) throw new Error("The new value cannot be empty.");
 
         await executeWithPermission(db, "write");
-        await db.update(currentEditId, { data: newValue });
+        await db.put({ data: newValue }, currentEditId);
 
         console.log(`Record with ID '${currentEditId}' updated.`);
         closeEditDialog();
@@ -189,8 +190,14 @@
       outputDiv.innerHTML = ""; // Clear previous content
 
       const nodes = [];
-      await db.map((id, value, edges, timestamp) => {
-        nodes.push({ id, value, edges, timestamp });
+      // await db.map((id, value, edges, timestamp) => {
+      //   nodes.push({ id, value, edges, timestamp });
+      // });
+
+      const { results} = await db.map();
+
+      results.forEach((result) => {
+        nodes.push({ id: result.id, value:result.value, edges:result.edges, timestamp: result.timestamp });
       });
 
       if (nodes.length === 0) {
