@@ -248,7 +248,10 @@
     }
 
     // Initial load, real-time updates
-    await db.map(nodes => loadGraph(nodes), true, false);
+
+    // await db.map(results => loadGraph(results));
+    const { results } = await db.map();
+    loadGraph(results)
 
   </script>
 </body>
