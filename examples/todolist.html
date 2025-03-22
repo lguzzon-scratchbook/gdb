@@ -96,8 +96,11 @@
   <ul id="taskList"></ul>
   <script type="module">
     import { GraphDB } from "../dist/index.js";
+    // import { withRadixIndex } from "../dist/radixIndex.min.js";
 
     const db = new GraphDB('todoList');
+    // withRadixIndex(db);
+
     const currentNodeIds = new Set();
 
     // Crear elementos del DOM
@@ -226,22 +229,28 @@
       if (!input.value.trim()) return;
 
       await db.put({ 
-        text: input.value.trim(), 
+        text: input.value,// .trim(), 
         completed: false 
       });
       input.value = '';
     }
 
     // Suscripción a cambios en tiempo real
-    const { unsubscribe } = await db.map((id, value) => {
-      if (value === null) {
+    const { unsubscribe } = await db.map(({id, value, action}) => { 
+      if (action === 'initial') { 
+        handleAddTask(id, { text: value.text, completed: value.completed });
+      }
+      if (action === 'removed') {
         handleDeleteTask(id);
-      } else if (currentNodeIds.has(id)) {
-        handleUpdateTask(id, value);
-      } else {
-        handleAddTask(id, value);
+      } 
+      if (action === 'updated') {
+        handleUpdateTask(id,{text: value.text, completed: value.completed});
+      } 
+      if (action === 'added') {
+        handleAddTask(id, {text: value.text, completed: value.completed});
       }
     });
+    
 
     // Event listeners
     document.getElementById('taskInput').addEventListener('keypress', (e) => {
