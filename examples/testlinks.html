@@ -95,7 +95,7 @@
         // Mostrar relaciones entrantes (buscar nodos que apunten a este)
         let incomingRelations = [];
 
-        db.map((id, value, edges) => {
+        db.map(({id, value, edges}) => {
           if (edges.includes(searchId)) {
             incomingRelations.push(id);
           }
