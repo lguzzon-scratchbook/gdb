@@ -157,9 +157,8 @@
 
     // Cargar tareas desde la base de datos
     async function init() {
-      await db.map((id, value, type) => {
-
-        if (type === 'removed') {
+      await db.map(({id, value, action}) => {
+        if (action === 'removed') {
           const taskElement = document.querySelector(`[data-id="${id}"]`);
           if (!taskElement) {
             console.error(`Tarea con ID '${id}' no encontrada en el DOM.`);
