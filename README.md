@@ -46,6 +46,8 @@ This project is under active development. Do not use it in production environmen
 - **Phase**: Alpha
 - **Completed Features**:
   - Basic queries.
+  - Advanced queries.
+  - + Modules for AI queries.
   - Distributed storage.
   
 - **Pending Features**:
