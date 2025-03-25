@@ -58,7 +58,8 @@ This project is under active development. Do not use it in production environmen
 ### ✅ **Role Based Access Control (RBAC)**
 
 - Customizable role hierarchy (`superadmin`, `admin`, etc)
-- Authentication with Metamask
+- Biometric Registration and Authentication with WebAuthn
+- WebAuthn - Biometric Registration and Authentication
 - Granular permissions (`read`/`write`/`delete`/`publish`)
 - Role assignment with automatic expiration
 - Cryptographic transaction verification
