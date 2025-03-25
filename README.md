@@ -36,6 +36,7 @@ Graph database with Role-Based Access Control (RBAC), P2P synchronization, and l
 - CRUD operations for nodes and relationships
 - Compressed serialization with MessagePack
 - Automatic indexing for fast searches
+- GraphDB supports external modules that extend its capabilities.
 
 ## Warning
 
