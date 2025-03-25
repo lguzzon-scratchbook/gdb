@@ -34,7 +34,7 @@ Graph database with Role-Based Access Control (RBAC), P2P synchronization, and l
 - Efficient storage in OPFS
 - Real-time synchronization between tabs and devices
 - CRUD operations for nodes and relationships
-- Compressed serialization with MessagePack
+- Efficient serialization using MessagePack and compression with Pako.
 - Automatic indexing for fast searches
 - GraphDB supports external modules that extend its capabilities.
 
