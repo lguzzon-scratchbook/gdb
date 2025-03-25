@@ -31,11 +31,11 @@ Graph database with Role-Based Access Control (RBAC), P2P synchronization, and l
 
 ### ✅ **GraphDB Core**
 
-- Efficient storage in OPFS
-- Real-time synchronization between tabs and devices
-- CRUD operations for nodes and relationships
+- Efficient storage in OPFS.
+- Real-time synchronization between tabs and devices.
+- CRUD operations for nodes and relationships.
 - Efficient serialization using MessagePack and compression with Pako.
-- Enabling reverse or Radix Tree indexing via external modules
+- Enabling reverse or Radix Tree indexing through external modules.
 - GraphDB supports external modules that extend its capabilities.
 
 ## Warning
