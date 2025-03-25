@@ -51,7 +51,7 @@ This project is under active development. Do not use it in production environmen
   - Distributed storage.
   
 - **Pending Features**:
-  - Conflict resolution module.
+  - Improve conflict resolution module.
   - Performance optimization.
 
 ### ✅ **Role Based Access Control (RBAC)**
@@ -97,7 +97,6 @@ import { GraphDB } from "gdb-p2p"
 |--------------|-----------------------------------------------------------------------------------------|
 | **jsDelivr** | [`https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm`](https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm) |
 | **UNPKG**    | [`https://unpkg.com/gdb-p2p@latest`](https://unpkg.com/gdb-p2p@latest)                  |
-| **Skypack**  | [`https://cdn.skypack.dev/gdb-p2p`](https://cdn.skypack.dev/gdb-p2p)                    |
 
 ## Documentation
 
