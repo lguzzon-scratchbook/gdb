@@ -35,7 +35,7 @@ Graph database with Role-Based Access Control (RBAC), P2P synchronization, and l
 - Real-time synchronization between tabs and devices
 - CRUD operations for nodes and relationships
 - Efficient serialization using MessagePack and compression with Pako.
-- Automatic indexing for fast searches
+- Enabling reverse or Radix Tree indexing via external modules
 - GraphDB supports external modules that extend its capabilities.
 
 ## Warning
