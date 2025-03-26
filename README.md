@@ -59,6 +59,7 @@ This project is under active development. Do not use it in production environmen
 
 - Customizable role hierarchy (`superadmin`, `admin`, etc)
 - Authentication with Metamask
+- Biometric Registration and Authentication with WebAuthn
 - Granular permissions (`read`/`write`/`delete`/`publish`)
 - Role assignment with automatic expiration
 - Cryptographic transaction verification
