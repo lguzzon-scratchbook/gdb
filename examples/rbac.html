@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GraphDB - Role-Based Access Control (RBAC Example)</title>
     <style>
-        /* Estilos generales */
+        /* General styles */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -22,14 +22,14 @@
             color: #007bff;
         }
 
-        /* Contenedor principal */
+        /* Main container */
         .container {
             max-width: 960px;
             margin: 0 auto;
             padding: 20px;
         }
 
-        /* Estilos de formulario */
+        /* Form styles */
         label {
             display: block;
             margin-bottom: 5px;
@@ -48,7 +48,7 @@
             box-sizing: border-box;
         }
 
-        /* Estilos de botón */
+        /* Button styles */
         button {
             margin: 5px;
             padding: 10px 15px;
@@ -64,7 +64,7 @@
             background-color: #0056b3;
         }
 
-        /* Estilos de lista de registros */
+        /* Record list styles */
         .record-list {
             margin-top: 20px;
         }
@@ -90,14 +90,14 @@
             margin-left: 10px;
         }
 
-        /* Estilo para truncar el texto */
+        /* Style to truncate text */
         .truncate {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* Estilos de diálogo de edición */
+        /* Edit dialog styles */
         .edit-dialog {
             display: none;
             position: fixed;
@@ -120,7 +120,7 @@
             box-sizing: border-box;
         }
 
-        /* Estilos de superposición */
+        /* Overlay styles */
         .overlay {
             display: none;
             position: fixed;
@@ -132,7 +132,7 @@
             z-index: 999;
         }
 
-        /* Media query para pantallas más pequeñas */
+        /* Media query for smaller screens */
         @media (max-width: 768px) {
             .record-item {
                 flex-direction: column;
@@ -199,6 +199,10 @@
 
         // Function to get userEmail from localStorage
         function getUserEmail() {
+          
+          const test = db.graph.get(`user:estebanrfp@gmail.com`)
+          console.log(test)
+            // return db.graph.get(`user:${userEmail}`)
             return localStorage.getItem('userEmail');
         }
 
@@ -308,6 +312,7 @@
             recordList.className = "record-list";
 
             nodes.forEach(({ id, value, timestamp }) => {
+              console.log(id)
                 const recordItem = document.createElement("div");
                 recordItem.className = "record-item";
 
