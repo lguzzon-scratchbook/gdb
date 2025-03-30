@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<style>
+  html,
+  body,
+  textarea {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+  }
+</style>
+<textarea id="paste" placeholder="Pega aquí!"></textarea>
+<script type="module">
+  // Import GraphDB
+  import { GraphDB } from "../dist/index.js";
+
+  // Initialize the database
+  const db = new GraphDB("graphdb-paste");
+
+  // Get the <textarea> element
+  const paste = document.getElementById("paste");
+
+  // Unique ID for the textarea content
+  const TEXTAREA_ID = "textarea-content";
+
+  // Function to save textarea content to GraphDB
+  const saveContent = async () => {
+    const content = paste.value; // Get current textarea content
+    await db.put({content}, TEXTAREA_ID); // Save content to GraphDB
+  };
+
+  // Event to save content in real time
+  paste.oninput = async () => {
+    await saveContent(); // Save content every time user types
+  };
+
+  // Listen for database changes (real-time synchronization)
+  db.map(({ id, value }) => {
+    if (id === TEXTAREA_ID) {
+      paste.value = value.content;
+    }
+  });
+</script>
