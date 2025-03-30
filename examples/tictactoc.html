@@ -134,21 +134,22 @@
     }
 
     function makeMove(index) {
-      // Verificar si la casilla ya está ocupada o si no es el turno del jugador actual
+      // Check if the cell is already taken or if it's not the current player's turn
       if (boardState[index] || currentPlayer !== player) return;
 
-      // Actualizar el estado del tablero
+      // Update the board state
       boardState[index] = player;
 
-      // Actualizar el tablero visualmente para el jugador actual
+      // Visually update the board for the current player
       createBoard();
 
-      // Notificar a los demás jugadores sobre el movimiento
+      currentPlayer = player === 'X' ? 'O' : 'X';
+      // Notify other players about the move
       const winner = checkWinner();
       if (winner) {
         sendData({ board: JSON.stringify(boardState), winner });
       } else {
-        sendData({ board: JSON.stringify(boardState), turn: player === 'X' ? 'O' : 'X' });
+        sendData({ board: JSON.stringify(boardState), turn: currentPlayer });
       }
     }
 
