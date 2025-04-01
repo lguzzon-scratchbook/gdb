@@ -85,27 +85,21 @@
     // Variable to track if Shift is pressed
     let isShiftPressed = false;
 
-    // Function to load all nodes and edges from the DB
-    async function loadGraph(nodes) {
+    // Function to update the graph in real-time
+    function updateGraph({ id, value, edges }) {
       try {
-        // Get all nodes and their relationships (IDs)
-        // const nodes = await db.getAllNodes();
-        const edges = Object.values(nodes).flatMap(node =>
-          node.edges.map(edgeId => ({ source: node.id, target: edgeId }))
-        );
+        // Add the node if it doesn't exist
+        if (!cy.getElementById(id).length) {
+          const text = typeof value === "object" && value !== null ? value.text : String(value);
+          cy.add({ group: "nodes", data: { id, text } });
+        }
 
-        // Clear the current graph
-        cy.elements().remove();
-
-        // Add nodes
-        nodes.forEach(node => {
-          const text = typeof node.value === "object" && node.value !== null ? node.value.text : String(node.value);
-          cy.add({ group: "nodes", data: { id: node.id, text } });
-        });
-
-        // Add edges (using only IDs)
-        edges.forEach(edge => {
-          cy.add({ group: "edges", data: { id: `${edge.source}-${edge.target}`, source: edge.source, target: edge.target } });
+        // Add edges (using only IDs) if they don't exist
+        edges.forEach(edgeId => {
+          const edgeIdString = `${id}-${edgeId}`;
+          if (!cy.getElementById(edgeIdString).length) {
+            cy.add({ group: "edges", data: { id: edgeIdString, source: id, target: edgeId } });
+          }
         });
 
         // Run the layout again to reorganize the nodes
@@ -118,7 +112,7 @@
           animate: true
         }).run();
       } catch (error) {
-        console.error("Error loading graph:", error);
+        console.error("Error updating graph:", error);
       }
     }
 
@@ -248,11 +242,7 @@
     }
 
     // Initial load, real-time updates
-
-    // await db.map(results => loadGraph(results));
-    const { results } = await db.map();
-    loadGraph(results)
-
+    db.map(updateGraph);
   </script>
 </body>
 
