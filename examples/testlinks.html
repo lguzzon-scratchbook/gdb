@@ -1,63 +1,63 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GraphDB Tester</title>
   <script type="module">
-    // Importar GraphDB como módulo
+    // Import GraphDB as a module
     import { GraphDB } from "../dist/index.js";
 
-    // Inicializar GraphDB
+    // Initialize GraphDB
     const db = new GraphDB("testGraph");
 
-    // Variables para almacenar nodos y relaciones
+    // Variables to store nodes and relationships
     const nodesList = document.getElementById("nodes-list");
     const relationsList = document.getElementById("relations-list");
     const searchResult = document.getElementById("search-result");
 
-    // Función para insertar un nodo
+    // Function to insert a node
     async function insertNode() {
       const valueInput = document.getElementById("node-value").value.trim();
       if (!valueInput) {
-        alert("Por favor, ingresa un valor para el nodo.");
+        alert("Please, enter a value for the node.");
         return;
       }
 
       try {
         const id = await db.put(valueInput);
         addNodeToList(id, valueInput);
-        console.log(`Nodo insertado con ID: ${id}`);
+        console.log(`Node inserted with ID: ${id}`);
       } catch (error) {
-        alert("Error al insertar el nodo.");
+        alert("Error inserting the node.");
       }
     }
 
-    // Función para crear una relación entre dos nodos
+    // Function to create a relationship between two nodes
     async function createLink() {
       const sourceId = document.getElementById("source-id").value.trim();
       const targetId = document.getElementById("target-id").value.trim();
 
       if (!sourceId || !targetId) {
-        alert("Debes proporcionar IDs válidos para la fuente y el destino.");
+        alert("You must provide valid IDs for the source and target.");
         return;
       }
 
       try {
         await db.link(sourceId, targetId);
         addRelationToList(sourceId, targetId);
-        console.log(`Relación creada entre ${sourceId} y ${targetId}`);
+        console.log(`Relationship created between ${sourceId} and ${targetId}`);
       } catch (error) {
-        alert("Error al crear la relación. Verifica los IDs.");
+        alert("Error creating the relationship. Check the IDs.");
       }
     }
 
-    // Función para buscar un nodo por ID
+    // Function to search for a node by ID
     async function searchNode() {
       const searchId = document.getElementById("search-id").value.trim();
       if (!searchId) {
-        alert("Por favor, ingresa un ID válido para buscar.");
+        alert("Please, enter a valid ID to search.");
         return;
       }
 
@@ -65,34 +65,34 @@
         const { result: node } = await db.get(searchId);
 
         if (!node) {
-          searchResult.innerHTML = `<p>No se encontró ningún nodo con el ID: ${searchId}</p>`;
+          searchResult.innerHTML = `<p>No node found with ID: ${searchId}</p>`;
           return;
         }
 
-        // Mostrar información del nodo
-        let resultHTML = `<p><strong>Nodo encontrado:</strong> ID: ${node.id}, Valor: ${node.value}</p>`;
+        // Show node information
+        let resultHTML = `<p><strong>Node found:</strong> ID: ${node.id}, Value: ${node.value}</p>`;
 
-        // Mostrar relaciones salientes
+        // Show outgoing relationships
         const outgoingRelations = node.edges || [];
         if (outgoingRelations.length > 0) {
-          resultHTML += `<p><strong>Relaciones salientes:</strong></p><ul>`;
+          resultHTML += `<p><strong>Outgoing relationships:</strong></p><ul>`;
 
-          // Usamos Promise.all para esperar que todas las promesas se resuelvan
+          // We use Promise.all to wait for all promises to resolve
           const relationsHTML = await Promise.all(
             outgoingRelations.map(async (targetId) => {
               const { result: targetNode } = await db.get(targetId);
-              return `<li>Relation: ${targetNode ? targetNode.value : "Desconocido"}</li>`;
+              return `<li>Relation: ${targetNode ? targetNode.value : "Unknown"}</li>`;
             })
           );
 
-          resultHTML += relationsHTML.join(""); // Unimos los resultados en el HTML
+          resultHTML += relationsHTML.join(""); // Join the results in the HTML
 
           resultHTML += `</ul>`;
         } else {
-          resultHTML += `<p>No hay relaciones salientes.</p>`;
+          resultHTML += `<p>No outgoing relationships.</p>`;
         }
 
-        // Mostrar relaciones entrantes (buscar nodos que apunten a este)
+        // Show incoming relationships (search for nodes that point to this)
         let incomingRelations = [];
 
         db.map(({id, value, edges}) => {
@@ -102,36 +102,36 @@
         });
 
         if (incomingRelations.length > 0) {
-          resultHTML += `<p><strong>Relaciones entrantes:</strong></p><ul>`;
+          resultHTML += `<p><strong>Incoming relationships:</strong></p><ul>`;
           incomingRelations.forEach((sourceId) => {
-            resultHTML += `<li>Fuente: ${sourceId} -> Destino: ${searchId}</li>`;
+            resultHTML += `<li>Source: ${sourceId} -> Target: ${searchId}</li>`;
           });
           resultHTML += `</ul>`;
         } else {
-          resultHTML += `<p>No hay relaciones entrantes.</p>`;
+          resultHTML += `<p>No incoming relationships.</p>`;
         }
 
         searchResult.innerHTML = resultHTML;
       } catch (error) {
-        alert("Error al buscar el nodo.");
+        alert("Error searching for the node.");
       }
     }
 
-    // Función para agregar un nodo a la lista
+    // Function to add a node to the list
     function addNodeToList(id, value) {
       const nodeItem = document.createElement("li");
-      nodeItem.textContent = `ID: ${id}, Valor: ${value}`;
+      nodeItem.textContent = `ID: ${id}, Value: ${value}`;
       nodesList.appendChild(nodeItem);
     }
 
-    // Función para agregar una relación a la lista
+    // Function to add a relationship to the list
     function addRelationToList(sourceId, targetId) {
       const relationItem = document.createElement("li");
-      relationItem.textContent = `Fuente: ${sourceId} -> Destino: ${targetId}`;
+      relationItem.textContent = `Source: ${sourceId} -> Target: ${targetId}`;
       relationsList.appendChild(relationItem);
     }
 
-    // Cargar datos existentes al iniciar la aplicación
+    // Load existing data when the application starts
     (async () => {
       await db.ready;
       await db.map(({ id, value, edges }) => {
@@ -141,7 +141,7 @@
         });
       });
 
-      // Asignar event listeners después de cargar los datos
+      // Assign event listeners after loading the data
       document.getElementById("insert-node-btn").addEventListener("click", insertNode);
       document.getElementById("create-link-btn").addEventListener("click", createLink);
       document.getElementById("search-node-btn").addEventListener("click", searchNode);
@@ -184,27 +184,27 @@
   <h1>GraphDB Tester</h1>
 
   <div id="controls">
-    <h2>Insertar Nodo</h2>
-    <input type="text" id="node-value" placeholder="Valor del nodo (texto o número)">
-    <button id="insert-node-btn">Insertar Nodo</button>
+    <h2>Insert Node</h2>
+    <input type="text" id="node-value" placeholder="Node value (text or number)">
+    <button id="insert-node-btn">Insert Node</button>
 
-    <h2>Crear Relación</h2>
-    <input type="text" id="source-id" placeholder="ID del nodo fuente">
-    <input type="text" id="target-id" placeholder="ID del nodo destino">
-    <button id="create-link-btn">Crear Relación</button>
+    <h2>Create Relationship</h2>
+    <input type="text" id="source-id" placeholder="Source node ID">
+    <input type="text" id="target-id" placeholder="Target node ID">
+    <button id="create-link-btn">Create Relationship</button>
 
-    <h2>Buscar Nodo</h2>
-    <input type="text" id="search-id" placeholder="ID del nodo a buscar">
-    <button id="search-node-btn">Buscar Nodo</button>
+    <h2>Search Node</h2>
+    <input type="text" id="search-id" placeholder="ID of the node to search">
+    <button id="search-node-btn">Search Node</button>
   </div>
 
-  <h2>Nodos</h2>
+  <h2>Nodes</h2>
   <ul id="nodes-list"></ul>
 
-  <h2>Relaciones</h2>
+  <h2>Relationships</h2>
   <ul id="relations-list"></ul>
 
-  <h2>Resultado de la Búsqueda</h2>
+  <h2>Search Result</h2>
   <div id="search-result"></div>
 </body>
 
