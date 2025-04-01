@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Video Streaming</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+
+    #videos {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    video {
+      width: 300px;
+      height: 200px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background-color: black;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+      color: green;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Real-Time Video Streaming App</h1>
+  <p>Join the room and start streaming your webcam video to other peers.</p>
+
+  <button id="startButton">Start Streaming</button>
+  <button id="stopButton" disabled>Stop Streaming</button>
+
+  <div id="status">Status: Idle</div>
+
+  <!-- Container for video elements -->
+  <div id="videos"></div>
+
+  <script type="module">
+    // Import the database library (replace with your actual library path)
+    import { GraphDB } from "../dist/index.js";
+
+    // Initialize the database and create a room
+    const db = new GraphDB('video-room');
+
+    // Object to store video elements for each peer
+    const peerVideos = {};
+
+    // Reference to the video container
+    const videoContainer = document.getElementById('videos');
+
+    // Variables to manage the local video stream
+    let selfStream;
+
+    // Start streaming video
+    document.getElementById('startButton').addEventListener('click', async () => {
+      try {
+        // Get access to the user's webcam
+        selfStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true
+        });
+
+        // Send the stream to peers currently in the room
+        db.room.addStream(selfStream);
+
+        // Send the stream to peers who join later
+        db.room.onPeerJoin(peerId => db.room.addStream(selfStream, peerId));
+
+        // Update UI
+        document.getElementById('status').textContent = 'Status: Streaming';
+        document.getElementById('startButton').disabled = true;
+        document.getElementById('stopButton').disabled = false;
+      } catch (error) {
+        console.error('Error accessing webcam:', error);
+        alert('Unable to access the webcam. Please check permissions.');
+      }
+    });
+
+    // Stop streaming video
+    document.getElementById('stopButton').addEventListener('click', () => {
+      if (selfStream) {
+        // Stop all tracks in the stream
+        selfStream.getTracks().forEach(track => track.stop());
+
+        // Remove the stream from the room
+        db.room.removeStream();
+
+        // Update UI
+        document.getElementById('status').textContent = 'Status: Stopped';
+        document.getElementById('startButton').disabled = false;
+        document.getElementById('stopButton').disabled = true;
+      }
+    });
+
+    // Handle incoming video streams from other peers
+    db.room.onPeerStream((stream, peerId) => {
+      let video = peerVideos[peerId];
+
+      // If this peer hasn't sent a stream before, create a video element
+      if (!video) {
+        video = document.createElement('video');
+        video.autoplay = true;
+
+        // Add video element to the DOM
+        videoContainer.appendChild(video);
+      }
+
+      // Set the incoming stream as the source for the video element
+      video.srcObject = stream;
+
+      // Store the video element for future reference
+      peerVideos[peerId] = video;
+
+      console.log(`Received video stream from peer ${peerId}`);
+    });
+
+    // Log when peers join or leave the room
+    db.room.onPeerJoin(peerId => console.log(`${peerId} joined the room`));
+    db.room.onPeerLeave(peerId => {
+      console.log(`${peerId} left the room`);
+
+      // Clean up the video element for the peer who left
+      if (peerVideos[peerId]) {
+        peerVideos[peerId].remove(); // Remove the video element from the DOM
+        delete peerVideos[peerId]; // Delete the reference
+      }
+    });
+  </script>
+</body>
+
+</html>
