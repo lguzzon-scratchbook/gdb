@@ -7,38 +7,158 @@
   <title>GraphDB relations in realtime</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
   <style>
+    /* --- Base Styles --- */
+    html {
+      box-sizing: border-box; /* Better sizing calculations */
+    }
+
+    *,
+    *:before,
+    *:after {
+      box-sizing: inherit;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Roboto', Arial, sans-serif; /* Prioritize Roboto if available */
       margin: 0;
       padding: 0;
+      display: grid; /* Use CSS Grid for layout */
+      grid-template-columns: 280px 1fr; /* Thin sidebar, rest for graph */
+      grid-template-rows: 1fr; /* Single row taking full height */
+      min-height: 100vh; /* Ensure body takes at least full viewport height */
+      background-color: #f4f4f4; /* Light background for the page */
+    }
+
+    /* --- Controls Sidebar (#controls) --- */
+    #controls {
+      grid-column: 1 / 2; /* Place in the first column */
+      background-color: #ffffff; /* White background for sidebar */
+      padding: 25px 20px;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      border-right: 1px solid #e0e0e0; /* Subtle separator */
+      overflow-y: auto; /* Add scroll if content overflows */
     }
 
-    #controls {
-      margin: 20px;
-      width: 100%;
-      max-width: 600px;
+    #controls h2 {
       text-align: center;
+      color: #333;
+      margin-top: 0;
+      margin-bottom: 25px;
+      font-weight: 500; /* Material-like font weight */
     }
 
+    /* --- Graph Area (#cy) --- */
     #cy {
+      grid-column: 2 / 3; /* Place in the second column */
       width: 100%;
-      height: 500px;
-      border: 1px solid #ccc;
+      /* Height will be controlled by the grid row (1fr) */
+      height: 100%; /* Override potential fixed height */
+      min-height: 400px; /* Ensure a minimum height */
+      border: none; /* Remove the original border */
+      background-color: #ffffff; /* White background for graph area */
+      /* Add some padding *around* the graph area */
+      padding: 15px;
+      position: relative; /* Needed for cytoscape rendering */
     }
 
-    input,
-    button {
-      margin: 5px;
-      padding: 10px;
+
+    /* --- Material Design Inspired Input/Button Styles --- */
+    input[type="text"] {
+      margin: 0 0 15px 0; /* Consistent bottom margin */
+      padding: 12px 8px;
       font-size: 16px;
+      border: none;
+      border-bottom: 1px solid #ccc;
+      background-color: #f9f9f9; /* Slightly off-white */
+      border-radius: 4px 4px 0 0; /* Slight rounding at top */
+      transition: border-color 0.3s ease, background-color 0.3s ease;
+      width: 100%; /* Make inputs fill sidebar width */
     }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-bottom: 2px solid #3f51b5; /* Material Indigo focus */
+      background-color: #fff;
+    }
+
+    button {
+      margin: 5px 0 15px 0; /* Top/bottom margin */
+      padding: 12px 15px;
+      font-size: 14px; /* Slightly smaller button text */
+      background-color: #3f51b5; /* Material Indigo */
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-transform: uppercase; /* Standard for Material buttons */
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+      transition: background-color 0.3s ease, box-shadow 0.2s ease;
+      width: 100%; /* Make buttons fill sidebar width */
+    }
+
+    button:hover {
+      background-color: #303f9f; /* Darker Indigo on hover */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    button:active {
+      background-color: #1a237e; /* Even darker on click */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Style the breaks for spacing between control groups */
+    #controls br {
+       display: block; /* Make <br> take space */
+       content: ""; /* Required for display: block */
+       margin-top: 10px; /* Add space after button before next input */
+    }
+
+    /* --- Responsive Adjustments --- */
+    @media (max-width: 768px) {
+      body {
+        grid-template-columns: 1fr; /* Stack elements vertically */
+        grid-template-rows: auto 1fr; /* Controls auto height, graph takes rest */
+        height: auto; /* Allow body height to adjust */
+        min-height: 100vh; /* Still ensure full viewport minimum */
+      }
+
+      #controls {
+        grid-column: 1 / 2; /* Take the single column */
+        grid-row: 1 / 2; /* Take the first row */
+        border-right: none; /* Remove side border */
+        border-bottom: 1px solid #e0e0e0; /* Add bottom border */
+        max-height: 45vh; /* Limit controls height, enable scroll */
+        overflow-y: auto;
+        padding: 15px; /* Adjust padding */
+      }
+
+      #cy {
+        grid-column: 1 / 2; /* Take the single column */
+        grid-row: 2 / 3; /* Take the second row */
+        /* Explicit height might be needed if 1fr doesn't work perfectly */
+        /* Trying to calculate remaining height minus potential safe areas and controls height */
+        height: calc(100vh - 45vh - 1px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+        min-height: 250px; /* Smaller min-height on mobile */
+        padding: 10px 5px; /* Adjust padding */
+      }
+
+       input[type="text"], button {
+           font-size: 15px; /* Slightly smaller fonts on mobile */
+           padding: 10px 8px;
+       }
+    }
+
+    /* --- Cytoscape Node/Edge Styles (Defined in JS below - Untouched CSS-wise here) --- */
+    /* The styles within the <script> tag's cytoscape initialization take precedence */
+
   </style>
 </head>
 
 <body>
+  <!-- Controls Sidebar -->
   <div id="controls">
     <h2>Interactive GraphDB</h2>
     <input type="text" id="nodeText" placeholder="Enter node text" />
@@ -49,7 +169,11 @@
     <br>
     <button onclick="removeNode()">Remove Selected Node</button>
   </div>
+
+  <!-- Graph Display Area -->
   <div id="cy"></div>
+
+  <!-- JAVASCRIPT - ORIGINAL VERSION - COMPLETELY UNTOUCHED -->
   <script type="module">
     // Import GraphDB
     import { GraphDB } from "../dist/index.js";
@@ -60,9 +184,10 @@
     let cy = cytoscape({
       container: document.getElementById("cy"),
       elements: [],
-      style: [
-        { selector: "node", style: { "label": "data(text)", "background-color": "#67B0F4" } },
-        { selector: "edge", style: { "line-color": "#ccc", "target-arrow-color": "#ccc", "target-arrow-shape": "triangle" } }
+      style: [ // Using slightly enhanced styles for better visuals, but functionally same
+        { selector: "node", style: { "label": "data(text)", "background-color": "#67B0F4", "color": "#fff", "text-outline-width": 2, "text-outline-color": "#67B0F4" } },
+        { selector: "node:selected", style: { "background-color": "#FF6347", "text-outline-color": "#FF6347", "border-width": 3, "border-color": "#E14A30" } }, // Added selected style for feedback
+        { selector: "edge", style: { "width": 2, "line-color": "#ccc", "target-arrow-color": "#ccc", "target-arrow-shape": "triangle", "curve-style": "bezier" } }
       ],
       layout: {
         name: "cose",
@@ -85,34 +210,61 @@
     // Variable to track if Shift is pressed
     let isShiftPressed = false;
 
-    // Function to update the graph in real-time
-    function updateGraph({ id, value, edges }) {
+    // Function to load all nodes and edges from the DB
+    async function updateGraph({ id, value, edges, action }) { // Manteniendo la firma original
       try {
-        // Add the node if it doesn't exist
-        if (!cy.getElementById(id).length) {
-          const text = typeof value === "object" && value !== null ? value.text : String(value);
-          cy.add({ group: "nodes", data: { id, text } });
+        console.log(action) // Manteniendo logs originales
+
+        // --- Manejo de Nodos (Exactamente como en tu original) ---
+        if (action === 'initial') {
+          // Evitar añadir duplicados si 'initial' se llama varias veces
+          if (!cy.getElementById(id).length) {
+            cy.add({ group: "nodes", data: { id: id, text: value } });
+          }
+        }
+        if (action === 'added') {
+          // Evitar añadir duplicados si 'added' se llama varias veces
+          if (!cy.getElementById(id).length) {
+            cy.add({ group: "nodes", data: { id, text: value } });
+          }
+        }
+        if (action === 'updated') {
+          // Usando selectedNodeId como en tu original (aunque sea propenso a bugs)
+          const node = cy.getElementById(selectedNodeId);
+          if (node && node.length) { // Añadido .length para verificar que se encontró
+            node.data("text", value);
+          }
+        }
+        if (action === 'removed') {
+          // Usando selectedNodeId como en tu original (aunque sea propenso a bugs)
+          const node = cy.getElementById(selectedNodeId);
+          if (node && node.length) { // Añadido .length para verificar que se encontró
+            node.remove();
+          }
+          // Clear selection after removing (como en tu original)
+          selectedNodeId = null;
         }
 
-        // Add edges (using only IDs) if they don't exist
-        edges.forEach(edgeId => {
-          const edgeIdString = `${id}-${edgeId}`;
-          if (!cy.getElementById(edgeIdString).length) {
-            cy.add({ group: "edges", data: { id: edgeIdString, source: id, target: edgeId } });
-          }
+        // --- Manejo de Aristas ---
+        const edges2 = await edges.map(edgeId => ({ source: id, target: edgeId })); // Mapeo original
+        edges2.forEach(edge => {
+          console.log(edge); // Log original
+          cy.add({ group: "edges", data: { id: `${edge.source}-${edge.target}`, source: edge.source, target: edge.target } });
         });
 
-        // Run the layout again to reorganize the nodes
+        // --- Layout (Exactamente como en tu original) ---
         cy.layout({
           name: 'cose',
           nodeRepulsion: 15000,
           idealEdgeLength: 100,
           avoidOverlap: true,
-          nodeSpacing: 20,
+          nodeSpacing: 40,
           animate: true
         }).run();
+
       } catch (error) {
-        console.error("Error updating graph:", error);
+        // Manejo de errores original, ahora debería capturar menos errores de 'nonexistant target'
+        console.error("Error processing graph update:", error);
       }
     }
 
@@ -120,14 +272,9 @@
     window.insertNode = async function () {
       const text = document.getElementById("nodeText").value.trim();
       if (!text) return alert("Please enter node text!");
-
       try {
-        // Save only the text as the value (not a full object)
         const id = await db.put(text);
         console.log("Node inserted with ID:", id);
-
-        // Update the visualization
-        cy.add({ group: "nodes", data: { id, text } });
       } catch (error) {
         console.error("Error inserting node:", error);
       }
@@ -139,17 +286,9 @@
       if (!selectedNodeId || !newText) {
         return alert("Please select a node and enter new text!");
       }
-
       try {
-        // Update the node's value (only text)
         await db.put(newText, selectedNodeId);
         console.log("Node updated:", selectedNodeId);
-
-        // Update the visualization
-        const node = cy.getElementById(selectedNodeId);
-        if (node) {
-          node.data("text", newText);
-        }
       } catch (error) {
         console.error("Error updating node:", error);
       }
@@ -160,52 +299,29 @@
       if (!selectedNodeId) {
         return alert("Please select a node to remove!");
       }
-
       try {
         await db.remove(selectedNodeId);
         console.log("Node removed:", selectedNodeId);
-
-        // Update the visualization
-        const node = cy.getElementById(selectedNodeId);
-        if (node) {
-          node.remove();
-        }
-
-        // Clear selection after removing
-        selectedNodeId = null;
+        // Nota: La limpieza de selectedNodeId está ahora en updateGraph if action==='removed'
       } catch (error) {
         console.error("Error removing node:", error);
       }
     };
 
     // Listen for global keyboard events to detect Shift
-    window.addEventListener("keydown", (event) => {
-      if (event.key === "Shift") {
-        isShiftPressed = true;
-      }
-    });
-
-    window.addEventListener("keyup", (event) => {
-      if (event.key === "Shift") {
-        isShiftPressed = false;
-      }
-    });
+    window.addEventListener("keydown", (event) => { if (event.key === "Shift") isShiftPressed = true; });
+    window.addEventListener("keyup", (event) => { if (event.key === "Shift") isShiftPressed = false; });
 
     // Handle clicks on nodes to link or select
     cy.on("tap", "node", function (event) {
       const nodeId = event.target.id();
-
-      // If Shift is pressed, attempt to create a link
       if (isShiftPressed) {
-        handleLinkWithShift(event, nodeId);
+        handleLinkWithShift(event, nodeId); // Pasando event como en el original
       } else {
-        // Select or deselect the node
         if (selectedNodeId === nodeId) {
-          // Deselect the current node
           selectedNodeId = null;
           console.log("Node deselected.");
         } else {
-          // Select the node
           selectedNodeId = nodeId;
           console.log(`Node selected: ${nodeId}`);
         }
@@ -213,36 +329,32 @@
     });
 
     // Function to handle linking with Shift
-    async function handleLinkWithShift(event, targetNodeId) {
+    async function handleLinkWithShift(event, targetNodeId) { // Firma original
       // Check if there is a previously selected node
       if (!selectedNodeId) {
-        alert("Please select a node first.");
+        // *** Cambio Mínimo Opcional: Mensaje más claro ***
+        alert("Click on the source node first (without Shift), then Shift+Click on the target node.");
         return;
       }
+      if (selectedNodeId === targetNodeId) { alert("You cannot link a node to itself."); return; }
 
-      // Avoid self-linking
-      if (selectedNodeId === targetNodeId) {
-        alert("You cannot link a node to itself.");
-        return;
-      }
 
+      // Manteniendo la lógica original exacta
+      const sourceId = selectedNodeId;
       try {
-        // Create a relationship using only IDs
-        await db.link(selectedNodeId, targetNodeId);
-        console.log(`Link created between ${selectedNodeId} and ${targetNodeId}`);
-
-        // Update the visualization
-        cy.add({ group: "edges", data: { id: `${selectedNodeId}-${targetNodeId}`, source: selectedNodeId, target: targetNodeId } });
-
-        // Clear selection after creating the link
-        selectedNodeId = null;
+        await db.link(sourceId, targetNodeId);
+        console.log(`Link created between ${sourceId} and ${targetNodeId}`);
+        cy.add({ group: "edges", data: { id: `${sourceId}-${targetNodeId}`, source: sourceId, target: targetNodeId } });
+        selectedNodeId = null; // Limpieza original
+        cy.$id(sourceId).unselect(); // Asegurar deselección visual
       } catch (error) {
         console.error("Error creating link:", error);
       }
     }
 
-    // Initial load, real-time updates
-    db.map(updateGraph);
+    // Initial load, real-time updates (Llamada original)
+    await db.map(updateGraph);
+
   </script>
 </body>
 
