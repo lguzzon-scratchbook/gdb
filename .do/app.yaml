@@ -1,8 +1,14 @@
-name: GraphDB Server
+name: gdb-server
 services:
-- environment_slug: node-js
-  github:
-    branch: main
-    deploy_on_push: true
-    repo: estebanrfp/gdb.git
-  name: gdb
+  - name: web
+    github:
+      repo: estebanrfp/gdb
+      branch: main
+      deploy_on_push: true
+    run_command: "node GraphDBServer.js"
+    build_command: ""
+    environment_slug: node-js
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    routes:
+      - path: /
