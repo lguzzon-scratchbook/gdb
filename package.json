@@ -5,8 +5,6 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "bun esbun.js",
-    "dev": "bun run --watch",
     "start": "node GraphDBServer.js"
   },
   "files": [
@@ -43,14 +41,9 @@
   "dependencies": {
     "@msgpack/msgpack": "3.1.1",
     "cors": "2.8.5",
-    "ethers": "6.13.5",
     "express": "5.1.0",
     "pako": "2.1.0",
     "trystero": "^0.21.1",
     "webrtc-polyfill": "1.1.10"
-  },
-  "devDependencies": {
-    "javascript-obfuscator": "4.1.1",
-    "text-encoding": "0.7.0"
   }
 }
