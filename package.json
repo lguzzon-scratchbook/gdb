@@ -45,11 +45,9 @@
     "cors": "2.8.5",
     "ethers": "6.13.5",
     "express": "5.1.0",
-    "nostr-tools": "2.12.0",
     "pako": "2.1.0",
     "trystero": "^0.21.1",
-    "webrtc-polyfill": "1.1.10",
-    "webtorrent": "2.6.0"
+    "webrtc-polyfill": "1.1.10"
   },
   "devDependencies": {
     "eslint": "9.24.0",
