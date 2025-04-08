@@ -1,6 +1,5 @@
 spec:
  name: GraphDB Server
- description: A GraphDB server for GDB data management
  static_sites:
  - git:
      branch: main
