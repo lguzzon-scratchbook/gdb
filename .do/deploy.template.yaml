@@ -3,5 +3,5 @@ spec:
  static_sites:
  - git:
      branch: main
-     repo_clone_url: git@github.com:estebanrfp/gdb.git
+     repo_clone_url: https://github.com/estebanrfp/gdb.git
    name: gdb
