@@ -1,7 +1,8 @@
 spec:
- name: GraphDB Server
- static_sites:
- - git:
-     branch: main
-     repo_clone_url: https://github.com/estebanrfp/gdb.git
-   name: gdb
+  name: GraphDB Server
+  services:
+  - environment_slug: node-js
+    git:
+      branch: main
+      repo_clone_url: https://github.com/estebanrfp/gdb.git
+    name: gdb
