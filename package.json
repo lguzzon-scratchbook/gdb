@@ -1,13 +1,13 @@
 {
   "name": "gdb-p2p",
-  "version": "0.0.53",
+  "version": "0.0.54",
   "description": "Distributed graph database (GraphDB/GDB) for real-time data modeling, scalable storage, and efficient querying of complex relationships.",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "build": "bun esbun.js",
     "dev": "bun run --watch",
-    "lint": "eslint ."
+    "start": "node GraphDBServer.js"
   },
   "files": [
     "dist"
@@ -41,18 +41,21 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@msgpack/msgpack": "3.1.0",
+    "@msgpack/msgpack": "3.1.1",
+    "cors": "2.8.5",
     "ethers": "6.13.5",
+    "express": "5.1.0",
+    "nostr-tools": "2.12.0",
     "pako": "2.1.0",
-    "radix3": "1.1.2",
-    "trystero": "^0.20.1",
-    "webtorrent": "2.5.19"
+    "trystero": "^0.21.1",
+    "webrtc-polyfill": "1.1.10",
+    "webtorrent": "2.6.0"
   },
   "devDependencies": {
-    "eslint": "9.22.0",
+    "eslint": "9.24.0",
     "eslint-config-standard": "17.1.0",
     "eslint-plugin-import": "2.31.0",
-    "eslint-plugin-n": "^17.16.2",
+    "eslint-plugin-n": "^17.17.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "7.2.1",
     "eslint-plugin-standard": "5.0.0",
