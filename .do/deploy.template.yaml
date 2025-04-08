@@ -1,0 +1,8 @@
+spec:
+ name: GraphDB Server
+ description: A GraphDB server for GDB data management
+ static_sites:
+ - git:
+     branch: main
+     repo_clone_url: git@github.com:estebanrfp/gdb.git
+   name: gdb
