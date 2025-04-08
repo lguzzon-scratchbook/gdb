@@ -20,7 +20,6 @@
 // - webrtc-polyfill: For WebRTC compatibility in Node.js
 // - HybridClock: For timestamp management
 // ========================================================================
-
 import express from "express";
 import fs from "fs/promises";
 import path from "path";
@@ -73,34 +72,35 @@ class Graph {
 
 // GraphDB Server Implementation
 export default class GraphDBServer {
-  constructor(name = process.argv[2] || "default", { password } = {}, storageDir = "./storage") {
+  constructor(name = process.env.GRAPHDB_ROOM || process.argv[2] || "default", { password } = {}, storageDir = "./storage") {
     this.hybridClock = new HybridClock();
-    this.globalTimestamp = 0; // Initialize global timestamp
+    this.globalTimestamp = { physical: 0, logical: 0 }; // Initialize global timestamp
     this.name = name;
     this.password = password;
     this.graph = new Graph();
     this.storageDir = storageDir;
-    this.clients = new Set(); // Almacenar clientes SSE
+    this.clients = new Set(); // Store SSE clients
 
     // Ensure the storage directory exists
     this.ensureStorageDirectory();
 
-    // Wait for the graph to load from the local file system
-    this.ready = this.loadGraphFromLocalStorage();
+    // Wait for the graph and timestamp to load from the local file system
+    this.ready = Promise.all([
+      this.loadGraphFromLocalStorage(),
+      this.loadGlobalTimestampFromLocalStorage()
+    ]);
 
     // Trystero configuration with unique key based on the database name
     const key = `graph-sync-room-${this.name}`;
-
     console.log(`   P2P room key: ${key}`);
-
     const roomConfig = {
       appId: "1234",
       ...(this.password && { password: this.password }),
       rtcPolyfill: RTCPeerConnection, // Use the webrtc-polyfill here
     };
+
     const room = joinRoom(roomConfig, key);
     this.room = room;
-
     const [sendData, getData] = room.makeAction("syncGraph");
     this.sendData = sendData;
 
@@ -143,7 +143,6 @@ export default class GraphDBServer {
     try {
       const filePath = path.join(this.storageDir, `${this.name}_graph.msgpack`);
       let graphContent;
-
       try {
         graphContent = await fs.readFile(filePath);
       } catch (error) {
@@ -154,7 +153,6 @@ export default class GraphDBServer {
           throw error;
         }
       }
-
       if (graphContent.byteLength > 0) {
         this.graph.deserialize(graphContent);
         console.log(`Graph loaded from local storage: [ ${this.graph.getAllNodes().length} nodes ]`);
@@ -172,55 +170,66 @@ export default class GraphDBServer {
       const serializedGraph = this.graph.serialize();
       const filePath = path.join(this.storageDir, `${this.name}_graph.msgpack`);
       await fs.writeFile(filePath, Buffer.from(serializedGraph));
-  
       console.log("Graph saved to local storage successfully.");
     } catch (error) {
       console.error("Error saving graph to local storage:", error.message);
     }
   }
 
-  // Insert or update a value in the graph and save changes
-  async put(value, id) {
-    await this.ready; // Ensure the graph is ready
-    const timestamp = this.hybridClock.now();
-    id ??= crypto.randomUUID(); // Generate ID if not provided
-    this.graph.insert(id, value, timestamp);
-    this.updateGlobalTimestamp(timestamp);
-    await this.saveGraphToLocalStorage();
-    this.sendData([{ type: "insert", id, value, timestamp }]);
-    console.log(`Inserted node with ID: ${id}`);
-    return id;
-  }
-
-  // Remove a node by ID and clean up references
-  async remove(id) {
-    await this.ready; // Ensure the graph is ready
-    const timestamp = this.hybridClock.now();
-    const node = this.graph.get(id);
-    if (!node) return console.error(`Node with ID '${id}' not found.`);
-    delete this.graph.nodes[id];
-    Object.values(this.graph.nodes).forEach(otherNode =>
-      otherNode.edges = otherNode.edges.filter(edgeId => edgeId !== id)
-    );
-    this.updateGlobalTimestamp(timestamp);
-    await this.saveGraphToLocalStorage();
-    this.sendData([{ type: "remove", id, value: node.value, timestamp }]);
-    console.log(`Removed node with ID: ${id}`);
-  }
-
-  // Create a link between two nodes and notify peers
-  async link(sourceId, targetId) {
-    await this.ready; // Ensure the graph is ready
-    const timestamp = this.hybridClock.now();
-    if (!this.graph.nodes[sourceId] || !this.graph.nodes[targetId]) {
-      console.error(`One or both nodes (${sourceId}, ${targetId}) do not exist.`);
-      return;
+  // Load the global timestamp from the local file system
+  async loadGlobalTimestampFromLocalStorage() {
+    try {
+      const filePath = path.join(this.storageDir, `${this.name}_timestamp.json`);
+      let timestampContent;
+      try {
+        timestampContent = await fs.readFile(filePath, "utf8");
+      } catch (error) {
+        if (error.code === "ENOENT") {
+          console.warn("The file '_timestamp.json' does not exist. Initializing with default timestamp.");
+          this.globalTimestamp = { physical: 0, logical: 0 }; // Default value
+          await this.saveGlobalTimestampToLocalStorage(); // Ensure the file is created
+          return;
+        } else {
+          throw error;
+        }
+      }
+      if (timestampContent) {
+        const parsedTimestamp = JSON.parse(timestampContent);
+        if (parsedTimestamp && typeof parsedTimestamp.physical === "number" && typeof parsedTimestamp.logical === "number") {
+          this.globalTimestamp = parsedTimestamp; // Assign only if format is correct
+          console.log(`Global timestamp loaded from local storage:`, this.globalTimestamp);
+        } else {
+          console.warn("Invalid timestamp format in '_timestamp.json'. Initializing with default timestamp.");
+          this.globalTimestamp = { physical: 0, logical: 0 }; // Default value
+          await this.saveGlobalTimestampToLocalStorage(); // Ensure the file is created
+        }
+      }
+    } catch (error) {
+      console.error("Error loading global timestamp from local storage:", error.message);
     }
-    this.graph.link(sourceId, targetId);
-    this.updateGlobalTimestamp(timestamp);
-    await this.saveGraphToLocalStorage();
-    this.sendData([{ type: "link", sourceId, targetId, timestamp }]);
-    console.log(`Linked nodes ${sourceId} and ${targetId}`);
+  }
+
+  // Save the global timestamp to the local file system
+  async saveGlobalTimestampToLocalStorage() {
+    try {
+      const filePath = path.join(this.storageDir, `${this.name}_timestamp.json`);
+      await fs.writeFile(filePath, JSON.stringify(this.globalTimestamp), "utf8");
+      console.log("Global timestamp saved to local storage successfully.");
+    } catch (error) {
+      console.error("Error saving global timestamp to local storage:", error.message);
+    }
+  }
+
+  // Update the global timestamp and save it to disk
+  updateGlobalTimestamp(timestamp) {
+    // if (this.hybridClock.compare(timestamp, this.globalTimestamp) > 0) {
+    //   console.log("Updating global timestamp from:", this.globalTimestamp, "to:", timestamp);
+    //   this.globalTimestamp = timestamp;
+    //   this.saveGlobalTimestampToLocalStorage(); // Guardar en disco al actualizar
+    // }
+    console.log("Updating global timestamp from:", this.globalTimestamp, "to:", timestamp);
+    this.globalTimestamp = timestamp;
+    this.saveGlobalTimestampToLocalStorage(); // Guardar en disco al actualizar
   }
 
   // Replace the local graph with the remote graph and save changes
@@ -228,6 +237,7 @@ export default class GraphDBServer {
     try {
       this.graph.nodes = { ...remoteGraph.nodes };
       await this.saveGraphToLocalStorage();
+      this.updateGlobalTimestamp(remoteGraph.timestamp || { physical: 0, logical: 0 }); // Update global timestamp
       console.log("Applied full graph from remote node.");
     } catch (error) {
       console.error(`Error applying the full graph: ${error.message}`);
@@ -235,26 +245,28 @@ export default class GraphDBServer {
   }
 
   // Handle incoming changes and apply them to the graph
-  async receiveChanges(changes) {    
+  async receiveChanges(changes) {
     const handlers = {
-      // insert: change => this.graph.insert(change.id, change.value, change.timestamp),
       insert: change => {
         const existingNode = this.graph.get(change.id);
         if (existingNode) {
-          // Si el nodo ya existe, resolvemos el conflicto
           const resolution = resolveConflict(existingNode, change, this.hybridClock);
           if (resolution.resolved) {
             Object.assign(existingNode, { value: resolution.value, timestamp: resolution.timestamp });
+            this.updateGlobalTimestamp(resolution.timestamp); // Actualizar el timestamp global
           }
         } else {
-          // Si el nodo no existe, simplemente lo insertamos
           this.graph.insert(change.id, change.value, change.timestamp);
+          this.updateGlobalTimestamp(change.timestamp); // Actualizar el timestamp global
         }
       },
       update: change => {
         const node = this.graph.get(change.id);
         const resolution = resolveConflict(node, change, this.hybridClock);
-        resolution.resolved && Object.assign(node, { value: resolution.value, timestamp: resolution.timestamp });
+        if (resolution.resolved) {
+          Object.assign(node, { value: resolution.value, timestamp: resolution.timestamp });
+          this.updateGlobalTimestamp(resolution.timestamp); // Actualizar el timestamp global
+        }
       },
       remove: change => delete this.graph.nodes[change.id],
       link: change => this.graph.link(change.sourceId, change.targetId),
@@ -264,40 +276,36 @@ export default class GraphDBServer {
           this.sendData([{ type: "syncReceive", graph: this.graph }]);
         }
       },
-      syncReceive: change => this.applyFullGraph(change.graph)
+      syncReceive: change => {
+        this.applyFullGraph(change.graph);
+        this.updateGlobalTimestamp(change.graph.timestamp || { physical: 0, logical: 0 }); // Actualizar el timestamp global
+      }
     };
 
-    for (const change of changes) handlers[change.type]?.(change);
-    await this.saveGraphToLocalStorage();
-  }
-
-  // Update the global timestamp
-  updateGlobalTimestamp(timestamp) {
-    if (this.hybridClock.compare(timestamp, this.globalTimestamp) > 0) {
-      this.globalTimestamp = timestamp;
+    for (const change of changes) {
+      handlers[change.type]?.(change);
     }
+
+    await this.saveGraphToLocalStorage();
   }
 }
 
 // Initialize the server
-const graphDBServer = new GraphDBServer(process.argv[2] || "default");
+const graphDBServer = new GraphDBServer(process.env.GRAPHDB_ROOM || process.argv[2] || "default");
 
 // Express setup
 const app = express();
 const PORT = 3000;
-// const STORAGE_DIR = path.join(process.cwd(), "storage");
 
 // Middleware to parse JSON
 app.use(express.json());
 
 // Endpoint to serve the HTML page
 app.get("/", (req, res) => {
-  // Configurar las cabeceras para enviar HTML
   res.setHeader("Content-Type", "text/html");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  // Enviar el HTML inicial al cliente
   res.write(`
     <!DOCTYPE html>
     <html lang="en">
@@ -326,46 +334,33 @@ app.get("/", (req, res) => {
       </div>
       <script>
         const connectionsDiv = document.getElementById("connections");
-
-        // Conectar al servidor usando SSE
         const eventSource = new EventSource("/events");
         eventSource.onmessage = event => {
           const data = JSON.parse(event.data);
-
           if (data.type === "peerJoin") {
             addPeer(data.peerId);
           } else if (data.type === "peerLeave") {
             removePeer(data.peerId);
           }
         };
-
         function addPeer(peerId) {
-          // Verificar si el peer ya existe en la lista
           const existingPeer = document.querySelector(\`[data-peer-id="\${peerId}"]\`);
           if (existingPeer) return;
-
-          // Crear un nuevo elemento para el peer
           const div = document.createElement("div");
           div.className = "peer";
-          div.setAttribute("data-peer-id", peerId); // Identificador único
+          div.setAttribute("data-peer-id", peerId);
           div.textContent = \`Peer: \${peerId}\`;
           connectionsDiv.appendChild(div);
-
-          // Eliminar el mensaje "No connections yet" si es necesario
           const noConnectionsMessage = connectionsDiv.querySelector("p");
           if (noConnectionsMessage) {
             connectionsDiv.removeChild(noConnectionsMessage);
           }
         }
-
         function removePeer(peerId) {
-          // Encontrar y eliminar el elemento correspondiente al peer
           const peerDiv = document.querySelector(\`[data-peer-id="\${peerId}"]\`);
           if (peerDiv) {
             connectionsDiv.removeChild(peerDiv);
           }
-
-          // Mostrar el mensaje "No connections yet" si no hay más peers
           if (connectionsDiv.children.length === 0) {
             const noConnectionsMessage = document.createElement("p");
             noConnectionsMessage.textContent = "No connections yet :-).";
@@ -377,21 +372,16 @@ app.get("/", (req, res) => {
     </html>
   `);
 
-  // Finalizar la respuesta para el HTML inicial
   res.end();
 });
 
-// Endpoint para manejar SSE
+// Endpoint for SSE
 app.get("/events", (req, res) => {
-  // Configurar las cabeceras para SSE
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  // Agregar el cliente a la lista de clientes activos
   graphDBServer.clients.add(res);
-
-  // Eliminar el cliente cuando se cierra la conexión
   req.on("close", () => {
     graphDBServer.clients.delete(res);
   });
