@@ -1,8 +1,22 @@
-spec:
+spec2:
   name: GraphDB Server
+  region: nyc
   services:
-  - environment_slug: node-js
-    git:
-      branch: main
-      repo_clone_url: https://github.com/estebanrfp/gdb
-    name: gdb
+    - name: GraphDB
+      environment_slug: node-js
+      git:
+        branch: main
+        repo_clone_url: https://github.com/estebanrfp/gdb
+      build_command: npm install
+      run_command: npm start
+      http_port: 3000
+      health_check:
+        http_path: /
+      instance_count: 1
+      instance_size_slug: apps-s-1vcpu-0.5gb
+      routes:
+        - path: /
+      envs:
+        - key: GRAPHDB_ROOM
+          value: todoList
+          scope: RUN_TIME
