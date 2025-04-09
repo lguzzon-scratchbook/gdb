@@ -6,7 +6,7 @@ spec:
       environment_slug: node-js
       git:
         branch: main
-        repo_clone_url: https://github.com/estebanrfp/gdb
+        repo_clone_url: https://github.com/estebanrfp/gdb.git
       build_command: npm install
       run_command: npm start
       http_port: 3000
