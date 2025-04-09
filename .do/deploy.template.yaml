@@ -1,4 +1,4 @@
-spec2:
+spec:
   name: GraphDB Server
   region: nyc
   services:
