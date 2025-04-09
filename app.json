@@ -1,0 +1,7 @@
+{
+  "name": "GraphDB Server",
+  "description": "GraphDB Server",
+  "repository": "https://github.com/estebanrfp/gdb",
+  "logo": "https://node-js-sample-1234567890ab.herokuapp.com/node.png",
+  "keywords": ["node", "express", "static"]
+}
