@@ -1,13 +1,24 @@
-name: gdb-app
-services:
-  - name: web
-    environment_slug: node-js
-    github:
-      branch: main
-      deploy_on_push: true
-    source_dir: /
-    run_command: npm start
-    build_command: npm install
-    http_port: 3000
-    routes:
-      - path: /
+spec:
+  name: GraphDB Server
+  region: nyc
+  services:
+    - name: web
+      environment_slug: node-js
+      github:
+        branch: main
+        repo_clone_url: https://github.com/estebanrfp/gdb.git
+        deploy_on_push: true
+      source_dir: /
+      build_command: npm install
+      run_command: npm start
+      http_port: 3000
+      health_check:
+        http_path: /
+      instance_count: 1
+      instance_size_slug: apps-s-1vcpu-0.5gb
+      routes:
+        - path: /
+      envs:
+        - key: GRAPHDB_ROOM
+          value: todoList
+          scope: RUN_TIME
