@@ -1,0 +1,13 @@
+name: gdb-app
+services:
+  - name: web
+    environment_slug: node-js
+    github:
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    run_command: npm start
+    build_command: npm install
+    http_port: 3000
+    routes:
+      - path: /
