@@ -11,5 +11,8 @@
       "value": "todoList",
       "required": true
     }
+  },
+  "scripts": {
+    "postdeploy": "npm start"
   }
 }
