@@ -8,13 +8,12 @@ spec:
     build_command: npm install
     run_command: npm start
     http_port: 3000
-    web:
-      http:
-        websocket:
-          enabled: true
-          protocol: ws
-          port: 8080
-          timeout: 60s
+    http:
+      websocket:
+        enabled: true
+        protocol: ws
+        port: 8080
+        timeout: 60s
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-0.5gb
     name: sample-gdb
