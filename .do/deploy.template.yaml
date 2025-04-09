@@ -1,14 +1,11 @@
 spec:
-  name: GraphDB Server
-  region: nyc
+  name: GraphDB
   services:
-    - name: web
-      environment_slug: node-js
-      github:
+    - environment_slug: node-js
+      git:
         branch: main
         repo_clone_url: https://github.com/estebanrfp/gdb.git
-        deploy_on_push: true
-      source_dir: /
+      name: sample-gdb
       build_command: npm install
       run_command: npm start
       http_port: 3000
