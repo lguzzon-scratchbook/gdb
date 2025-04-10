@@ -12,8 +12,5 @@
       "required": true
     }
   },
-  "scripts": {
-    "postdeploy": "npm start"
-  },
   "stack": "heroku-24"
 }
