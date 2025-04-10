@@ -88,7 +88,18 @@ export default class GraphDBServer {
     this.ready = Promise.all([
       this.loadGraphFromLocalStorage(),
       this.loadGlobalTimestampFromLocalStorage()
-    ]);
+    ]).then(() => {
+      // ¡AQUÍ! Actualizar el reloj híbrido con el timestamp cargado
+      if (this.globalTimestamp.physical !== 0 || this.globalTimestamp.logical !== 0) {
+        console.log("Updating hybrid clock with loaded global timestamp:", this.globalTimestamp);
+        // Suponiendo que existe un método 'update' en HybridClock
+        // para ajustar su estado interno basado en un timestamp recibido/cargado.
+        this.hybridClock.update(this.globalTimestamp);
+      }
+      console.log("GraphDB Server Ready.");
+    }).catch(error => {
+      console.error("Error during initialization:", error);
+    });
 
     // Trystero configuration with unique key based on the database name
     const key = `graph-sync-room-${this.name}`;
@@ -295,7 +306,7 @@ const graphDBServer = new GraphDBServer(process.env.GRAPHDB_ROOM || process.argv
 
 // Express setup
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON
 app.use(express.json());
