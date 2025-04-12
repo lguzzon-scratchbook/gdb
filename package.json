@@ -5,6 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
+    "build": "bun esbun.js",
+    "dev": "bun run --watch",
     "start": "node GraphDBServer.js"
   },
   "files": [
@@ -46,5 +48,12 @@
     "pako": "2.1.0",
     "trystero": "^0.21.1",
     "webrtc-polyfill": "1.1.10"
+  },
+  "devDependencies": {
+    "eslint": "8.57.1",
+    "eslint-config-standard": "17.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-n": "16.6.2",
+    "eslint-plugin-promise": "6.6.0"
   }
 }
