@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAuthn Demo</title>
+</head>
+<body>
+    <h2>WebAuthn - Registro y Autenticación con Biométrica</h2>
+    <button id="authButton" onclick="handleAuthentication()">Autenticar / Registrar</button>
+    <button onclick="checkUserStatus()">Verificar Estado</button>
+    <p id="status"></p>
+    
+    <script>
+        let storedCredential = null; // Aquí se guardará la clave pública simulada
+        let isAuthenticated = false; // Variable para rastrear si el usuario está autenticado
+
+        async function handleAuthentication() {
+            const authButton = document.getElementById("authButton");
+
+            if (!storedCredential) {
+                // Si no hay credencial registrada, iniciar el proceso de registro
+                await registerUser('user1');
+            } else if (!isAuthenticated) {
+                // Si hay credencial pero no está autenticado, iniciar el proceso de autenticación
+                await authenticateUser();
+            } else {
+                // Si ya está autenticado, desactivar el botón y mostrar un mensaje
+                authButton.disabled = true;
+                document.getElementById("status").innerText = "Ya estás autenticado. Botón desactivado.";
+            }
+        }
+
+        async function registerUser(userHandle) {
+            if (!window.PublicKeyCredential) {
+                alert("WebAuthn no es soportado en este navegador.");
+                return;
+            }
+            
+            const publicKey = {
+                challenge: new Uint8Array(32),
+                rp: { name: "RBAC System" },
+                user: {
+                    id: new Uint8Array(16),
+                    name: userHandle,
+                    displayName: userHandle
+                },
+                pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                authenticatorSelection: {
+                    authenticatorAttachment: "platform", // Usa autenticador integrado
+                    userVerification: "required" // Obliga a usar biometría
+                },
+                timeout: 60000,
+                attestation: "direct"
+            };
+            
+            try {
+                const credential = await navigator.credentials.create({ publicKey });
+                storedCredential = credential;
+                document.getElementById("status").innerText = "Registro exitoso. Puedes autenticarte ahora.";
+                console.log("Credencial registrada:", credential);
+                await authenticateUser()
+            } catch (err) {
+                console.error("Error en registro", err);
+                document.getElementById("status").innerText = "Error en registro.";
+            }
+        }
+        
+        async function authenticateUser() {
+            if (!storedCredential) {
+                alert("No hay credenciales registradas. Registra una primero.");
+                return;
+            }
+            
+            const publicKey = {
+                challenge: new Uint8Array(32),
+                allowCredentials: [{
+                    id: storedCredential.rawId,
+                    type: "public-key"
+                }],
+                userVerification: "required", // Obliga a usar biometría en autenticación
+                timeout: 60000
+            };
+            
+            try {
+                const assertion = await navigator.credentials.get({ publicKey });
+                isAuthenticated = true; // Marcar como autenticado
+                document.getElementById("status").innerText = "Autenticación exitosa.";
+                console.log("Autenticación exitosa:", assertion);
+                // Si ya está autenticado, desactivar el botón y mostrar un mensaje
+                authButton.disabled = true;
+            } catch (err) {
+                console.error("Error en autenticación", err);
+                document.getElementById("status").innerText = "Error en autenticación.";
+            }
+        }
+
+        function checkUserStatus() {
+            if (!storedCredential) {
+                document.getElementById("status").innerText = "El usuario no está registrado.";
+            } else if (!isAuthenticated) {
+                document.getElementById("status").innerText = "El usuario está registrado pero no autenticado.";
+            } else {
+                document.getElementById("status").innerText = "El usuario está registrado y autenticado.";
+            }
+        }
+    </script>
+</body>
+</html>
