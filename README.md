@@ -181,7 +181,7 @@ The source code of this project is licensed under the [MIT License](https://open
 
 ## Author
 
-Esteban Fuster Pozzi (@estebanrfp) — Full Stack JavaScript Developer and creator of GraphDB (GDB), an open-source real-time graph database built entirely with modern vanilla JavaScript.
+[Esteban Fuster Pozzi (@estebanrfp)](https://estebanrfp.com) — Full Stack JavaScript Developer and creator of [GraphDB (GDB)](https://www.npmjs.com/package/gdb-p2p), an open-source real-time graph database built entirely with modern vanilla JavaScript.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_shield&issueType=security)
 
