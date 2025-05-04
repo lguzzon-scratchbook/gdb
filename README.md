@@ -48,12 +48,14 @@ This project is under active development. Do not use it in production environmen
 - **Completed Features**:
   - Basic queries.
   - Advanced queries.
-  + Modules for AI queries.
+  - Modules for AI queries.
   - Distributed storage.
-  
+
 - **Pending Features**:
   - Improve conflict resolution module.
   - Performance optimization.
+
+> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](./CHANGELOG.md) before upgrading.
 
 ### ✅ **Role Based Access Control (RBAC)**
 
