@@ -226,10 +226,12 @@
     // Función para ejecutar una consulta y mostrar resultados
     async function executeQuery(obj) {
       let { results } = await db.map(obj);
+     
       const resultsDiv = document.getElementById('results');
       const statusBar = document.getElementById('statusBar');
       resultsDiv.innerHTML = '';
       if (results.length > 0) {
+        console.log(results)
         results.forEach(result => {
           const item = document.createElement('div');
           item.className = 'result-item';
