@@ -95,13 +95,6 @@ import { GraphDB } from "gdb-p2p"
 </script>
 ```
 
-### **Available CDNs**
-
-| CDN          | URL                                                                                     |
-|--------------|-----------------------------------------------------------------------------------------|
-| **jsDelivr** | [`https://cdn.jsdelivr.net/npm/gdb-p2p/+esm`](https://cdn.jsdelivr.net/npm/gdb-p2p/+esm) |
-| **UNPKG**    | [`https://unpkg.com/gdb-p2p@latest`](https://unpkg.com/gdb-p2p@latest)                  |
-
 ## Documentation
 
 For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
