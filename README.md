@@ -91,7 +91,7 @@ import { GraphDB } from "gdb-p2p"
 
 ```html
 <script type="module">
-  import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p@0/+esm"
+  import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm"
 </script>
 ```
 
@@ -99,7 +99,7 @@ import { GraphDB } from "gdb-p2p"
 
 | CDN          | URL                                                                                     |
 |--------------|-----------------------------------------------------------------------------------------|
-| **jsDelivr** | [`https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm`](https://cdn.jsdelivr.net/npm/gdb-p2p@latest/+esm) |
+| **jsDelivr** | [`https://cdn.jsdelivr.net/npm/gdb-p2p/+esm`](https://cdn.jsdelivr.net/npm/gdb-p2p/+esm) |
 | **UNPKG**    | [`https://unpkg.com/gdb-p2p@latest`](https://unpkg.com/gdb-p2p@latest)                  |
 
 ## Documentation
