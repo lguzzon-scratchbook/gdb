@@ -103,7 +103,7 @@ For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrf
 
 We’ve created a collection of interactive examples to help you understand how GDB works in real-world scenarios. These examples cover everything from basic setup to advanced features like RBAC and P2P synchronization.
 
-👉 [Explore Examples](https://estebanrfp.github.io/gdb/dist/)
+👉 [Explore Examples](https://github.com/estebanrfp/gdb/wiki/EXAMPLES.md)
 
 ### **Internal Dependencies**
 
