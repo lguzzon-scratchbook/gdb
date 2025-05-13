@@ -99,6 +99,8 @@ import { GraphDB } from "gdb-p2p"
 
 For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
 
+For interactive, AI-assisted GraphDB documentation, visit our [Devin Wiki](https://deepwiki.com/estebanrfp/gdb).
+
 ## Examples
 
 We’ve created a collection of interactive examples to help you understand how GDB works in real-world scenarios. These examples cover everything from basic setup to advanced features like RBAC and P2P synchronization.
