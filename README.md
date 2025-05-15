@@ -71,6 +71,7 @@ This project is under active development. Do not use it in production environmen
 - Digital signature of critical operations
 - Real-time permission validation
 - Secure storage of roles in internal graph
+- [Security Implementation proposal](https://github.com/estebanrfp/gdb/wiki/RBAC-Security)
 
 > **Important Notice**: This project is currently in the research and development phase and is not yet ready for production use. Please wait until it reaches the beta or stable phase before deploying it in a live environment. Refer to the [Project Status](#project-status) section for more details.
 ---
