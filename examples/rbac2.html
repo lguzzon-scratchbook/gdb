@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDB con RBAC y Seguridad P2P</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        button { padding: 10px 15px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        input[type="text"] { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+        .section { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        h2, h3 { color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GDB con RBAC y Seguridad P2P (Demo)</h1>
+        <p>Abre la consola del navegador para ver los logs detallados.</p>
+
+        <div class="section">
+            <h2>1. Autenticación y Configuración</h2>
+            <label for="userHandle">UserHandle:</label>
+            <input type="text" id="userHandle" value="alice">
+            <button id="loginBtn">Login/Registro (WebAuthn) y Activar Seguridad</button>
+            <button id="logoutBtn" disabled>Logout y Desactivar Seguridad</button>
+            <p>Estado: <strong id="status">No logueado</strong></p>
+            <p>Clave Pública de Firma GDB (JWK): <pre id="gdbPubKey" style="font-size: 0.8em;">N/A</pre></p>
+        </div>
+
+        <div class="section">
+            <h2>2. Operaciones con GDB</h2>
+            <h3>Escribir Dato (requiere rol 'user' con permiso 'write')</h3>
+            <label for="dataId">ID del Dato (opcional):</label>
+            <input type="text" id="dataId" placeholder="Ej: nodo1">
+            <label for="dataValue">Valor (JSON):</label>
+            <input type="text" id="dataValue" value='{"message":"Hola GDB!"}'>
+            <button id="putDataBtn" disabled>Guardar Dato (db.put)</button>
+
+            <h3>Leer Dato</h3>
+            <label for="getDataId">ID del Dato a Leer:</label>
+            <input type="text" id="getDataId" value="nodo1">
+            <button id="getDataBtn">Leer Dato (db.get)</button>
+            <p>Resultado Get: <pre id="getResult">N/A</pre></p>
+
+            <h3>Asignar Rol (requiere rol 'superadmin' con permiso 'assignRole')</h3>
+            <label for="targetUser">UserHandle Destino:</label>
+            <input type="text" id="targetUser" value="bob">
+            <label for="newRole">Nuevo Rol:</label>
+            <input type="text" id="newRole" value="admin">
+            <button id="assignRoleBtn" disabled>Asignar Rol</button>
+        </div>
+
+        <div class="section">
+            <h2>3. Simulación de Recepción P2P</h2>
+            <p>Estos botones simulan la llegada de datos desde otro peer. La verificación se hará si la seguridad está activa.</p>
+            <button id="simulateGoodP2PReceiveBtn" disabled>Simular Recepción P2P VÁLIDA</button>
+            <button id="simulateBadSigP2PReceiveBtn" disabled>Simular Recepción P2P con FIRMA INVÁLIDA</button>
+            <button id="simulateNoPermP2PReceiveBtn" disabled>Simular Recepción P2P SIN PERMISO RBAC</button>
+            <p><i>(La simulación de firma/verificación es conceptual aquí, ya que no tenemos la clave privada del "otro peer")</i></p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Asegúrate de que las rutas sean correctas
+        import { GraphDB } from "../dist/index.js";
+        import {
+          initializeCompleteSecurity,
+          handleAuthentication as rbacHandleAuthentication, // Renombrar para evitar confusión
+          executeWithPermission,
+          assignRole as rbacAssignRole, // Renombrar
+          setCustomRoles
+        } from '../dist/rbac.min.js';
+
+        let db;
+        let currentUserHandle = null;
+        let appSecurityManagerInstance = null; // Referencia a la instancia de SM usada por rbac.js
+
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const statusEl = document.getElementById('status');
+        const gdbPubKeyEl = document.getElementById('gdbPubKey');
+        const putDataBtn = document.getElementById('putDataBtn');
+        const assignRoleBtn = document.getElementById('assignRoleBtn');
+        const getDataBtn = document.getElementById('getDataBtn');
+        const getResultEl = document.getElementById('getResult');
+
+        // --- Inicialización de GDB ---
+        async function initGDB() {
+            const dbName = 'miAppGDB_Segura';
+            console.log(`Inicializando GDB: ${dbName}`);
+            db = new GraphDB(dbName); // No se pasa securityManager aquí aún
+            await db.ready;
+            console.log("GDB Lista.");
+
+            // Configurar roles (opcional, si quieres diferentes a los de rbac.js por defecto)
+            // setCustomRoles({ ... });
+
+            updateUIState();
+        }
+
+        // --- Lógica de Autenticación y Seguridad de la App ---
+        loginBtn.addEventListener('click', async () => {
+            const userHandleInput = document.getElementById('userHandle').value;
+            if (!userHandleInput) {
+                alert("Por favor, ingresa un UserHandle.");
+                return;
+            }
+
+            try {
+                console.log(`App: Intentando login/registro WebAuthn para ${userHandleInput}...`);
+                // rbacHandleAuthentication debería manejar el flujo WebAuthn y actualizar/crear el nodo de usuario en GDB
+                // Devuelve el userHandle si es exitoso.
+                currentUserHandle = await rbacHandleAuthentication(db, userHandleInput);
+                console.log(`App: WebAuthn exitoso para ${currentUserHandle}`);
+
+                // Ahora inicializar la seguridad completa (RBAC + P2P)
+                await initializeCompleteSecurity(db, currentUserHandle);
+                appSecurityManagerInstance = db.securityManager; // Guardar referencia si se necesita (para strictMode, etc.)
+
+                statusEl.textContent = `Logueado como: ${currentUserHandle}`;
+                if (appSecurityManagerInstance) {
+                    // Intentar mostrar la clave pública de firma GDB
+                    const userNodeQuery = await db.get(`user:${currentUserHandle}`);
+                    if (userNodeQuery.result && userNodeQuery.result.value && userNodeQuery.result.value.gdbSigningPubKey) {
+                        gdbPubKeyEl.textContent = JSON.stringify(userNodeQuery.result.value.gdbSigningPubKey, null, 2);
+                    } else {
+                        gdbPubKeyEl.textContent = "Clave pública GDB aún no establecida/sincronizada.";
+                    }
+                }
+                 console.log("App: Seguridad completa inicializada.");
+            } catch (error) {
+                console.error("App: Error durante el login/inicialización de seguridad:", error);
+                statusEl.textContent = `Error: ${error.message}`;
+                currentUserHandle = null;
+                if (db.securityManager) { // Asegurar que se desactive la seguridad en GDB
+                    await initializeCompleteSecurity(db, null);
+                }
+            }
+            updateUIState();
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            console.log("App: Logout...");
+            currentUserHandle = null;
+            // Desactivar la seguridad en GDB
+            await initializeCompleteSecurity(db, null);
+            appSecurityManagerInstance = null;
+            statusEl.textContent = "No logueado";
+            gdbPubKeyEl.textContent = "N/A";
+            updateUIState();
+        });
+
+
+        // --- Lógica de Operaciones GDB ---
+        putDataBtn.addEventListener('click', async () => {
+            if (!currentUserHandle) {
+                alert("Debes estar logueado.");
+                return;
+            }
+            const dataId = document.getElementById('dataId').value || undefined;
+            const dataValueStr = document.getElementById('dataValue').value;
+            let dataValue;
+            try {
+                dataValue = JSON.parse(dataValueStr);
+            } catch (e) {
+                alert("El valor del dato no es JSON válido.");
+                return;
+            }
+
+            try {
+                await executeWithPermission(db, currentUserHandle, 'write', async (user) => {
+                    console.log(`App (db.put): Usuario ${user} autorizado localmente. Ejecutando...`);
+                    const id = await db.put(dataValue, dataId);
+                    alert(`Dato guardado/actualizado con ID: ${id}`);
+                    console.log(`App: Dato guardado/actualizado con ID: ${id}`);
+                });
+            } catch (error) {
+                alert(`Error en db.put: ${error.message}`);
+                console.error("App: Error en db.put:", error);
+            }
+        });
+
+        getDataBtn.addEventListener('click', async () => {
+            const dataId = document.getElementById('getDataId').value;
+            if (!dataId) {
+                alert("Ingresa un ID para leer.");
+                return;
+            }
+             // Para 'get' simple, podríamos no necesitar executeWithPermission si el permiso 'read' es para 'guest'
+             // Pero si 'read' fuera restringido, sí se necesitaría:
+             // await executeWithPermission(db, currentUserHandle, 'read', async () => { ... });
+            try {
+                console.log(`App: Leyendo dato con ID: ${dataId}`);
+                const nodeQuery = await db.get(dataId); // get reactivo se podría probar también
+                if (nodeQuery.result) {
+                    getResultEl.textContent = JSON.stringify(nodeQuery.result, null, 2);
+                } else {
+                    getResultEl.textContent = "Nodo no encontrado.";
+                }
+            } catch (error) {
+                 alert(`Error en db.get: ${error.message}`);
+                 console.error("App: Error en db.get:", error);
+            }
+        });
+
+        assignRoleBtn.addEventListener('click', async () => {
+            if (!currentUserHandle) {
+                alert("Debes estar logueado.");
+                return;
+            }
+            const targetUser = document.getElementById('targetUser').value;
+            const newRole = document.getElementById('newRole').value;
+            if (!targetUser || !newRole) {
+                alert("Completa usuario destino y nuevo rol.");
+                return;
+            }
+
+            try {
+                await executeWithPermission(db, currentUserHandle, 'assignRole', async (user) => {
+                    console.log(`App (assignRole): Usuario ${user} autorizado localmente. Ejecutando...`);
+                    await rbacAssignRole(db, targetUser, newRole, null); // null para expiresAt
+                    alert(`Solicitud para asignar rol '${newRole}' a '${targetUser}' enviada.`);
+                    console.log(`App: Solicitud para asignar rol '${newRole}' a '${targetUser}' enviada.`);
+                });
+            } catch (error) {
+                alert(`Error en assignRole: ${error.message}`);
+                console.error("App: Error en assignRole:", error);
+            }
+        });
+
+
+        // --- Simulación de Recepción P2P ---
+        // Para una simulación real, necesitaríamos una clave privada de "otroEmisor" y su pública en GDB
+        // Aquí solo creamos el objeto 'change' y lo pasamos a la lógica de recepción de GDB.
+        const simulateP2PReceiveBtn = document.getElementById('simulateGoodP2PReceiveBtn');
+        const simulateBadSigP2PReceiveBtn = document.getElementById('simulateBadSigP2PReceiveBtn');
+        const simulateNoPermP2PReceiveBtn = document.getElementById('simulateNoPermP2PReceiveBtn');
+
+        // Helper para simular recepción (GDB se encarga de llamar al SM internamente)
+        function simulateIncomingP2PData(operations) {
+            if (!db) return;
+            console.log("App: Simulando recepción de datos P2P:", operations);
+            // Esto simula que Trystero entrega los datos al callback de getData en GDB
+            // y GDB llama a su securityManager.verifyIncomingOperations si está configurado.
+            const getDataCallback = db.room.getAction("syncGraph")[1]; // NO ES LA FORMA CORRECTA, es solo ilustrativo
+                                                                    // de que GDB tiene un callback para getData.
+                                                                    // La forma correcta es que GDB procese
+                                                                    // un array de operaciones.
+            // Deberíamos llamar al método que GraphDB usa para procesar datos entrantes.
+            // Asumiendo que el callback de `getData` en el constructor de GDB es el punto de entrada:
+            // Necesitamos una forma de invocar ese callback.
+            // La forma más directa es si tuviéramos una instancia de la room aquí, o
+            // si GDB expusiera un método para inyectar datos de prueba.
+            // Por ahora, llamaremos directamente a db.receiveChanges, pero el SecurityManager NO será invocado
+            // a menos que el propio db.receiveChanges estuviera modificado o pasáramos por el hook de getData.
+
+            // El hook de getData en GDB es: getData(async (dataFromNetwork) => { ... })
+            // Necesitamos una forma de "disparar" ese callback con nuestros datos simulados.
+            // Esto es difícil sin modificar GDB para permitir inyección de prueba o tener acceso al listener.
+
+            // Alternativa: Si tenemos appSecurityManagerInstance (SecurityManager de rbac.js)
+            // podemos llamar a su método de verificación y luego a db.receiveChanges.
+            if (appSecurityManagerInstance) {
+                appSecurityManagerInstance.verifyIncomingOperations(operations, db)
+                    .then(({ validatedOperations, unverifiedOperations }) => {
+                        console.log("App (Sim P2P): Verificación SM completada.");
+                        if (validatedOperations && validatedOperations.length > 0) {
+                            console.log("App (Sim P2P): Pasando operaciones validadas a db.receiveChanges:", validatedOperations);
+                            db.receiveChanges(validatedOperations);
+                        }
+                        if (unverifiedOperations && unverifiedOperations.length > 0 && !appSecurityManagerInstance.isStrictMode()) {
+                            console.warn("App (Sim P2P): Pasando operaciones no verificadas a db.receiveChanges (modo no estricto):", unverifiedOperations);
+                            db.receiveChanges(unverifiedOperations);
+                        }
+                        if (validatedOperations.length === 0 && (unverifiedOperations.length === 0 || appSecurityManagerInstance.isStrictMode() ) ) {
+                            alert("Simulación P2P: Ninguna operación fue validada/procesada.");
+                        } else {
+                            alert("Simulación P2P: Operaciones procesadas (revisa la consola).");
+                        }
+                    })
+                    .catch(e => console.error("Error en simulación P2P con SM:", e));
+            } else {
+                // Sin seguridad, pasar directamente
+                console.log("App (Sim P2P): Seguridad no activa, pasando directamente a db.receiveChanges:", operations);
+                db.receiveChanges(operations);
+                alert("Simulación P2P: Operaciones procesadas sin seguridad (revisa la consola).");
+            }
+        }
+
+        simulateP2PReceiveBtn.addEventListener('click', async () => {
+            // Para que esto funcione, 'otroUsuarioConPermiso' debe existir en GDB,
+            // tener un rol con 'write', y una gdbSigningPubKey.
+            // Y necesitaríamos su clave privada para firmar de verdad.
+            // Aquí SIMULAMOS una firma válida (no podemos crearla sin la clave privada).
+            const op = {
+                type: "put",
+                id: "nodoP2PValido",
+                value: { data: "Este dato vino de un peer 'válido' (simulado)" },
+                timestamp: new Date().toISOString(), // Simular timestamp
+                originUser: "otroUsuarioConPermiso" // Asumir que existe y tiene permisos
+            };
+            // En una prueba real, necesitarías firmar 'op' para obtener 'signature'
+            // y la 'publicKeyJwk' del 'otroUsuarioConPermiso'
+            // const signedOp = await firmarConClavePrivadaDeOtroUsuario(op);
+            // Por ahora, enviamos un objeto que SecurityManager espera.
+            const simulSignedOp = {
+                ...op,
+                signature: [1,2,3,4,5], // Firma Falsa (SecurityManager la rechazará si no puede verificar)
+                                      // Para que PASE la simulación, SecurityManager.verifySignatureECDSA
+                                      // debería ser temporalmente modificada para devolver 'true'.
+                // No incluimos publicKeyJwk aquí, porque SecurityManager lo busca en GDB
+            };
+            alert("IMPORTANTE: Para que esta simulación de 'RECEPCIÓN VÁLIDA' funcione, necesitarías modificar temporalmente `verifySignatureECDSA` en `SecurityManager.js` para que devuelva `true` para esta prueba, ya que no podemos generar una firma real aquí sin la clave privada del emisor. Además, 'otroUsuarioConPermiso' debe existir en tu DB con un rol 'user' y un campo 'gdbSigningPubKey' (aunque el valor del JWK no importe para esta simulación si se modifica `verifySignatureECDSA`).");
+            simulateIncomingP2PData([simulSignedOp]);
+        });
+
+        simulateBadSigP2PReceiveBtn.addEventListener('click', () => {
+            const op = {
+                type: "put", id: "nodoP2PMalaFirma", value: { data: "Intento con mala firma" },
+                timestamp: new Date().toISOString(), originUser: "alice" //alice debe existir
+            };
+            const simulSignedOp = { ...op, signature: [9,9,9] }; // Firma obviamente incorrecta
+            simulateIncomingP2PData([simulSignedOp]);
+        });
+
+        simulateNoPermP2PReceiveBtn.addEventListener('click', () => {
+            // Asumir que 'guestUser' existe con rol 'guest' (solo permiso 'read')
+            // y tiene una gdbSigningPubKey. De nuevo, para que la firma PASE la verificación
+            // (antes de RBAC), verifySignatureECDSA necesitaría ser modificada temporalmente.
+            const op = {
+                type: "put", id: "nodoP2PSinPermiso", value: { data: "Intento sin permiso de escritura" },
+                timestamp: new Date().toISOString(), originUser: "guestUser"
+            };
+            const simulSignedOp = { ...op, signature: [1,2,3,4,5] }; // Firma "falsa pero válida" para la simulación
+            alert("Para esta simulación, 'guestUser' debe existir con rol 'guest' y 'gdbSigningPubKey'. Además, `verifySignatureECDSA` en `SecurityManager.js` debe modificarse temporalmente para devolver `true` para esta firma, para que llegue a la comprobación RBAC.");
+            simulateIncomingP2PData([simulSignedOp]);
+        });
+
+
+        // --- UI State ---
+        function updateUIState() {
+            const loggedIn = !!currentUserHandle;
+            loginBtn.disabled = loggedIn;
+            logoutBtn.disabled = !loggedIn;
+            putDataBtn.disabled = !loggedIn;
+            assignRoleBtn.disabled = !loggedIn; // Podrías añadir lógica de rol aquí también
+            // getDataBtn.disabled = !loggedIn; // Leer podría estar siempre habilitado
+            simulateP2PReceiveBtn.disabled = !loggedIn;
+            simulateBadSigP2PReceiveBtn.disabled = !loggedIn;
+            simulateNoPermP2PReceiveBtn.disabled = !loggedIn;
+
+            if (loggedIn) {
+                document.getElementById('userHandle').value = currentUserHandle;
+                document.getElementById('userHandle').disabled = true;
+            } else {
+                document.getElementById('userHandle').disabled = false;
+            }
+        }
+
+        // Iniciar la aplicación
+        initGDB();
+    </script>
+</body>
+</html>
