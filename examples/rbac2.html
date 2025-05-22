@@ -162,12 +162,6 @@
             // 3. Copia el objeto JWK de la clave pública aquí.
             //
             {
-                "kty": "EC", "crv": "P-256", "alg": "ES256", "ext": true,
-                "x": "joWTNbJizJN84UoFGsjR1ZQVFIkkC6fpv7_k7bUetkg", // Reemplazar
-                "y": "PQQkPSV633jBTTZ1Np1wsaSWL2obRcwRC3k7ICymrqo", // Reemplazar
-                "key_ops": ["verify"]
-            },
-            {
                 "crv": "P-256",
                 "ext": true,
                 "key_ops": [
@@ -176,6 +170,16 @@
                 "kty": "EC",
                 "x": "joWTNbJizJN84UoFGsjR1ZQVFIkkC6fpv7_k7bUetkg",
                 "y": "PQQkPSV633jBTTZ1Np1wsaSWL2obRcwRC3k7ICymrqo"
+            },
+            {
+                "crv": "P-256",
+                "ext": true,
+                "key_ops": [
+                    "verify"
+                ],
+                "kty": "EC",
+                "x": "4i0B-zW_eKpP0wLhs5htymEqNcD-ko1lz4UA21TyjDo",
+                "y": "vEpAasFH9ExRb7tOND91j8ANjbofAfKF-iH8eMzGA6g"
             }
         ];
         if (SUPERADMIN_PUBLIC_KEYS_CONFIG.length === 0) {
