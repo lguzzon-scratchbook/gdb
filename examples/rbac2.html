@@ -11,7 +11,7 @@
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         input[type="text"] { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; max-height: 100px; overflow-y: auto; font-size: 0.8em;}
         .section { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
         h2, h3 { color: #0056b3; }
     </style>
@@ -22,342 +22,469 @@
         <p>Abre la consola del navegador para ver los logs detallados.</p>
 
         <div class="section">
-            <h2>1. Autenticación y Configuración</h2>
+            <h2>1. Autenticación y Configuración de Seguridad</h2>
             <label for="userHandle">UserHandle:</label>
             <input type="text" id="userHandle" value="alice">
             <button id="loginBtn">Login/Registro (WebAuthn) y Activar Seguridad</button>
             <button id="logoutBtn" disabled>Logout y Desactivar Seguridad</button>
-            <p>Estado: <strong id="status">No logueado</strong></p>
-            <p>Clave Pública de Firma GDB (JWK): <pre id="gdbPubKey" style="font-size: 0.8em;">N/A</pre></p>
+            <p>Estado: <strong id="status">No logueado. Seguridad P2P Inactiva.</strong></p>
+            <p>Tu Clave Pública de Firma GDB (JWK): <pre id="gdbPubKey">N/A</pre></p>
+            <p>
+                Modo Estricto del SecurityManager (local): <strong id="strictModeStatus">N/A</strong>
+                <button id="toggleStrictModeBtn" disabled>Cambiar Modo Estricto</button>
+            </p>
         </div>
 
         <div class="section">
             <h2>2. Operaciones con GDB</h2>
-            <h3>Escribir Dato (requiere rol 'user' con permiso 'write')</h3>
+            <h3>Escribir Dato (acción local requiere 'write')</h3>
             <label for="dataId">ID del Dato (opcional):</label>
             <input type="text" id="dataId" placeholder="Ej: nodo1">
             <label for="dataValue">Valor (JSON):</label>
             <input type="text" id="dataValue" value='{"message":"Hola GDB!"}'>
             <button id="putDataBtn" disabled>Guardar Dato (db.put)</button>
 
-            <h3>Leer Dato</h3>
+            <h3>Leer Dato (acción local podría requerir 'read')</h3>
             <label for="getDataId">ID del Dato a Leer:</label>
             <input type="text" id="getDataId" value="nodo1">
             <button id="getDataBtn">Leer Dato (db.get)</button>
             <p>Resultado Get: <pre id="getResult">N/A</pre></p>
 
-            <h3>Asignar Rol (requiere rol 'superadmin' con permiso 'assignRole')</h3>
+            <h3>Asignar Rol (acción local requiere 'assignRole', P2P requiere ser SuperAdmin de config)</h3>
             <label for="targetUser">UserHandle Destino:</label>
             <input type="text" id="targetUser" value="bob">
             <label for="newRole">Nuevo Rol:</label>
-            <input type="text" id="newRole" value="admin">
+            <input type="text" id="newRole" value="manager">
             <button id="assignRoleBtn" disabled>Asignar Rol</button>
         </div>
 
         <div class="section">
-            <h2>3. Simulación de Recepción P2P</h2>
-            <p>Estos botones simulan la llegada de datos desde otro peer. La verificación se hará si la seguridad está activa.</p>
-            <button id="simulateGoodP2PReceiveBtn" disabled>Simular Recepción P2P VÁLIDA</button>
-            <button id="simulateBadSigP2PReceiveBtn" disabled>Simular Recepción P2P con FIRMA INVÁLIDA</button>
-            <button id="simulateNoPermP2PReceiveBtn" disabled>Simular Recepción P2P SIN PERMISO RBAC</button>
-            <p><i>(La simulación de firma/verificación es conceptual aquí, ya que no tenemos la clave privada del "otro peer")</i></p>
+            <h2>3. Simulación de Recepción P2P (desde "otro peer")</h2>
+            <p><i>La verificación de firma es real. Para "ÉXITO" en la simulación, el emisor simulado debe tener su clave pública y rol configurados correctamente en tu GDB local, y para acciones de superadmin, su clave pública debe estar en `SUPERADMIN_PUBLIC_KEYS_CONFIG`.</i></p>
+            <button id="simulateValidSuperAdminActionBtn" disabled>Simular `assignRole` VÁLIDO por SuperAdmin</button>
+            <button id="simulateValidUserWriteBtn" disabled>Simular `put` VÁLIDO por Usuario</button>
+            <button id="simulateBadSigP2PReceiveBtn" disabled>Simular `put` con FIRMA INVÁLIDA</button>
+            <button id="simulateNoPermP2PReceiveBtn" disabled>Simular `put` SIN PERMISO RBAC (firma válida)</button>
+            <button id="simulateNotSuperAdminAssignRoleBtn" disabled>Simular `assignRole` por NO SuperAdmin (firma válida)</button>
         </div>
     </div>
 
     <script type="module">
-        // Asegúrate de que las rutas sean correctas
-        import { GraphDB } from "../dist/index.js";
+        import { GraphDB } from "../dist/index.js"; // Ajusta la ruta
         import {
           initializeCompleteSecurity,
-          handleAuthentication as rbacHandleAuthentication, // Renombrar para evitar confusión
+          handleAuthentication as rbacHandleAuthentication,
           executeWithPermission,
-          assignRole as rbacAssignRole, // Renombrar
-          setCustomRoles
-        } from '../dist/rbac.min.js';
+          assignRole as rbacAssignRole,
+          // setCustomRoles // Descomenta si necesitas roles personalizados
+        } from '../dist/rbac.min.js'; // Ajusta la ruta
+
+        // --- CONFIGURACIÓN DE LA APLICACIÓN: CLAVES PÚBLICAS DE SUPERADMIN ---
+        // ¡¡¡REEMPLAZA ESTO CON EL JWK PÚBLICO REAL DE TU SUPERADMIN!!!
+        // Esta lista se pasa a initializeCompleteSecurity.
+        // Formato: Array de objetos JWK.
+        const SUPERADMIN_PUBLIC_KEYS_CONFIG = [
+          // EJEMPLO - DEBES REEMPLAZAR ESTO O LA VERIFICACIÓN DE SUPERADMIN FALLARÁ
+          // Para generar un JWK:
+          // 1. Abre la consola del navegador.
+          // 2. Pega y ejecuta el código de SecurityManager.js -> generateSigningKeyPairJWKSM()
+          //    (puedes copiar la función a la consola o importarla si está exportada)
+          //    async function generate() {
+          //      const keyPair = await window.crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+          //      const publicKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.publicKey);
+          //      console.log("Clave Pública JWK para SuperAdmin:", JSON.stringify(publicKeyJwk));
+          //      // ¡Guarda la clave privada JWK de forma segura si este es tu superadmin real!
+          //      const privateKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey);
+          //      console.log("Clave Privada JWK (¡GUARDAR DE FORMA SEGURA!):", JSON.stringify(privateKeyJwk));
+          //    }
+          //    generate();
+          // 3. Copia el objeto JWK de la clave pública aquí.
+          //
+          // {
+          //   "kty": "EC", "crv": "P-256", "alg": "ES256", "ext": true,
+          //   "x": "X_COORDINATE_FOR_SUPERADMIN_1", // Reemplazar
+          //   "y": "Y_COORDINATE_FOR_SUPERADMIN_1", // Reemplazar
+          //   "key_ops": ["verify"]
+          // }
+        ];
+        if (SUPERADMIN_PUBLIC_KEYS_CONFIG.length === 0) {
+            console.warn("APP: ADVERTENCIA - No hay claves de superadmin configuradas. Las operaciones 'assignRole' P2P (y otras de superadmin) fallarán la verificación de 'superadmin por configuración'.");
+        }
+        // --------------------------------------------------------------------
 
         let db;
         let currentUserHandle = null;
-        let appSecurityManagerInstance = null; // Referencia a la instancia de SM usada por rbac.js
+        let appSecurityManagerInstance = null; // Para acceder a métodos como setStrictMode
 
+        // --- Elementos UI ---
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const statusEl = document.getElementById('status');
         const gdbPubKeyEl = document.getElementById('gdbPubKey');
+        const userHandleInputEl = document.getElementById('userHandle');
+        const strictModeStatusEl = document.getElementById('strictModeStatus');
+        const toggleStrictModeBtn = document.getElementById('toggleStrictModeBtn');
+
         const putDataBtn = document.getElementById('putDataBtn');
-        const assignRoleBtn = document.getElementById('assignRoleBtn');
+        const dataIdInputEl = document.getElementById('dataId');
+        const dataValueInputEl = document.getElementById('dataValue');
+
         const getDataBtn = document.getElementById('getDataBtn');
+        const getDataIdInputEl = document.getElementById('getDataId');
         const getResultEl = document.getElementById('getResult');
+
+        const assignRoleBtn = document.getElementById('assignRoleBtn');
+        const targetUserInputEl = document.getElementById('targetUser');
+        const newRoleInputEl = document.getElementById('newRole');
+
+        const simulateValidSuperAdminActionBtn = document.getElementById('simulateValidSuperAdminActionBtn');
+        const simulateValidUserWriteBtn = document.getElementById('simulateValidUserWriteBtn');
+        const simulateBadSigP2PReceiveBtn = document.getElementById('simulateBadSigP2PReceiveBtn');
+        const simulateNoPermP2PReceiveBtn = document.getElementById('simulateNoPermP2PReceiveBtn');
+        const simulateNotSuperAdminAssignRoleBtn = document.getElementById('simulateNotSuperAdminAssignRoleBtn');
 
         // --- Inicialización de GDB ---
         async function initGDB() {
-            const dbName = 'miAppGDB_Segura';
-            console.log(`Inicializando GDB: ${dbName}`);
-            db = new GraphDB(dbName); // No se pasa securityManager aquí aún
+            const dbName = 'miAppGDB_Segura_Demo3'; // Cambia el nombre si quieres una DB fresca
+            console.log(`APP: Inicializando GDB: ${dbName}`);
+            db = new GraphDB(dbName, { /* securityManager se inyectará después del login */ });
             await db.ready;
-            console.log("GDB Lista.");
-
-            // Configurar roles (opcional, si quieres diferentes a los de rbac.js por defecto)
-            // setCustomRoles({ ... });
-
+            console.log("APP: GDB Lista.");
             updateUIState();
         }
 
         // --- Lógica de Autenticación y Seguridad de la App ---
         loginBtn.addEventListener('click', async () => {
-            const userHandleInput = document.getElementById('userHandle').value;
-            if (!userHandleInput) {
+            const userHandleValue = userHandleInputEl.value.trim();
+            if (!userHandleValue) {
                 alert("Por favor, ingresa un UserHandle.");
                 return;
             }
 
             try {
-                console.log(`App: Intentando login/registro WebAuthn para ${userHandleInput}...`);
-                // rbacHandleAuthentication debería manejar el flujo WebAuthn y actualizar/crear el nodo de usuario en GDB
-                // Devuelve el userHandle si es exitoso.
-                currentUserHandle = await rbacHandleAuthentication(db, userHandleInput);
-                console.log(`App: WebAuthn exitoso para ${currentUserHandle}`);
+                loginBtn.disabled = true;
+                logoutBtn.disabled = true;
+                statusEl.textContent = "Procesando WebAuthn y configurando seguridad...";
 
-                // Ahora inicializar la seguridad completa (RBAC + P2P)
-                await initializeCompleteSecurity(db, currentUserHandle);
-                appSecurityManagerInstance = db.securityManager; // Guardar referencia si se necesita (para strictMode, etc.)
+                // rbacHandleAuthentication maneja el flujo WebAuthn.
+                // Asume que db es necesario si lee/escribe credenciales WebAuthn directamente a GDB.
+                await rbacHandleAuthentication(db, userHandleValue);
+                currentUserHandle = userHandleValue; // Asumir éxito si no hay error
+                console.log(`APP: WebAuthn completado para ${currentUserHandle}`);
 
-                statusEl.textContent = `Logueado como: ${currentUserHandle}`;
+                statusEl.textContent = `Logueado como: ${currentUserHandle}. Configurando seguridad P2P...`;
+
+                await initializeCompleteSecurity(db, currentUserHandle, SUPERADMIN_PUBLIC_KEYS_CONFIG);
+                appSecurityManagerInstance = db.securityManager;
+
                 if (appSecurityManagerInstance) {
-                    // Intentar mostrar la clave pública de firma GDB
                     const userNodeQuery = await db.get(`user:${currentUserHandle}`);
-                    if (userNodeQuery.result && userNodeQuery.result.value && userNodeQuery.result.value.gdbSigningPubKey) {
+                    if (userNodeQuery.result?.value?.gdbSigningPubKey) {
                         gdbPubKeyEl.textContent = JSON.stringify(userNodeQuery.result.value.gdbSigningPubKey, null, 2);
                     } else {
-                        gdbPubKeyEl.textContent = "Clave pública GDB aún no establecida/sincronizada.";
+                        gdbPubKeyEl.textContent = "Esperando sincronización de clave pública GDB...";
+                        // Forzar una relectura después de un breve retraso podría ayudar si es un problema de timing
+                        setTimeout(async () => {
+                             const userNodeQueryUpdated = await db.get(`user:${currentUserHandle}`);
+                             if (userNodeQueryUpdated.result?.value?.gdbSigningPubKey) {
+                                gdbPubKeyEl.textContent = JSON.stringify(userNodeQueryUpdated.result.value.gdbSigningPubKey, null, 2);
+                             }
+                        }, 2000);
                     }
+                    strictModeStatusEl.textContent = appSecurityManagerInstance.isStrictMode() ? "Activado" : "Desactivado";
                 }
-                 console.log("App: Seguridad completa inicializada.");
+                 console.log("APP: Seguridad completa inicializada.");
+                 statusEl.textContent = `Logueado como: ${currentUserHandle}. Seguridad P2P Activa.`;
+
             } catch (error) {
-                console.error("App: Error durante el login/inicialización de seguridad:", error);
+                console.error("APP: Error durante el login/inicialización de seguridad:", error);
                 statusEl.textContent = `Error: ${error.message}`;
                 currentUserHandle = null;
-                if (db.securityManager) { // Asegurar que se desactive la seguridad en GDB
-                    await initializeCompleteSecurity(db, null);
-                }
+                if (db) await initializeCompleteSecurity(db, null, []); // Desactivar seguridad
+                appSecurityManagerInstance = null;
             }
             updateUIState();
         });
 
         logoutBtn.addEventListener('click', async () => {
-            console.log("App: Logout...");
+            console.log("APP: Logout...");
+            const userHandleToLogout = currentUserHandle;
             currentUserHandle = null;
-            // Desactivar la seguridad en GDB
-            await initializeCompleteSecurity(db, null);
+            if (db) await initializeCompleteSecurity(db, null, []); // Desactivar seguridad
             appSecurityManagerInstance = null;
-            statusEl.textContent = "No logueado";
+            statusEl.textContent = "No logueado. Seguridad P2P Inactiva.";
             gdbPubKeyEl.textContent = "N/A";
+            strictModeStatusEl.textContent = "N/A";
+            userHandleInputEl.value = userHandleToLogout || "alice";
             updateUIState();
         });
 
+        toggleStrictModeBtn.addEventListener('click', () => {
+            if (appSecurityManagerInstance) {
+                const currentMode = appSecurityManagerInstance.isStrictMode();
+                appSecurityManagerInstance.setStrictMode(!currentMode);
+                strictModeStatusEl.textContent = appSecurityManagerInstance.isStrictMode() ? "Activado" : "Desactivado";
+                alert(`Modo estricto del SecurityManager cambiado a: ${appSecurityManagerInstance.isStrictMode()}`);
+            }
+        });
 
         // --- Lógica de Operaciones GDB ---
         putDataBtn.addEventListener('click', async () => {
-            if (!currentUserHandle) {
-                alert("Debes estar logueado.");
-                return;
-            }
-            const dataId = document.getElementById('dataId').value || undefined;
-            const dataValueStr = document.getElementById('dataValue').value;
+            if (!currentUserHandle) { alert("Debes estar logueado."); return; }
+            const dataIdInput = dataIdInputEl.value.trim();
+            const dataId = dataIdInput ? dataIdInput : undefined; // undefined para que GDB genere ID
+            const dataValueStr = dataValueInputEl.value;
             let dataValue;
-            try {
-                dataValue = JSON.parse(dataValueStr);
-            } catch (e) {
-                alert("El valor del dato no es JSON válido.");
-                return;
-            }
+            try { dataValue = JSON.parse(dataValueStr); } catch (e) { alert("Valor del dato no es JSON válido."); return; }
 
             try {
                 await executeWithPermission(db, currentUserHandle, 'write', async (user) => {
-                    console.log(`App (db.put): Usuario ${user} autorizado localmente. Ejecutando...`);
                     const id = await db.put(dataValue, dataId);
-                    alert(`Dato guardado/actualizado con ID: ${id}`);
-                    console.log(`App: Dato guardado/actualizado con ID: ${id}`);
+                    alert(`Dato guardado/actualizado. ID: ${id}`);
+                    console.log(`APP: Dato guardado por ${user}. ID: ${id}`);
                 });
-            } catch (error) {
-                alert(`Error en db.put: ${error.message}`);
-                console.error("App: Error en db.put:", error);
-            }
+            } catch (error) { alert(`Error en db.put: ${error.message}`); console.error("APP: Error en db.put:", error); }
         });
 
         getDataBtn.addEventListener('click', async () => {
-            const dataId = document.getElementById('getDataId').value;
-            if (!dataId) {
-                alert("Ingresa un ID para leer.");
-                return;
-            }
-             // Para 'get' simple, podríamos no necesitar executeWithPermission si el permiso 'read' es para 'guest'
-             // Pero si 'read' fuera restringido, sí se necesitaría:
-             // await executeWithPermission(db, currentUserHandle, 'read', async () => { ... });
+            const dataId = getDataIdInputEl.value.trim();
+            if (!dataId) { alert("Ingresa un ID para leer."); return; }
             try {
-                console.log(`App: Leyendo dato con ID: ${dataId}`);
-                const nodeQuery = await db.get(dataId); // get reactivo se podría probar también
-                if (nodeQuery.result) {
-                    getResultEl.textContent = JSON.stringify(nodeQuery.result, null, 2);
-                } else {
-                    getResultEl.textContent = "Nodo no encontrado.";
-                }
-            } catch (error) {
-                 alert(`Error en db.get: ${error.message}`);
-                 console.error("App: Error en db.get:", error);
-            }
+                const nodeQuery = await db.get(dataId, (nodeData) => { // Get reactivo
+                    console.log("APP: Actualización reactiva para db.get:", nodeData);
+                    getResultEl.textContent = nodeData ? JSON.stringify(nodeData, null, 2) : "Nodo no encontrado o eliminado (reactivo).";
+                });
+                // Mostrar el resultado inicial
+                getResultEl.textContent = nodeQuery.result ? JSON.stringify(nodeQuery.result, null, 2) : "Nodo no encontrado.";
+            } catch (error) { alert(`Error en db.get: ${error.message}`); console.error("APP: Error en db.get:", error); }
         });
 
         assignRoleBtn.addEventListener('click', async () => {
-            if (!currentUserHandle) {
-                alert("Debes estar logueado.");
-                return;
-            }
-            const targetUser = document.getElementById('targetUser').value;
-            const newRole = document.getElementById('newRole').value;
-            if (!targetUser || !newRole) {
-                alert("Completa usuario destino y nuevo rol.");
-                return;
-            }
+            if (!currentUserHandle) { alert("Debes estar logueado."); return; }
+            const targetUser = targetUserInputEl.value.trim();
+            const newRole = newRoleInputEl.value.trim();
+            if (!targetUser || !newRole) { alert("Completa usuario destino y nuevo rol."); return; }
 
             try {
                 await executeWithPermission(db, currentUserHandle, 'assignRole', async (user) => {
-                    console.log(`App (assignRole): Usuario ${user} autorizado localmente. Ejecutando...`);
-                    await rbacAssignRole(db, targetUser, newRole, null); // null para expiresAt
+                    await rbacAssignRole(db, targetUser, newRole); // rbac.js se encarga del put
                     alert(`Solicitud para asignar rol '${newRole}' a '${targetUser}' enviada.`);
-                    console.log(`App: Solicitud para asignar rol '${newRole}' a '${targetUser}' enviada.`);
+                    console.log(`APP: Solicitud de asignación de rol por ${user} enviada.`);
                 });
-            } catch (error) {
-                alert(`Error en assignRole: ${error.message}`);
-                console.error("App: Error en assignRole:", error);
-            }
+            } catch (error) { alert(`Error en assignRole: ${error.message}`); console.error("APP: Error en assignRole:", error); }
         });
-
 
         // --- Simulación de Recepción P2P ---
-        // Para una simulación real, necesitaríamos una clave privada de "otroEmisor" y su pública en GDB
-        // Aquí solo creamos el objeto 'change' y lo pasamos a la lógica de recepción de GDB.
-        const simulateP2PReceiveBtn = document.getElementById('simulateGoodP2PReceiveBtn');
-        const simulateBadSigP2PReceiveBtn = document.getElementById('simulateBadSigP2PReceiveBtn');
-        const simulateNoPermP2PReceiveBtn = document.getElementById('simulateNoPermP2PReceiveBtn');
-
-        // Helper para simular recepción (GDB se encarga de llamar al SM internamente)
-        function simulateIncomingP2PData(operations) {
-            if (!db) return;
-            console.log("App: Simulando recepción de datos P2P:", operations);
-            // Esto simula que Trystero entrega los datos al callback de getData en GDB
-            // y GDB llama a su securityManager.verifyIncomingOperations si está configurado.
-            const getDataCallback = db.room.getAction("syncGraph")[1]; // NO ES LA FORMA CORRECTA, es solo ilustrativo
-                                                                    // de que GDB tiene un callback para getData.
-                                                                    // La forma correcta es que GDB procese
-                                                                    // un array de operaciones.
-            // Deberíamos llamar al método que GraphDB usa para procesar datos entrantes.
-            // Asumiendo que el callback de `getData` en el constructor de GDB es el punto de entrada:
-            // Necesitamos una forma de invocar ese callback.
-            // La forma más directa es si tuviéramos una instancia de la room aquí, o
-            // si GDB expusiera un método para inyectar datos de prueba.
-            // Por ahora, llamaremos directamente a db.receiveChanges, pero el SecurityManager NO será invocado
-            // a menos que el propio db.receiveChanges estuviera modificado o pasáramos por el hook de getData.
-
-            // El hook de getData en GDB es: getData(async (dataFromNetwork) => { ... })
-            // Necesitamos una forma de "disparar" ese callback con nuestros datos simulados.
-            // Esto es difícil sin modificar GDB para permitir inyección de prueba o tener acceso al listener.
-
-            // Alternativa: Si tenemos appSecurityManagerInstance (SecurityManager de rbac.js)
-            // podemos llamar a su método de verificación y luego a db.receiveChanges.
-            if (appSecurityManagerInstance) {
-                appSecurityManagerInstance.verifyIncomingOperations(operations, db)
-                    .then(({ validatedOperations, unverifiedOperations }) => {
-                        console.log("App (Sim P2P): Verificación SM completada.");
-                        if (validatedOperations && validatedOperations.length > 0) {
-                            console.log("App (Sim P2P): Pasando operaciones validadas a db.receiveChanges:", validatedOperations);
-                            db.receiveChanges(validatedOperations);
-                        }
-                        if (unverifiedOperations && unverifiedOperations.length > 0 && !appSecurityManagerInstance.isStrictMode()) {
-                            console.warn("App (Sim P2P): Pasando operaciones no verificadas a db.receiveChanges (modo no estricto):", unverifiedOperations);
-                            db.receiveChanges(unverifiedOperations);
-                        }
-                        if (validatedOperations.length === 0 && (unverifiedOperations.length === 0 || appSecurityManagerInstance.isStrictMode() ) ) {
-                            alert("Simulación P2P: Ninguna operación fue validada/procesada.");
-                        } else {
-                            alert("Simulación P2P: Operaciones procesadas (revisa la consola).");
-                        }
-                    })
-                    .catch(e => console.error("Error en simulación P2P con SM:", e));
-            } else {
-                // Sin seguridad, pasar directamente
-                console.log("App (Sim P2P): Seguridad no activa, pasando directamente a db.receiveChanges:", operations);
-                db.receiveChanges(operations);
-                alert("Simulación P2P: Operaciones procesadas sin seguridad (revisa la consola).");
+        async function simulateIncomingP2PData(operations) {
+            if (!db) { alert("GDB no inicializado."); return; }
+            if (!db.securityManager) {
+                console.warn("APP (Sim P2P): SecurityManager no activo en este peer. Procesando sin verificación P2P.");
+                // Quitar firma y gdbSigningPubKey si existen, ya que GDB no los espera si SM no está
+                const opsSinFirma = operations.map(op => {
+                    const {signature, gdbSigningPubKey, ...data} = op;
+                    return data;
+                });
+                db.receiveChanges(opsSinFirma);
+                alert("Simulación P2P: Operaciones procesadas por GDB sin SecurityManager (solo LWW).");
+                return;
+            }
+            console.log("APP (Sim P2P): Enviando operaciones simuladas al SecurityManager local para verificación:", operations);
+            try {
+                // El hook en GDB llamaría a db.securityManager.verifyIncomingOperations
+                // Aquí lo llamamos directamente para la simulación.
+                const { validatedOperations, unverifiedOperations } = await db.securityManager.verifyIncomingOperations(operations);
+                let message = "Simulación P2P Completada:\n";
+                if (validatedOperations && validatedOperations.length > 0) {
+                    message += `${validatedOperations.length} operaciones validadas y pasadas a GDB.\n`;
+                    db.receiveChanges(validatedOperations);
+                }
+                if (unverifiedOperations && unverifiedOperations.length > 0) {
+                    message += `${unverifiedOperations.length} operaciones no verificadas.\n`;
+                    if (!db.securityManager.isStrictMode()) {
+                        message += "Modo no estricto: Pasando no verificadas a GDB.\n";
+                        db.receiveChanges(unverifiedOperations);
+                    } else {
+                        message += "Modo estricto: Descartando no verificadas.\n";
+                    }
+                }
+                if (validatedOperations.length === 0 && unverifiedOperations.length === 0 && operations.length > 0) {
+                    message += "Ninguna operación fue procesada por GDB (todas rechazadas por SM o vacías).";
+                } else if (operations.length === 0) {
+                    message += "No se simularon operaciones.";
+                }
+                alert(message);
+                console.log("APP (Sim P2P): " + message.replace(/\n/g, ' '));
+            } catch (e) {
+                alert("Error en simulación P2P: " + e.message);
+                console.error("Error en simulación P2P con SM:", e);
             }
         }
+        
+        // Helper para crear un objeto de operación firmado (o pseudo-firmado) para simulación
+        // Necesitaría acceso a la clave privada del 'originUserHandle' para firmar de verdad.
+        // Por ahora, crea la estructura que SecurityManager espera.
+        async function createPseudoSignedOpForSimulation(originUserHandle, operationType, dataId, dataValue, realSignatureInfo = null) {
+            const opData = {
+                type: operationType,
+                id: dataId,
+                value: dataValue,
+                timestamp: db.hybridClock.now(), // Usar el reloj de GDB
+                originUser: originUserHandle
+            };
 
-        simulateP2PReceiveBtn.addEventListener('click', async () => {
-            // Para que esto funcione, 'otroUsuarioConPermiso' debe existir en GDB,
-            // tener un rol con 'write', y una gdbSigningPubKey.
-            // Y necesitaríamos su clave privada para firmar de verdad.
-            // Aquí SIMULAMOS una firma válida (no podemos crearla sin la clave privada).
-            const op = {
+            if (realSignatureInfo && realSignatureInfo.signature && realSignatureInfo.gdbSigningPubKey) {
+                return { ...opData, signature: realSignatureInfo.signature, gdbSigningPubKey: realSignatureInfo.gdbSigningPubKey };
+            }
+
+            // Si no hay firma real, generamos una estructura con firma basura
+            // El receptor necesitará la gdbSigningPubKey correcta del originUser en su DB para intentar verificar.
+            const userNodeQuery = await db.get(`user:${originUserHandle}`);
+            const pubKey = userNodeQuery.result?.value?.gdbSigningPubKey || 
+                           { kty: "EC", crv: "P-256", x: "placeholder", y: "placeholder", ext:true, alg:"ES256", key_ops:["verify"] };
+
+            return {
+                ...opData,
+                gdbSigningPubKey: pubKey, 
+                signature: [1,2,3,4,5,9,9,9] // Firma basura
+            };
+        }
+
+        simulateValidSuperAdminActionBtn.addEventListener('click', async () => {
+            if (!currentUserHandle) { alert("Loguéate primero como un superadmin."); return; }
+            // Para que esta prueba sea significativa, currentUserHandle DEBE ser un superadmin
+            // cuya clave pública esté en SUPERADMIN_PUBLIC_KEYS_CONFIG.
+            const targetUser = "carol";
+            const roleToAssign = "admin";
+            
+            // Creamos la operación como si el currentUserHandle (que es superadmin) la originara.
+            // Esta operación será firmada REALMENTE por el currentUserHandle.
+            const opToSign = {
+                type: "put", // assignRole se traduce a un put en el nodo del usuario
+                id: `user:${targetUser}`, // El ID del nodo afectado
+                value: { role: roleToAssign, targetUserHandle: targetUser, assignedBy: currentUserHandle }, // El nuevo estado del nodo
+                timestamp: db.hybridClock.now(),
+                originUser: currentUserHandle 
+            };
+
+            // SecurityManager.signOutgoingOperations la firmará.
+            // Necesitamos obtener esa firma para la simulación.
+            // Esto es un poco artificial, ya que estamos firmando localmente para simular una recepción.
+            if (!appSecurityManagerInstance || !appSecurityManagerInstance.localPrivateKey) {
+                alert("SecurityManager o clave privada local no disponible para firmar simulación.");
+                return;
+            }
+            const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
+            if (!signedOpsArray || signedOpsArray.length === 0) {
+                 alert("No se pudo firmar la operación de superadmin para simulación."); return;
+            }
+            
+            alert("Simulando 'assignRole' por superadmin. El receptor (esta misma instancia) verificará si tu clave pública está en SUPERADMIN_PUBLIC_KEYS_CONFIG y tienes permiso 'assignRole'.");
+            await simulateIncomingP2PData(signedOpsArray);
+        });
+
+        simulateValidUserWriteBtn.addEventListener('click', async () => {
+            if (!currentUserHandle) { alert("Loguéate primero."); return; }
+            const opToSign = {
                 type: "put",
-                id: "nodoP2PValido",
-                value: { data: "Este dato vino de un peer 'válido' (simulado)" },
-                timestamp: new Date().toISOString(), // Simular timestamp
-                originUser: "otroUsuarioConPermiso" // Asumir que existe y tiene permisos
+                id: "nodoP2PUserWrite_" + Date.now(),
+                value: { data: `Escrito por ${currentUserHandle} y firmado.` },
+                timestamp: db.hybridClock.now(),
+                originUser: currentUserHandle
             };
-            // En una prueba real, necesitarías firmar 'op' para obtener 'signature'
-            // y la 'publicKeyJwk' del 'otroUsuarioConPermiso'
-            // const signedOp = await firmarConClavePrivadaDeOtroUsuario(op);
-            // Por ahora, enviamos un objeto que SecurityManager espera.
-            const simulSignedOp = {
-                ...op,
-                signature: [1,2,3,4,5], // Firma Falsa (SecurityManager la rechazará si no puede verificar)
-                                      // Para que PASE la simulación, SecurityManager.verifySignatureECDSA
-                                      // debería ser temporalmente modificada para devolver 'true'.
-                // No incluimos publicKeyJwk aquí, porque SecurityManager lo busca en GDB
-            };
-            alert("IMPORTANTE: Para que esta simulación de 'RECEPCIÓN VÁLIDA' funcione, necesitarías modificar temporalmente `verifySignatureECDSA` en `SecurityManager.js` para que devuelva `true` para esta prueba, ya que no podemos generar una firma real aquí sin la clave privada del emisor. Además, 'otroUsuarioConPermiso' debe existir en tu DB con un rol 'user' y un campo 'gdbSigningPubKey' (aunque el valor del JWK no importe para esta simulación si se modifica `verifySignatureECDSA`).");
-            simulateIncomingP2PData([simulSignedOp]);
+            if (!appSecurityManagerInstance || !appSecurityManagerInstance.localPrivateKey) {
+                alert("SecurityManager o clave privada local no disponible para firmar simulación.");
+                return;
+            }
+            const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
+             if (!signedOpsArray || signedOpsArray.length === 0) {
+                 alert("No se pudo firmar la operación de usuario para simulación."); return;
+            }
+            alert("Simulando 'put' válido por usuario. El receptor (esta misma instancia) verificará firma y permiso 'write'.");
+            await simulateIncomingP2PData(signedOpsArray);
         });
 
-        simulateBadSigP2PReceiveBtn.addEventListener('click', () => {
-            const op = {
-                type: "put", id: "nodoP2PMalaFirma", value: { data: "Intento con mala firma" },
-                timestamp: new Date().toISOString(), originUser: "alice" //alice debe existir
-            };
-            const simulSignedOp = { ...op, signature: [9,9,9] }; // Firma obviamente incorrecta
-            simulateIncomingP2PData([simulSignedOp]);
+        simulateBadSigP2PReceiveBtn.addEventListener('click', async () => {
+            if (!currentUserHandle) { alert("Loguéate primero."); return; }
+            const userNodeQuery = await db.get(`user:${currentUserHandle}`);
+            const pubKey = userNodeQuery.result?.value?.gdbSigningPubKey || {kty:"EC", crv:"P-256", x:"badKey", y:"badKey", alg:"ES256", ext:true, key_ops:["verify"]};
+
+            const op = await createPseudoSignedOpForSimulation(
+                currentUserHandle, 'put', 'nodoP2PMalaFirma', { data: "Intento con mala firma" },
+                { signature: [9,8,7,6,5,4,3,2,1,0,9,8,7,6,5,4,3,2,1,0,9,8,7,6,5,4,3,2,1,0,9,8], gdbSigningPubKey: pubKey }
+            );
+            await simulateIncomingP2PData([op]);
         });
 
-        simulateNoPermP2PReceiveBtn.addEventListener('click', () => {
-            // Asumir que 'guestUser' existe con rol 'guest' (solo permiso 'read')
-            // y tiene una gdbSigningPubKey. De nuevo, para que la firma PASE la verificación
-            // (antes de RBAC), verifySignatureECDSA necesitaría ser modificada temporalmente.
-            const op = {
-                type: "put", id: "nodoP2PSinPermiso", value: { data: "Intento sin permiso de escritura" },
-                timestamp: new Date().toISOString(), originUser: "guestUser"
+        simulateNoPermP2PReceiveBtn.addEventListener('click', async () => {
+            if (!currentUserHandle) { alert("Loguéate primero."); return; }
+            // Asumimos que el currentUserHandle tiene un rol (ej: 'user') que SÍ puede firmar
+            // pero que intentará una acción para la que NO tiene permiso (ej: 'delete' si solo tiene 'write').
+            // El SecurityManager.signOutgoingOperations firmará esto correctamente.
+             const opToSign = {
+                type: "remove", // Asumir que el rol de 'user' no tiene 'delete'
+                id: "nodoQueNoDeberiaBorrar",
+                value: null, // Para 'remove'
+                timestamp: db.hybridClock.now(),
+                originUser: currentUserHandle
             };
-            const simulSignedOp = { ...op, signature: [1,2,3,4,5] }; // Firma "falsa pero válida" para la simulación
-            alert("Para esta simulación, 'guestUser' debe existir con rol 'guest' y 'gdbSigningPubKey'. Además, `verifySignatureECDSA` en `SecurityManager.js` debe modificarse temporalmente para devolver `true` para esta firma, para que llegue a la comprobación RBAC.");
-            simulateIncomingP2PData([simulSignedOp]);
+            if (!appSecurityManagerInstance || !appSecurityManagerInstance.localPrivateKey) {
+                alert("SecurityManager o clave privada local no disponible para firmar simulación.");
+                return;
+            }
+            const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
+             if (!signedOpsArray || signedOpsArray.length === 0) {
+                 alert("No se pudo firmar la operación sin permiso para simulación."); return;
+            }
+            alert("Simulando 'remove' con firma VÁLIDA pero (posiblemente) SIN PERMISO RBAC. El receptor lo verificará.");
+            await simulateIncomingP2PData(signedOpsArray);
         });
-
+        
+        simulateNotSuperAdminAssignRoleBtn.addEventListener('click', async () => {
+            if (!currentUserHandle) { alert("Loguéate primero."); return; }
+            // Asumimos que currentUserHandle NO es un superadmin (su clave NO está en SUPERADMIN_PUBLIC_KEYS_CONFIG)
+            // pero sí tiene un rol y clave de firma válida (ej: 'user').
+            const targetUser = "dave";
+            const opToSign = {
+                type: "put", // assignRole se traduce a un put
+                id: `user:${targetUser}`,
+                value: { role: "admin", targetUserHandle: targetUser, assignedBy: currentUserHandle },
+                timestamp: db.hybridClock.now(),
+                originUser: currentUserHandle
+            };
+             if (!appSecurityManagerInstance || !appSecurityManagerInstance.localPrivateKey) {
+                alert("SecurityManager o clave privada local no disponible para firmar simulación.");
+                return;
+            }
+            const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
+            if (!signedOpsArray || signedOpsArray.length === 0) {
+                 alert("No se pudo firmar la operación de no-superadmin para simulación."); return;
+            }
+            alert("Simulando 'assignRole' por un usuario que NO es superadmin (firma válida). El receptor lo verificará contra SUPERADMIN_PUBLIC_KEYS_CONFIG.");
+            await simulateIncomingP2PData(signedOpsArray);
+        });
 
         // --- UI State ---
         function updateUIState() {
             const loggedIn = !!currentUserHandle;
             loginBtn.disabled = loggedIn;
             logoutBtn.disabled = !loggedIn;
+            userHandleInputEl.disabled = loggedIn;
+
             putDataBtn.disabled = !loggedIn;
-            assignRoleBtn.disabled = !loggedIn; // Podrías añadir lógica de rol aquí también
-            // getDataBtn.disabled = !loggedIn; // Leer podría estar siempre habilitado
-            simulateP2PReceiveBtn.disabled = !loggedIn;
+            assignRoleBtn.disabled = !loggedIn;
+            // getDataBtn siempre habilitado por ahora
+
+            toggleStrictModeBtn.disabled = !appSecurityManagerInstance;
+            simulateValidSuperAdminActionBtn.disabled = !loggedIn;
+            simulateValidUserWriteBtn.disabled = !loggedIn;
             simulateBadSigP2PReceiveBtn.disabled = !loggedIn;
             simulateNoPermP2PReceiveBtn.disabled = !loggedIn;
+            simulateNotSuperAdminAssignRoleBtn.disabled = !loggedIn;
 
-            if (loggedIn) {
-                document.getElementById('userHandle').value = currentUserHandle;
-                document.getElementById('userHandle').disabled = true;
+            if (appSecurityManagerInstance) {
+                strictModeStatusEl.textContent = appSecurityManagerInstance.isStrictMode() ? "Activado" : "Desactivado";
             } else {
-                document.getElementById('userHandle').disabled = false;
+                strictModeStatusEl.textContent = "N/A";
             }
         }
 
