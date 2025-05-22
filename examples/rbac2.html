@@ -1,21 +1,75 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GDB con RBAC y Seguridad P2P</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        button { padding: 10px 15px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        input[type="text"] { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; max-height: 100px; overflow-y: auto; font-size: 0.8em;}
-        .section { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
-        h2, h3 { color: #0056b3; }
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        pre {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 0.8em;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        h2,
+        h3 {
+            color: #0056b3;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>GDB con RBAC y Seguridad P2P (Demo)</h1>
@@ -28,7 +82,9 @@
             <button id="loginBtn">Login/Registro (WebAuthn) y Activar Seguridad</button>
             <button id="logoutBtn" disabled>Logout y Desactivar Seguridad</button>
             <p>Estado: <strong id="status">No logueado. Seguridad P2P Inactiva.</strong></p>
-            <p>Tu Clave Pública de Firma GDB (JWK): <pre id="gdbPubKey">N/A</pre></p>
+            <p>Tu Clave Pública de Firma GDB (JWK):
+            <pre id="gdbPubKey">N/A</pre>
+            </p>
             <p>
                 Modo Estricto del SecurityManager (local): <strong id="strictModeStatus">N/A</strong>
                 <button id="toggleStrictModeBtn" disabled>Cambiar Modo Estricto</button>
@@ -48,7 +104,9 @@
             <label for="getDataId">ID del Dato a Leer:</label>
             <input type="text" id="getDataId" value="nodo1">
             <button id="getDataBtn">Leer Dato (db.get)</button>
-            <p>Resultado Get: <pre id="getResult">N/A</pre></p>
+            <p>Resultado Get:
+            <pre id="getResult">N/A</pre>
+            </p>
 
             <h3>Asignar Rol (acción local requiere 'assignRole', P2P requiere ser SuperAdmin de config)</h3>
             <label for="targetUser">UserHandle Destino:</label>
@@ -60,23 +118,26 @@
 
         <div class="section">
             <h2>3. Simulación de Recepción P2P (desde "otro peer")</h2>
-            <p><i>La verificación de firma es real. Para "ÉXITO" en la simulación, el emisor simulado debe tener su clave pública y rol configurados correctamente en tu GDB local, y para acciones de superadmin, su clave pública debe estar en `SUPERADMIN_PUBLIC_KEYS_CONFIG`.</i></p>
+            <p><i>La verificación de firma es real. Para "ÉXITO" en la simulación, el emisor simulado debe tener su
+                    clave pública y rol configurados correctamente en tu GDB local, y para acciones de superadmin, su
+                    clave pública debe estar en `SUPERADMIN_PUBLIC_KEYS_CONFIG`.</i></p>
             <button id="simulateValidSuperAdminActionBtn" disabled>Simular `assignRole` VÁLIDO por SuperAdmin</button>
             <button id="simulateValidUserWriteBtn" disabled>Simular `put` VÁLIDO por Usuario</button>
             <button id="simulateBadSigP2PReceiveBtn" disabled>Simular `put` con FIRMA INVÁLIDA</button>
             <button id="simulateNoPermP2PReceiveBtn" disabled>Simular `put` SIN PERMISO RBAC (firma válida)</button>
-            <button id="simulateNotSuperAdminAssignRoleBtn" disabled>Simular `assignRole` por NO SuperAdmin (firma válida)</button>
+            <button id="simulateNotSuperAdminAssignRoleBtn" disabled>Simular `assignRole` por NO SuperAdmin (firma
+                válida)</button>
         </div>
     </div>
 
     <script type="module">
         import { GraphDB } from "../dist/index.js"; // Ajusta la ruta
         import {
-          initializeCompleteSecurity,
-          handleAuthentication as rbacHandleAuthentication,
-          executeWithPermission,
-          assignRole as rbacAssignRole,
-          // setCustomRoles // Descomenta si necesitas roles personalizados
+            initializeCompleteSecurity,
+            handleAuthentication as rbacHandleAuthentication,
+            executeWithPermission,
+            assignRole as rbacAssignRole,
+            // setCustomRoles // Descomenta si necesitas roles personalizados
         } from '../dist/rbac.min.js'; // Ajusta la ruta
 
         // --- CONFIGURACIÓN DE LA APLICACIÓN: CLAVES PÚBLICAS DE SUPERADMIN ---
@@ -84,28 +145,39 @@
         // Esta lista se pasa a initializeCompleteSecurity.
         // Formato: Array de objetos JWK.
         const SUPERADMIN_PUBLIC_KEYS_CONFIG = [
-          // EJEMPLO - DEBES REEMPLAZAR ESTO O LA VERIFICACIÓN DE SUPERADMIN FALLARÁ
-          // Para generar un JWK:
-          // 1. Abre la consola del navegador.
-          // 2. Pega y ejecuta el código de SecurityManager.js -> generateSigningKeyPairJWKSM()
-          //    (puedes copiar la función a la consola o importarla si está exportada)
-          //    async function generate() {
-          //      const keyPair = await window.crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
-          //      const publicKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.publicKey);
-          //      console.log("Clave Pública JWK para SuperAdmin:", JSON.stringify(publicKeyJwk));
-          //      // ¡Guarda la clave privada JWK de forma segura si este es tu superadmin real!
-          //      const privateKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey);
-          //      console.log("Clave Privada JWK (¡GUARDAR DE FORMA SEGURA!):", JSON.stringify(privateKeyJwk));
-          //    }
-          //    generate();
-          // 3. Copia el objeto JWK de la clave pública aquí.
-          //
-          // {
-          //   "kty": "EC", "crv": "P-256", "alg": "ES256", "ext": true,
-          //   "x": "X_COORDINATE_FOR_SUPERADMIN_1", // Reemplazar
-          //   "y": "Y_COORDINATE_FOR_SUPERADMIN_1", // Reemplazar
-          //   "key_ops": ["verify"]
-          // }
+            // EJEMPLO - DEBES REEMPLAZAR ESTO O LA VERIFICACIÓN DE SUPERADMIN FALLARÁ
+            // Para generar un JWK:
+            // 1. Abre la consola del navegador.
+            // 2. Pega y ejecuta el código de SecurityManager.js -> generateSigningKeyPairJWKSM()
+            //    (puedes copiar la función a la consola o importarla si está exportada)
+            //    async function generate() {
+            //      const keyPair = await window.crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+            //      const publicKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.publicKey);
+            //      console.log("Clave Pública JWK para SuperAdmin:", JSON.stringify(publicKeyJwk));
+            //      // ¡Guarda la clave privada JWK de forma segura si este es tu superadmin real!
+            //      const privateKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey);
+            //      console.log("Clave Privada JWK (¡GUARDAR DE FORMA SEGURA!):", JSON.stringify(privateKeyJwk));
+            //    }
+            //    generate();
+            // 3. Copia el objeto JWK de la clave pública aquí.
+            //
+            // {
+            //   "kty": "EC", "crv": "P-256", "alg": "ES256", "ext": true,
+            //   "x": "X_COORDINATE_FOR_SUPERADMIN_1", // Reemplazar
+            //   "y": "Y_COORDINATE_FOR_SUPERADMIN_1", // Reemplazar
+            //   "key_ops": ["verify"]
+            // }
+
+            {
+                "crv": "P-256",
+                "ext": true,
+                "key_ops": [
+                    "verify"
+                ],
+                "kty": "EC",
+                "x": "joWTNbJizJN84UoFGsjR1ZQVFIkkC6fpv7_k7bUetkg",
+                "y": "PQQkPSV633jBTTZ1Np1wsaSWL2obRcwRC3k7ICymrqo"
+            }
         ];
         if (SUPERADMIN_PUBLIC_KEYS_CONFIG.length === 0) {
             console.warn("APP: ADVERTENCIA - No hay claves de superadmin configuradas. Las operaciones 'assignRole' P2P (y otras de superadmin) fallarán la verificación de 'superadmin por configuración'.");
@@ -185,16 +257,16 @@
                         gdbPubKeyEl.textContent = "Esperando sincronización de clave pública GDB...";
                         // Forzar una relectura después de un breve retraso podría ayudar si es un problema de timing
                         setTimeout(async () => {
-                             const userNodeQueryUpdated = await db.get(`user:${currentUserHandle}`);
-                             if (userNodeQueryUpdated.result?.value?.gdbSigningPubKey) {
+                            const userNodeQueryUpdated = await db.get(`user:${currentUserHandle}`);
+                            if (userNodeQueryUpdated.result?.value?.gdbSigningPubKey) {
                                 gdbPubKeyEl.textContent = JSON.stringify(userNodeQueryUpdated.result.value.gdbSigningPubKey, null, 2);
-                             }
+                            }
                         }, 2000);
                     }
                     strictModeStatusEl.textContent = appSecurityManagerInstance.isStrictMode() ? "Activado" : "Desactivado";
                 }
-                 console.log("APP: Seguridad completa inicializada.");
-                 statusEl.textContent = `Logueado como: ${currentUserHandle}. Seguridad P2P Activa.`;
+                console.log("APP: Seguridad completa inicializada.");
+                statusEl.textContent = `Logueado como: ${currentUserHandle}. Seguridad P2P Activa.`;
 
             } catch (error) {
                 console.error("APP: Error durante el login/inicialización de seguridad:", error);
@@ -281,7 +353,7 @@
                 console.warn("APP (Sim P2P): SecurityManager no activo en este peer. Procesando sin verificación P2P.");
                 // Quitar firma y gdbSigningPubKey si existen, ya que GDB no los espera si SM no está
                 const opsSinFirma = operations.map(op => {
-                    const {signature, gdbSigningPubKey, ...data} = op;
+                    const { signature, gdbSigningPubKey, ...data } = op;
                     return data;
                 });
                 db.receiveChanges(opsSinFirma);
@@ -319,7 +391,7 @@
                 console.error("Error en simulación P2P con SM:", e);
             }
         }
-        
+
         // Helper para crear un objeto de operación firmado (o pseudo-firmado) para simulación
         // Necesitaría acceso a la clave privada del 'originUserHandle' para firmar de verdad.
         // Por ahora, crea la estructura que SecurityManager espera.
@@ -339,13 +411,13 @@
             // Si no hay firma real, generamos una estructura con firma basura
             // El receptor necesitará la gdbSigningPubKey correcta del originUser en su DB para intentar verificar.
             const userNodeQuery = await db.get(`user:${originUserHandle}`);
-            const pubKey = userNodeQuery.result?.value?.gdbSigningPubKey || 
-                           { kty: "EC", crv: "P-256", x: "placeholder", y: "placeholder", ext:true, alg:"ES256", key_ops:["verify"] };
+            const pubKey = userNodeQuery.result?.value?.gdbSigningPubKey ||
+                { kty: "EC", crv: "P-256", x: "placeholder", y: "placeholder", ext: true, alg: "ES256", key_ops: ["verify"] };
 
             return {
                 ...opData,
-                gdbSigningPubKey: pubKey, 
-                signature: [1,2,3,4,5,9,9,9] // Firma basura
+                gdbSigningPubKey: pubKey,
+                signature: [1, 2, 3, 4, 5, 9, 9, 9] // Firma basura
             };
         }
 
@@ -355,7 +427,7 @@
             // cuya clave pública esté en SUPERADMIN_PUBLIC_KEYS_CONFIG.
             const targetUser = "carol";
             const roleToAssign = "admin";
-            
+
             // Creamos la operación como si el currentUserHandle (que es superadmin) la originara.
             // Esta operación será firmada REALMENTE por el currentUserHandle.
             const opToSign = {
@@ -363,7 +435,7 @@
                 id: `user:${targetUser}`, // El ID del nodo afectado
                 value: { role: roleToAssign, targetUserHandle: targetUser, assignedBy: currentUserHandle }, // El nuevo estado del nodo
                 timestamp: db.hybridClock.now(),
-                originUser: currentUserHandle 
+                originUser: currentUserHandle
             };
 
             // SecurityManager.signOutgoingOperations la firmará.
@@ -375,9 +447,9 @@
             }
             const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
             if (!signedOpsArray || signedOpsArray.length === 0) {
-                 alert("No se pudo firmar la operación de superadmin para simulación."); return;
+                alert("No se pudo firmar la operación de superadmin para simulación."); return;
             }
-            
+
             alert("Simulando 'assignRole' por superadmin. El receptor (esta misma instancia) verificará si tu clave pública está en SUPERADMIN_PUBLIC_KEYS_CONFIG y tienes permiso 'assignRole'.");
             await simulateIncomingP2PData(signedOpsArray);
         });
@@ -396,8 +468,8 @@
                 return;
             }
             const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
-             if (!signedOpsArray || signedOpsArray.length === 0) {
-                 alert("No se pudo firmar la operación de usuario para simulación."); return;
+            if (!signedOpsArray || signedOpsArray.length === 0) {
+                alert("No se pudo firmar la operación de usuario para simulación."); return;
             }
             alert("Simulando 'put' válido por usuario. El receptor (esta misma instancia) verificará firma y permiso 'write'.");
             await simulateIncomingP2PData(signedOpsArray);
@@ -406,11 +478,11 @@
         simulateBadSigP2PReceiveBtn.addEventListener('click', async () => {
             if (!currentUserHandle) { alert("Loguéate primero."); return; }
             const userNodeQuery = await db.get(`user:${currentUserHandle}`);
-            const pubKey = userNodeQuery.result?.value?.gdbSigningPubKey || {kty:"EC", crv:"P-256", x:"badKey", y:"badKey", alg:"ES256", ext:true, key_ops:["verify"]};
+            const pubKey = userNodeQuery.result?.value?.gdbSigningPubKey || { kty: "EC", crv: "P-256", x: "badKey", y: "badKey", alg: "ES256", ext: true, key_ops: ["verify"] };
 
             const op = await createPseudoSignedOpForSimulation(
                 currentUserHandle, 'put', 'nodoP2PMalaFirma', { data: "Intento con mala firma" },
-                { signature: [9,8,7,6,5,4,3,2,1,0,9,8,7,6,5,4,3,2,1,0,9,8,7,6,5,4,3,2,1,0,9,8], gdbSigningPubKey: pubKey }
+                { signature: [9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8], gdbSigningPubKey: pubKey }
             );
             await simulateIncomingP2PData([op]);
         });
@@ -420,7 +492,7 @@
             // Asumimos que el currentUserHandle tiene un rol (ej: 'user') que SÍ puede firmar
             // pero que intentará una acción para la que NO tiene permiso (ej: 'delete' si solo tiene 'write').
             // El SecurityManager.signOutgoingOperations firmará esto correctamente.
-             const opToSign = {
+            const opToSign = {
                 type: "remove", // Asumir que el rol de 'user' no tiene 'delete'
                 id: "nodoQueNoDeberiaBorrar",
                 value: null, // Para 'remove'
@@ -432,13 +504,13 @@
                 return;
             }
             const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
-             if (!signedOpsArray || signedOpsArray.length === 0) {
-                 alert("No se pudo firmar la operación sin permiso para simulación."); return;
+            if (!signedOpsArray || signedOpsArray.length === 0) {
+                alert("No se pudo firmar la operación sin permiso para simulación."); return;
             }
             alert("Simulando 'remove' con firma VÁLIDA pero (posiblemente) SIN PERMISO RBAC. El receptor lo verificará.");
             await simulateIncomingP2PData(signedOpsArray);
         });
-        
+
         simulateNotSuperAdminAssignRoleBtn.addEventListener('click', async () => {
             if (!currentUserHandle) { alert("Loguéate primero."); return; }
             // Asumimos que currentUserHandle NO es un superadmin (su clave NO está en SUPERADMIN_PUBLIC_KEYS_CONFIG)
@@ -451,13 +523,13 @@
                 timestamp: db.hybridClock.now(),
                 originUser: currentUserHandle
             };
-             if (!appSecurityManagerInstance || !appSecurityManagerInstance.localPrivateKey) {
+            if (!appSecurityManagerInstance || !appSecurityManagerInstance.localPrivateKey) {
                 alert("SecurityManager o clave privada local no disponible para firmar simulación.");
                 return;
             }
             const signedOpsArray = await appSecurityManagerInstance.signOutgoingOperations([opToSign]);
             if (!signedOpsArray || signedOpsArray.length === 0) {
-                 alert("No se pudo firmar la operación de no-superadmin para simulación."); return;
+                alert("No se pudo firmar la operación de no-superadmin para simulación."); return;
             }
             alert("Simulando 'assignRole' por un usuario que NO es superadmin (firma válida). El receptor lo verificará contra SUPERADMIN_PUBLIC_KEYS_CONFIG.");
             await simulateIncomingP2PData(signedOpsArray);
@@ -492,4 +564,5 @@
         initGDB();
     </script>
 </body>
+
 </html>
