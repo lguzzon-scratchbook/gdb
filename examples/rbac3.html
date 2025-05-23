@@ -87,8 +87,7 @@
         const SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG = [
             // ¡¡¡REEMPLAZA ESTO CON DIRECCIONES ETH REALES DE TUS SUPERADMINS!!!
             // Ejemplo: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" (dirección de Hardhat #0)
-            "0x________________________________________", // Reemplaza con una dirección real
-            "0x________________________________________"  // Reemplaza con otra si tienes más
+            "0xC9f9b6d99d605880C8dD85DBCbBE94E83af738A5", // Reemplaza con una dirección real
         ];
         if (SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG.find(a => a.startsWith("0x_"))) {
             console.warn("APP: ADVERTENCIA - Una o más direcciones de superadmin son placeholders. Las operaciones 'assignRole' P2P (y otras de superadmin) fallarán la verificación de 'superadmin por configuración' si la dirección del remitente no es una real de esta lista.");
