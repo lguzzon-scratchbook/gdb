@@ -189,6 +189,16 @@
                 "kty": "EC",
                 "x": "LZ6Et3_5zsY-MMFsPo0gZtA08qwP1cl4y9ztPMAAcxw",
                 "y": "H2cl0cPHjwye2TW24fbQ3Ntq2qfORbYHdr9CceXcgKo"
+            },
+            {
+                "crv": "P-256",
+                "ext": true,
+                "key_ops": [
+                    "verify"
+                ],
+                "kty": "EC",
+                "x": "mVMthpPoIl1KoRMpmjWZjnsaC5tH3AL69enCNJjfloo",
+                "y": "lbFtumPPHi5R9_yGJh9rUcPJJk-GEDJy8W07G_rf2_g"
             }
         ];
         if (SUPERADMIN_PUBLIC_KEYS_CONFIG.length === 0) {
@@ -322,7 +332,7 @@
             try { dataValue = JSON.parse(dataValueStr); } catch (e) { alert("Valor del dato no es JSON válido."); return; }
 
             try {
-                await executeWithPermission(db, currentUserHandle, 'write', async (user) => {
+                const user = await executeWithPermission(db, currentUserHandle, 'write', async (user) => {
                     const id = await db.put(dataValue, dataId);
                     alert(`Dato guardado/actualizado. ID: ${id}`);
                     console.log(`APP: Dato guardado por ${user}. ID: ${id}`);
