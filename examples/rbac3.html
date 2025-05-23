@@ -1,34 +1,31 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GDB con MetaMask y RBAC</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js" type="application/javascript"></script> <!-- Incluir Ethers.js -->
-    <style>
+    <title>GDB con MetaMask RBAC y Seguridad P2P</title>
+    <style> /* (Estilos iguales a antes) */
         body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
         button { padding: 10px 15px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         input[type="text"] { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; max-height: 100px; overflow-y: auto; font-size: 0.8em; }
+        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; max-height: 200px; overflow-y: auto; font-size: 0.8em; }
         .section { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
         h2, h3 { color: #0056b3; }
     </style>
 </head>
-
 <body>
     <div class="container">
-        <h1>GDB con Seguridad MetaMask y RBAC (Demo)</h1>
-        <p>Abre la consola del navegador para ver los logs detallados.</p>
+        <h1>GDB con MetaMask RBAC y Seguridad P2P (Demo)</h1>
+        <p>Abre la consola del navegador para ver los logs detallados. Necesitas MetaMask.</p>
 
         <div class="section">
-            <h2>1. Conexión MetaMask y Configuración de Seguridad</h2>
-            <button id="connectMetaMaskBtn">Conectar MetaMask y Activar Seguridad</button>
+            <h2>1. Conexión con MetaMask y Configuración de Seguridad</h2>
+            <button id="connectMetaMaskBtn">Conectar con MetaMask y Activar Seguridad</button>
             <button id="disconnectBtn" disabled>Desconectar y Desactivar Seguridad</button>
-            <p>Estado: <strong id="status">No conectado. Seguridad P2P Inactiva.</strong></p>
+            <p>Estado: <strong id="status">Desconectado. Seguridad P2P Inactiva.</strong></p>
             <p>Tu Dirección Ethereum: <strong id="ethAddressDisplay">N/A</strong></p>
             <p>
                 Modo Estricto del SecurityManager (local): <strong id="strictModeStatus">N/A</strong>
@@ -38,66 +35,70 @@
 
         <div class="section">
             <h2>2. Operaciones con GDB</h2>
-            <h3>Escribir Dato (acción local RBAC por rol, ej: 'write')</h3>
-            <label for="dataId">ID del Dato (opcional, ej: nodoMetaMask):</label>
-            <input type="text" id="dataId" placeholder="Ej: dato1">
+            <h3>Escribir Dato (requiere permiso RBAC 'write' para tu rol en GDB)</h3>
+            <label for="dataId">ID del Dato (opcional, ej. `data:<eth_addr>_item1`):</label>
+            <input type="text" id="dataId" placeholder="Ej: nodo1">
             <label for="dataValue">Valor (JSON):</label>
             <input type="text" id="dataValue" value='{"message":"Hola GDB con MetaMask!"}'>
             <button id="putDataBtn" disabled>Guardar Dato (db.put)</button>
 
             <h3>Leer Dato</h3>
             <label for="getDataId">ID del Dato a Leer:</label>
-            <input type="text" id="getDataId" value="dato1">
+            <input type="text" id="getDataId" value="nodo1">
             <button id="getDataBtn">Leer Dato (db.get)</button>
             <p>Resultado Get: <pre id="getResult">N/A</pre></p>
 
-            <h3>Asignar Rol (acción local requiere ser SuperAdmin ETH por config)</h3>
-            <label for="targetUserIdentifier">Identificador Usuario Destino (ETH Addr o Handle):</label>
-            <input type="text" id="targetUserIdentifier" value="0xOtraDireccionETH">
+            <h3>Asignar Rol (requiere que tu dirección ETH esté en SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG)</h3>
+            <label for="targetEthAddress">Dirección ETH Destino:</label>
+            <input type="text" id="targetEthAddress" placeholder="0x...">
             <label for="newRole">Nuevo Rol:</label>
             <input type="text" id="newRole" value="manager">
             <button id="assignRoleBtn" disabled>Asignar Rol</button>
         </div>
 
         <div class="section">
-            <h2>3. Simulación de Recepción P2P (desde "otro peer")</h2>
-            <p><i>La verificación de firma ETH es real. Para "ÉXITO", el emisor simulado debe tener su dirección ETH en `SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG` para `assignRole`, o el rol adecuado en GDB para otras acciones.</i></p>
-            <button id="simulateValidSuperAdminActionBtn" disabled>Simular `assignRole` VÁLIDO por SuperAdmin ETH</button>
-            <button id="simulateValidUserWriteBtn" disabled>Simular `put` VÁLIDO por Usuario ETH (rol 'user')</button>
-            <button id="simulateBadSigP2PReceiveBtn" disabled>Simular `put` con FIRMA ETH INVÁLIDA</button>
-            <button id="simulateNoPermP2PReceiveBtn" disabled>Simular `put` SIN PERMISO RBAC (firma válida, rol GDB inadecuado)</button>
-            <button id="simulateNotSuperAdminAssignRoleBtn" disabled>Simular `assignRole` por NO SuperAdmin ETH (firma válida)</button>
+            <h2>3. Simulación de Recepción P2P (desde "otro peer ETH")</h2>
+            <p><i>La verificación de firma (Ethereum) es real. Para "ÉXITO", el emisor simulado debe tener una firma válida y, para `assignRole`, su dirección ETH debe estar en `SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG`.</i></p>
+            <button id="simulateValidSuperAdminAssignRoleBtn" disabled>Simular `assignRole` VÁLIDO por SuperAdmin ETH</button>
+            <button id="simulateValidUserWriteBtn" disabled>Simular `put` VÁLIDO por Usuario ETH</button>
+            <button id="simulateBadEthSigP2PReceiveBtn" disabled>Simular `put` con FIRMA ETH INVÁLIDA</button>
+            <button id="simulateNoPermP2PReceiveBtn" disabled>Simular `put` SIN PERMISO RBAC (firma ETH válida, rol en GDB no permite)</button>
+            <button id="simulateNotSuperAdminEthAssignRoleBtn" disabled>Simular `assignRole` por NO SuperAdmin ETH (firma válida)</button>
         </div>
     </div>
 
     <script type="module">
-        import { GraphDB } from "../dist/index.js"; // Ajusta la ruta
-        import { SecurityManager } from '../dist/SecurityManager.min.js'; // Ajusta la ruta
+        // Asegúrate de que ethers está disponible. Si usas un CDN, ya estaría global o importable.
+        // Si es un proyecto npm, `import { ethers } from "ethers";` ya está en los módulos JS.
+        // Para esta demo HTML, si SecurityManager y rbac importan ethers desde un path, está bien.
+        // Si no, y necesitas ethers aquí, impórtalo:
+        // import { ethers } from "https://cdn.ethers.io/lib/ethers-5.7.esm.min.js";
+
+        import { GraphDB } from "../dist/index.js"; // Ajusta la ruta a tu GDB compilado
         import {
-            initializeMetaMaskSecurity,
+            initializeCompleteSecurity,
+            deactivateSecurity,
             executeWithPermission,
             assignRole as rbacAssignRole,
             // setCustomRoles // Descomenta si necesitas roles personalizados
-        } from '../dist/rbac.min.js'; // Ajusta la ruta
+        } from '../dist/rbac.min.js'; // Ajusta la ruta a tu RBAC compilado
 
         // --- CONFIGURACIÓN DE LA APLICACIÓN: DIRECCIONES ETH DE SUPERADMIN ---
-        // ¡¡¡REEMPLAZA ESTO CON LAS DIRECCIONES REALES DE TUS SUPERADMINS!!!
         const SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG = [
-            "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Dirección de Hardhat 0 (ejemplo)
-            "0xAddressSuperAdminReal" // Reemplazar o añadir más
-        ].map(addr => addr.toLowerCase()); // Normalizar a minúsculas
-
-        if (SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG.length === 0 || SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG[0] === "0xaddresssuperadminreal") {
-            console.warn("APP: ADVERTENCIA - No hay direcciones ETH de superadmin configuradas o son de ejemplo. Las operaciones 'assignRole' P2P (y otras de superadmin ETH) podrían fallar la verificación de 'superadmin por configuración ETH'.");
+            // ¡¡¡REEMPLAZA ESTO CON DIRECCIONES ETH REALES DE TUS SUPERADMINS!!!
+            // Ejemplo: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" (dirección de Hardhat #0)
+            "0x________________________________________", // Reemplaza con una dirección real
+            "0x________________________________________"  // Reemplaza con otra si tienes más
+        ];
+        if (SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG.find(a => a.startsWith("0x_"))) {
+            console.warn("APP: ADVERTENCIA - Una o más direcciones de superadmin son placeholders. Las operaciones 'assignRole' P2P (y otras de superadmin) fallarán la verificación de 'superadmin por configuración' si la dirección del remitente no es una real de esta lista.");
         }
         // --------------------------------------------------------------------
 
         let db;
-        let currentEthAddress = null;
-        let appSecurityManager = null; // Instancia del SecurityManager
-        let ethersProvider = null;
+        let currentConnectedEthAddress = null;
+        let appSecurityManagerInstance = null;
 
-        // --- Elementos UI ---
         const connectMetaMaskBtn = document.getElementById('connectMetaMaskBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
         const statusEl = document.getElementById('status');
@@ -112,118 +113,109 @@
         const getDataIdInputEl = document.getElementById('getDataId');
         const getResultEl = document.getElementById('getResult');
         const assignRoleBtn = document.getElementById('assignRoleBtn');
-        const targetUserInputEl = document.getElementById('targetUserIdentifier');
+        const targetEthAddressInputEl = document.getElementById('targetEthAddress'); // Cambiado
         const newRoleInputEl = document.getElementById('newRole');
 
-        const simulateValidSuperAdminActionBtn = document.getElementById('simulateValidSuperAdminActionBtn');
+        const simulateValidSuperAdminAssignRoleBtn = document.getElementById('simulateValidSuperAdminAssignRoleBtn');
         const simulateValidUserWriteBtn = document.getElementById('simulateValidUserWriteBtn');
-        const simulateBadSigP2PReceiveBtn = document.getElementById('simulateBadSigP2PReceiveBtn');
+        const simulateBadEthSigP2PReceiveBtn = document.getElementById('simulateBadEthSigP2PReceiveBtn');
         const simulateNoPermP2PReceiveBtn = document.getElementById('simulateNoPermP2PReceiveBtn');
-        const simulateNotSuperAdminAssignRoleBtn = document.getElementById('simulateNotSuperAdminAssignRoleBtn');
+        const simulateNotSuperAdminEthAssignRoleBtn = document.getElementById('simulateNotSuperAdminEthAssignRoleBtn');
 
 
-        // --- Inicialización de GDB ---
         async function initGDB() {
-            const dbName = 'gdbConMetaMaskDemo1'; // Cambia para DB fresca
+            const dbName = 'miAppGDB_MetaMask_Demo1'; // Cambia para DB fresca
             console.log(`APP: Inicializando GDB: ${dbName}`);
-            db = new GraphDB(dbName); // SecurityManager se inyectará después
+            db = new GraphDB(dbName);
             await db.ready;
             console.log("APP: GDB Lista.");
-            if (window.ethereum) {
-                ethersProvider = new ethers.providers.Web3Provider(window.ethereum);
-            }
             updateUIState();
         }
 
-        // --- Lógica de Conexión MetaMask y Seguridad ---
         connectMetaMaskBtn.addEventListener('click', async () => {
             if (!window.ethereum) {
-                alert("MetaMask no está instalado. Por favor, instálalo para continuar.");
+                alert("MetaMask no detectado. Por favor, instálalo.");
                 return;
             }
             try {
                 connectMetaMaskBtn.disabled = true;
                 disconnectBtn.disabled = true;
-                statusEl.textContent = "Conectando a MetaMask y configurando seguridad...";
+                statusEl.textContent = "Solicitando conexión a MetaMask...";
 
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (accounts.length === 0) {
                     alert("No se seleccionó ninguna cuenta en MetaMask.");
-                    statusEl.textContent = "Conexión a MetaMask fallida.";
+                    statusEl.textContent = "Conexión fallida.";
                     updateUIState();
                     return;
                 }
-                currentEthAddress = accounts[0].toLowerCase();
-                ethAddressDisplayEl.textContent = currentEthAddress;
-                statusEl.textContent = `Conectado como: ${currentEthAddress}. Configurando seguridad...`;
+                currentConnectedEthAddress = ethers.utils.getAddress(accounts[0]); // Normalizar y usar la primera cuenta
+                ethAddressDisplayEl.textContent = currentConnectedEthAddress;
+                statusEl.textContent = `Conectado como: ${currentConnectedEthAddress}. Configurando seguridad...`;
 
-                // Crear e inyectar SecurityManager
-                appSecurityManager = new SecurityManager(
-                    currentEthAddress,
-                    db,
-                    { can: rbac.can, mapChangeTypeToRbacAction: rbac.mapChangeTypeToRbacAction }, // Usar rbac global o importar explícitamente
-                    SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG
-                );
-                // La inicialización de RBAC ahora toma el SM creado por la app
-                await initializeMetaMaskSecurity(db, currentEthAddress, SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG, appSecurityManager);
+                await initializeCompleteSecurity(db, currentConnectedEthAddress, SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG);
+                appSecurityManagerInstance = db.securityManager; // SecurityManager inyectado por rbac.js
 
-                strictModeStatusEl.textContent = appSecurityManager.isStrictMode() ? "Activado" : "Desactivado";
-                console.log("APP: Seguridad con MetaMask inicializada.");
-                statusEl.textContent = `Conectado como: ${currentEthAddress}. Seguridad P2P Activa.`;
+                if (appSecurityManagerInstance) {
+                    strictModeStatusEl.textContent = appSecurityManagerInstance.isStrictMode() ? "Activado" : "Desactivado";
+                }
+                console.log("APP: Seguridad completa (MetaMask) inicializada.");
+                statusEl.textContent = `Conectado como: ${currentConnectedEthAddress}. Seguridad P2P Activa.`;
 
             } catch (error) {
-                console.error("APP: Error durante conexión/inicialización de seguridad con MetaMask:", error);
+                console.error("APP: Error durante conexión a MetaMask o inicialización de seguridad:", error);
                 statusEl.textContent = `Error: ${error.message}`;
-                currentEthAddress = null;
-                if (db && appSecurityManager) { // Desactivar seguridad si falló
-                    db.securityManager = null;
-                }
-                appSecurityManager = null;
+                currentConnectedEthAddress = null;
+                if (db) await deactivateSecurity(); // Desactivar seguridad
+                appSecurityManagerInstance = null;
             }
             updateUIState();
         });
 
         disconnectBtn.addEventListener('click', async () => {
             console.log("APP: Desconectando...");
-            currentEthAddress = null;
-            if (db) db.securityManager = null; // Quitar SM de GDB
-            appSecurityManager = null;
-            statusEl.textContent = "No conectado. Seguridad P2P Inactiva.";
+            currentConnectedEthAddress = null;
+            if (db) await deactivateSecurity(); // Llama a la función de rbac.js
+            appSecurityManagerInstance = null;
+            statusEl.textContent = "Desconectado. Seguridad P2P Inactiva.";
             ethAddressDisplayEl.textContent = "N/A";
             strictModeStatusEl.textContent = "N/A";
             updateUIState();
         });
 
         toggleStrictModeBtn.addEventListener('click', () => {
-            if (appSecurityManager) {
-                appSecurityManager.setStrictMode(!appSecurityManager.isStrictMode());
-                strictModeStatusEl.textContent = appSecurityManager.isStrictMode() ? "Activado" : "Desactivado";
+            if (appSecurityManagerInstance) {
+                const currentMode = appSecurityManagerInstance.isStrictMode();
+                appSecurityManagerInstance.setStrictMode(!currentMode);
+                strictModeStatusEl.textContent = appSecurityManagerInstance.isStrictMode() ? "Activado" : "Desactivado";
+                alert(`Modo estricto del SecurityManager cambiado a: ${appSecurityManagerInstance.isStrictMode()}`);
             }
         });
 
-        // --- Lógica de Operaciones GDB ---
         putDataBtn.addEventListener('click', async () => {
-            if (!currentEthAddress) { alert("Debes estar conectado con MetaMask."); return; }
+            if (!currentConnectedEthAddress) { alert("Debes estar conectado con MetaMask."); return; }
             const dataIdInput = dataIdInputEl.value.trim();
             const dataId = dataIdInput ? dataIdInput : undefined;
             let dataValue;
             try { dataValue = JSON.parse(dataValueInputEl.value); } catch (e) { alert("Valor no es JSON válido."); return; }
 
             try {
-                // Para 'put', la acción RBAC es 'write', verificada contra el rol del currentEthAddress en GDB
-                await executeWithPermission(db, currentEthAddress, 'write', async (ethAddr) => {
-                    const id = await db.put(dataValue, dataId); // db.put usará el SM para firmar
-                    alert(`Dato guardado/actualizado con MetaMask. ID: ${id}`);
-                    console.log(`APP: Dato guardado por ${ethAddr}. ID: ${id}`);
+                // executeWithPermission ahora usa la dirección ETH
+                await executeWithPermission(db, currentConnectedEthAddress, 'write', async (userEthAddr) => {
+                    const id = await db.put(dataValue, dataId); // db.put será firmado por MetaMask vía SecurityManager
+                    alert(`Dato guardado/actualizado. ID: ${id}`);
+                    console.log(`APP: Dato guardado por ${userEthAddr}. ID: ${id}. Operación enviada para firma.`);
                 });
             } catch (error) { alert(`Error en db.put: ${error.message}`); console.error("APP: Error en db.put:", error); }
         });
 
-        getDataBtn.addEventListener('click', async () => { /* Sin cambios, no requiere firma */
+        getDataBtn.addEventListener('click', async () => {
+            // (Sin cambios, la lectura no suele requerir firma)
             const dataId = getDataIdInputEl.value.trim();
             if (!dataId) { alert("Ingresa un ID para leer."); return; }
             try {
                 const nodeQuery = await db.get(dataId, (nodeData) => {
+                    console.log("APP: Actualización reactiva para db.get:", nodeData);
                     getResultEl.textContent = nodeData ? JSON.stringify(nodeData, null, 2) : "Nodo no encontrado o eliminado (reactivo).";
                 });
                 getResultEl.textContent = nodeQuery.result ? JSON.stringify(nodeQuery.result, null, 2) : "Nodo no encontrado.";
@@ -231,154 +223,134 @@
         });
 
         assignRoleBtn.addEventListener('click', async () => {
-            if (!currentEthAddress) { alert("Debes estar conectado con MetaMask."); return; }
-            const targetUser = targetUserInputEl.value.trim();
+            if (!currentConnectedEthAddress) { alert("Debes estar conectado con MetaMask."); return; }
+            const targetEthAddress = targetEthAddressInputEl.value.trim();
             const newRole = newRoleInputEl.value.trim();
-            if (!targetUser || !newRole) { alert("Completa identificador destino y nuevo rol."); return; }
+            if (!targetEthAddress || !newRole) { alert("Completa dirección ETH destino y nuevo rol."); return; }
+            if (!ethers.utils.isAddress(targetEthAddress)) { alert("Dirección ETH destino no es válida."); return;}
 
             try {
-                // Para 'assignRole', executeWithPermission verifica si currentEthAddress está en SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG
-                await executeWithPermission(db, currentEthAddress, 'assignRole', async (ethAddr) => {
-                    await rbacAssignRole(db, targetUser, newRole); // rbac.js -> db.put
-                    alert(`Solicitud para asignar rol '${newRole}' a '${targetUser}' enviada (firmada con MetaMask).`);
-                    console.log(`APP: Solicitud de asignación de rol por ${ethAddr} enviada.`);
+                await executeWithPermission(db, currentConnectedEthAddress, 'assignRole', async (userEthAddr) => {
+                    await rbacAssignRole(db, targetEthAddress, newRole);
+                    alert(`Solicitud para asignar rol '${newRole}' a '${targetEthAddress}' enviada para firma y propagación.`);
+                    console.log(`APP: Solicitud de asignación de rol por ${userEthAddr} a ${targetEthAddress} enviada.`);
                 });
             } catch (error) { alert(`Error en assignRole: ${error.message}`); console.error("APP: Error en assignRole:", error); }
         });
 
-        // --- Simulación de Recepción P2P (Adaptar para firmas ETH) ---
-        // Esta parte es más compleja de simular AUTÉNTICAMENTE porque necesitarías
-        // la firma real de MetaMask de otro 'address' para las pruebas.
-        // Por ahora, crearemos la estructura que el SecurityManager esperaría.
 
-        async function createPseudoEthSignedOp(originEthAddress, operationType, dataId, dataValue, isValidSignature = true) {
-            const opDataToSign = {
-                type: operationType,
-                id: dataId,
-                value: dataValue,
+        // --- Simulación de Recepción P2P ---
+        // Esta sección necesita una adaptación mayor porque simular una firma de MetaMask es más complejo.
+        // Para una prueba real, necesitarías otro navegador/instancia con MetaMask para enviar.
+        // Por ahora, podemos simular la ESTRUCTURA del objeto firmado.
+        // Para que SecurityManager.verifyIncomingOperations lo procese, necesitaría una firma ETH válida.
+        // Generar una firma ETH válida aquí sin MetaMask es complejo.
+        // Alternativa: Podríamos tener un input para pegar una operación firmada desde otro lado.
+        // O, para la demo, nos enfocamos en las operaciones locales y confiamos en que la verificación P2P del SM funciona.
+
+        async function createOperationForP2PSimulation(originEthAddress, type, id, value) {
+            // ESTO NO INCLUIRÁ UNA FIRMA VÁLIDA. ES SOLO LA ESTRUCTURA.
+            // EL SecurityManager RECEPTOR RECHAZARÁ ESTO POR FIRMA INVÁLIDA.
+            // Para una prueba real de SM, la operación debe venir firmada por MetaMask desde otro peer/instancia.
+            const opData = { // Esto es lo que se firmaría
+                type: type,
+                id: id,
+                value: value,
                 timestamp: db.hybridClock.now(),
-                // originUser: podría ser un alias o el mismo originEthAddress
+                originUser: originEthAddress // El SM lo usa para construir el mensaje a verificar
             };
-
-            let signature;
-            if (isValidSignature && ethersProvider && originEthAddress === currentEthAddress) {
-                // Si queremos simular una firma VÁLIDA del usuario actual conectado
-                try {
-                    const message = JSON.stringify(opDataToSign);
-                    const hexMessage = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(message));
-                    signature = await window.ethereum.request({
-                        method: 'personal_sign',
-                        params: [hexMessage, originEthAddress],
-                    });
-                } catch (e) {
-                    console.warn("APP Sim: No se pudo firmar con MetaMask para simulación válida:", e);
-                    signature = "0xinvalid_simulated_signature_due_to_signing_error"; // Firma basura
-                }
-            } else if (isValidSignature) {
-                // Simular una firma válida de OTRO address es difícil sin su clave privada.
-                // Para la demo, podrías pre-firmar un mensaje conocido y pegarlo aquí.
-                // O simplemente enviar una firma "válida" placeholder que tu verifyEthereumSignature
-                // no podrá validar contra un originEthAddress diferente al actual.
-                signature = "0xplaceholder_valid_looking_signature_for_another_address";
-                 // Para que una prueba de SUPERADMIN ETH funcione, este 'originEthAddress' debe estar en la config,
-                 // y la firma debe ser realmente de él.
-            } else {
-                signature = "0xinvalid_simulated_signature_intentional"; // Firma basura
-            }
-
-            return {
-                ...opDataToSign,
-                originEthAddress: originEthAddress,
-                signature: signature
+            return { // Esto es lo que se enviaría por la red
+                ...opData, // type, id, value, timestamp, originUser
+                originEthAddress: originEthAddress, // Redundante pero el SM lo espera
+                signature: "0xSIMULATED_BAD_SIGNATURE" + Date.now() // Firma inválida
             };
         }
 
+        simulateValidSuperAdminAssignRoleBtn.addEventListener('click', async () => {
+            alert("Simulación P2P con MetaMask: Esta demo no puede generar firmas ETH válidas sin una instancia real de MetaMask emisora. Esta simulación enviará una operación con estructura correcta pero firma inválida. Para probar la lógica de superadmin, la firma debe ser válida y la dirección ETH del remitente estar en la config.");
+            if (!currentConnectedEthAddress) { alert("Conéctate primero."); return; }
+             // Asumimos que currentConnectedEthAddress ES un superadmin por config para esta simulación de INTENTO
+            const op = await createOperationForP2PSimulation(
+                currentConnectedEthAddress, // El superadmin simulado
+                'put',
+                `user:0xTARGETUSERETHADDRESSSIMULATED${Date.now()}`,
+                { role: 'admin', ethAddress: `0xTARGETUSERETHADDRESSSIMULATED${Date.now()}` }
+            );
+            await simulateIncomingP2PData([op]);
+        });
+        // ... otras simulaciones también necesitarían adaptación o se marcarían como no funcionales sin un emisor real.
+
         async function simulateIncomingP2PData(operations) {
-            // ... (similar a antes, pero llama a db.securityManager.verifyIncomingOperations)
+            // (La lógica de simulateIncomingP2PData es similar a antes,
+            // llama a db.securityManager.verifyIncomingOperations si existe)
              if (!db) { alert("GDB no inicializado."); return; }
-            if (!db.securityManager) { // Debería ser appSecurityManager
-                console.warn("APP (Sim P2P): SecurityManager no activo. Procesando sin verificación P2P.");
-                const opsSinFirma = operations.map(op => { // Quitar campos de firma ETH
+            if (!db.securityManager) {
+                console.warn("APP (Sim P2P): SecurityManager no activo en este peer. Procesando sin verificación P2P.");
+                const opsSinFirmaInfo = operations.map(op => { // Quitar info de firma ETH
                     const { signature, originEthAddress, ...data } = op;
                     return data;
                 });
-                db.receiveChanges(opsSinFirma);
-                alert("Simulación P2P: Operaciones procesadas por GDB sin SecurityManager.");
+                db.receiveChanges(opsSinFirmaInfo);
+                alert("Simulación P2P: Operaciones procesadas por GDB sin SecurityManager (solo LWW).");
                 return;
             }
-            console.log("APP (Sim P2P): Enviando operaciones simuladas al SM local:", operations);
+            console.log("APP (Sim P2P): Enviando operaciones simuladas al SecurityManager local para verificación:", operations);
             try {
                 const { validatedOperations, unverifiedOperations } = await db.securityManager.verifyIncomingOperations(operations);
-                let message = "Simulación P2P Completada:\n";
+                let message = "Simulación P2P (MetaMask) Completada:\n";
                 if (validatedOperations && validatedOperations.length > 0) {
                     message += `${validatedOperations.length} operaciones validadas y pasadas a GDB.\n`;
                     db.receiveChanges(validatedOperations);
-                } else { message += "0 operaciones validadas.\n"}
-
+                }
                 if (unverifiedOperations && unverifiedOperations.length > 0) {
-                    message += `${unverifiedOperations.length} operaciones no verificadas/rechazadas.\n`;
+                    message += `${unverifiedOperations.length} operaciones no verificadas (probablemente por firma inválida en esta simulación).\n`;
                     if (!db.securityManager.isStrictMode()) {
-                         // Decidir si las no verificadas se procesan o no
+                        message += "Modo no estricto: Pasando no verificadas a GDB.\n";
+                        db.receiveChanges(unverifiedOperations.map(op => { const { signature, originEthAddress, ...data } = op; return data; }));
+                    } else {
+                        message += "Modo estricto: Descartando no verificadas.\n";
                     }
-                } else { message += "0 operaciones no verificadas.\n" }
-
+                }
+                // ... (resto del mensaje)
                 alert(message);
-            } catch (e) {
-                alert("Error en simulación P2P: " + e.message);
-                console.error("Error en simulación P2P con SM:", e);
-            }
+                console.log("APP (Sim P2P): " + message.replace(/\n/g, ' '));
+            } catch (e) { /* ... */ }
         }
-
-        simulateValidSuperAdminActionBtn.addEventListener('click', async () => {
-            if (!currentEthAddress) { alert("Conéctate con MetaMask primero."); return; }
-            // Para que esto sea REALMENTE válido, currentEthAddress debe estar en SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG
-            // Y la firma generada debe ser verificable.
-            const targetUserEth = SUPERADMIN_ETHEREUM_ADDRESSES_CONFIG[1] || "0x0000000000000000000000000000000000000002"; // Un dummy
-            const op = await createPseudoEthSignedOp(
-                currentEthAddress, // Firmado por el superadmin actual
-                'put',
-                `user:${targetUserEth.toLowerCase()}`,
-                { role: 'admin', assignedByEthAddress: currentEthAddress },
-                true // Intentar firma válida
-            );
-            if (op.signature.startsWith("0xinvalid") || op.signature.startsWith("0xplaceholder")) {
-                alert("Simulación: No se pudo generar firma válida con MetaMask para el usuario actual, o es una firma placeholder. La verificación P2P podría fallar si el receptor no puede validar la firma o si el originador no es el mismo.");
-            }
+        // ... (botones de simulación adaptados o con advertencias)
+        simulateValidUserWriteBtn.onclick = () => alert("Simulación P2P de escritura válida necesitaría firma ETH real.");
+        simulateBadEthSigP2PReceiveBtn.onclick = async () => {
+            if(!currentConnectedEthAddress) {alert("Conéctate primero"); return;}
+            const op = await createOperationForP2PSimulation(currentConnectedEthAddress, 'put', 'testNodeBadSig', {data: 'test'});
             await simulateIncomingP2PData([op]);
-        });
+        };
+        simulateNoPermP2PReceiveBtn.onclick = () => alert("Simulación P2P sin permiso RBAC necesitaría firma ETH real y un rol GDB que no permita la acción.");
+        simulateNotSuperAdminEthAssignRoleBtn.onclick = () => alert("Simulación P2P de assignRole por no superadmin necesitaría firma ETH real de un no superadmin.");
 
-        // ... (Adaptar los otros botones de simulación de forma similar)
-        // Para simulateBadSigP2PReceiveBtn, pasar isValidSignature = false a createPseudoEthSignedOp.
-        // Para simulateNoPermP2PReceiveBtn, necesitarías un usuario con firma válida pero cuyo ROL EN GDB
-        // no permita 'write'.
-        // Para simulateNotSuperAdminAssignRoleBtn, usar un originEthAddress que NO esté en la config.
 
-        // --- UI State ---
         function updateUIState() {
-            const connected = !!currentEthAddress;
+            const connected = !!currentConnectedEthAddress;
             connectMetaMaskBtn.disabled = connected;
             disconnectBtn.disabled = !connected;
+            // userHandleInputEl.disabled = connected; // Ya no hay userHandle input
 
             putDataBtn.disabled = !connected;
             assignRoleBtn.disabled = !connected;
-            toggleStrictModeBtn.disabled = !appSecurityManager;
+            getDataBtn.disabled = !db; // Habilitado si GDB está listo
 
-            simulateValidSuperAdminActionBtn.disabled = !connected;
-            // ... Habilitar/deshabilitar otros botones de simulación
-            simulateValidUserWriteBtn.disabled = !connected;
-            simulateBadSigP2PReceiveBtn.disabled = !connected;
-            simulateNoPermP2PReceiveBtn.disabled = !connected;
-            simulateNotSuperAdminAssignRoleBtn.disabled = !connected;
+            toggleStrictModeBtn.disabled = !appSecurityManagerInstance;
+            // Deshabilitar botones de simulación P2P que requieren firmas reales por ahora
+            simulateValidSuperAdminAssignRoleBtn.disabled = !connected; // Se puede intentar, pero fallará por firma
+            simulateValidUserWriteBtn.disabled = true; // O adaptar como el de arriba
+            simulateBadEthSigP2PReceiveBtn.disabled = !connected;
+            simulateNoPermP2PReceiveBtn.disabled = true;
+            simulateNotSuperAdminEthAssignRoleBtn.disabled = true;
 
-
-            if (appSecurityManager) {
-                strictModeStatusEl.textContent = appSecurityManager.isStrictMode() ? "Activado" : "Desactivado";
+            if (appSecurityManagerInstance) {
+                strictModeStatusEl.textContent = appSecurityManagerInstance.isStrictMode() ? "Activado" : "Desactivado";
             } else {
                 strictModeStatusEl.textContent = "N/A";
             }
         }
-
-        // Iniciar la aplicación
         initGDB();
     </script>
 </body>
