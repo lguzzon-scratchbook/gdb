@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>GDB Security Testbed (Strict Only - Final)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px 5px 5px 0;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      margin-right: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      background-color: #fff;
+    }
+
+    .section h2 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    pre {
+      background-color: #f0f0f0;
+      padding: 8px;
+      font-size: 0.9em;
+      max-height: 120px;
+      overflow-y: auto;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    p {
+      margin-bottom: 0.5em;
+    }
+
+    .result-area {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>GDB Security Testbed (Siempre en Modo Seguro - Final)</h1>
+    <p>Consola del navegador para logs. Requiere MetaMask.</p>
+    <p><em>Abre dos pestañas. Asigna un rol en una; debería actualizarse en la otra. Las operaciones P2P no firmadas
+        siempre se descartan.</em></p>
+
+    <div class="section">
+      <h2>1. Conexión y Estado Global</h2>
+      <button id="connectBtn">Conectar MetaMask y Activar Seguridad</button>
+      <button id="disconnectBtn" disabled>Desconectar</button>
+      <p>Estado Global: <strong id="statusGlobal">Inicializando...</strong></p>
+    </div>
+
+    <div class="section" id="userInfoSection" style="display:none;">
+      <h2>2. Información del Usuario Activo</h2>
+      <p>Dirección ETH Activa: <strong id="ethAddressActive">N/A</strong></p>
+      <p>Rol en GDB: <strong id="userRoleActive">N/A</strong></p>
+    </div>
+
+    <div class="section">
+      <h2>3. Escribir/Actualizar Datos (Nodo)</h2>
+      <p><em>Requiere permiso RBAC 'write'. La operación será firmada.</em></p>
+      <input type="text" id="dataNodeIdWrite" placeholder="ID del Nodo (ej: mi_dato)" value="test_data_secure">
+      <input type="text" id="dataNodeValueWrite" placeholder='Valor JSON (ej: {"msg":"hola"})'
+        value='{"message":"Dato seguro"}'>
+      <button id="putDataBtn" disabled>Guardar/Actualizar Dato</button>
+    </div>
+
+    <div class="section">
+      <h2>4. Leer Datos (Nodo)</h2>
+      <p><em>Requiere permiso RBAC 'read' (generalmente todos lo tienen).</em></p>
+      <input type="text" id="dataNodeIdRead" placeholder="ID del Nodo a Leer" value="test_data_secure">
+      <button id="getDataBtn" disabled>Leer Dato</button>
+      <div class="result-area">
+        Resultado Lectura:
+        <pre id="getDataResult">N/A</pre>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>5. Administración de Roles</h2>
+      <p><em>Requiere que tu dirección ETH activa sea SuperAdmin (configurada en el script). La operación será
+          firmada.</em></p>
+      <input type="text" id="targetEthForRole" placeholder="0xTargetEthParaRol"
+        value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">
+      <input type="text" id="roleToAssign" placeholder="Rol (ej: manager)" value="manager">
+      <button id="assignRoleBtn" disabled>Asignar Rol a Dirección</button>
+    </div>
+
+    <div class="section">
+      <h2>6. Simulación Recepción P2P</h2>
+      <p><em>Esto simula una operación P2P entrante con una firma deliberadamente inválida. Será descartada por el
+          SecurityManager.</em></p>
+      <button id="simulateReceiveBtn" disabled>Simular 'put' P2P (Firma Inválida)</button>
+    </div>
+
+    <p>Logs de Acciones Recientes:
+    <pre id="actionLog">---</pre>
+    </p>
+  </div>
+
+  <script type="module">
+    import { GraphDB } from "../dist/index.js"; // Ajusta ruta
+    import {
+      createSecurity,
+      clearSecurity,
+      executeWithPermission,
+      assignRole,
+      setSecurityStateChangeCallback,
+      getActiveEthAddress,
+      isSecurityActive
+    } from '../dist/rbac.min.js'; // Ajusta ruta
+
+    // --- CONFIGURACIÓN SUPERADMIN (REEMPLAZAR CON DIRECCIONES REALES) ---
+    const SUPERADMIN_ETH_ADDRESSES = [
+      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Hardhat #0
+      "0xC9f9b6d99d605880C8dD85DBCbBE94E83af738A5"
+    ];
+    // --------------------------------------------------------------------
+
+    let db;
+    let uiLog = "";
+    let unsubscribeUserRoleListener = null;
+
+    // --- UI Elements ---
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const statusGlobalEl = document.getElementById('statusGlobal');
+
+    const userInfoSectionEl = document.getElementById('userInfoSection');
+    const ethAddressActiveEl = document.getElementById('ethAddressActive');
+    const userRoleActiveEl = document.getElementById('userRoleActive');
+
+    const dataNodeIdWriteInput = document.getElementById('dataNodeIdWrite');
+    const dataNodeValueWriteInput = document.getElementById('dataNodeValueWrite');
+    const putDataBtnEl = document.getElementById('putDataBtn');
+
+    const dataNodeIdReadInput = document.getElementById('dataNodeIdRead');
+    const getDataBtnEl = document.getElementById('getDataBtn');
+    const getDataResultEl = document.getElementById('getDataResult');
+
+    const assignRoleBtnEl = document.getElementById('assignRoleBtn');
+    const targetEthForRoleInput = document.getElementById('targetEthForRole');
+    const roleToAssignInput = document.getElementById('roleToAssign');
+
+    const simulateReceiveBtnEl = document.getElementById('simulateReceiveBtn');
+    const actionLogEl = document.getElementById('actionLog');
+
+    function logAction(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logMessage = `[${timestamp}] ${message}`;
+      console.log("APP_LOG:", logMessage);
+
+      uiLog += logMessage + "\n";
+      const maxLogLength = 2000;
+      if (uiLog.length > maxLogLength) {
+        uiLog = uiLog.substring(uiLog.length - maxLogLength);
+      }
+      actionLogEl.textContent = uiLog;
+      actionLogEl.scrollTop = actionLogEl.scrollHeight;
+    }
+
+    function updateUserRoleInUI(userNodeData) {
+      const currentEth = getActiveEthAddress();
+      if (userNodeData && userNodeData.value && userNodeData.value.role) {
+        let roleText = userNodeData.value.role;
+        if (userNodeData.value.expiresAt && new Date(userNodeData.value.expiresAt) < new Date()) {
+          roleText += " (Expirado)";
+        }
+        userRoleActiveEl.textContent = roleText;
+        logAction(`Rol (reactivo): Actualizado a ${roleText} para ${currentEth || 'usuario desconocido'}`);
+      } else {
+        userRoleActiveEl.textContent = 'No asignado (o nodo eliminado)';
+        logAction(`Rol (reactivo): Nodo de usuario no encontrado o sin rol para ${currentEth || 'usuario desconocido'}`);
+      }
+    }
+
+    async function displayUserInfoAndSetupListener() {
+      const currentEth = getActiveEthAddress();
+
+      if (unsubscribeUserRoleListener) {
+        unsubscribeUserRoleListener();
+        unsubscribeUserRoleListener = null;
+        logAction("Rol Listener: Desuscrito del listener de rol anterior.");
+      }
+
+      if (!currentEth || !db) {
+        userInfoSectionEl.style.display = 'none';
+        userRoleActiveEl.textContent = 'N/A';
+        ethAddressActiveEl.textContent = 'N/A';
+        return;
+      }
+
+      ethAddressActiveEl.textContent = currentEth;
+      userInfoSectionEl.style.display = 'block';
+      userRoleActiveEl.textContent = 'Cargando rol...';
+
+      try {
+        const userNodeKey = `user:${currentEth}`;
+        const { result, unsubscribe } = await db.get(userNodeKey, updateUserRoleInUI);
+
+        unsubscribeUserRoleListener = unsubscribe;
+        logAction(`Rol Listener: Suscrito a cambios para ${userNodeKey}`);
+        updateUserRoleInUI(result);
+      } catch (error) {
+        logAction(`Error obteniendo rol/configurando listener para ${currentEth}: ${error.message}`);
+        userRoleActiveEl.textContent = 'Error al cargar rol';
+      }
+    }
+
+    async function initializeSessionWithSecurity(rawAddress) {
+      if (!rawAddress) {
+        logAction("initializeSessionWithSecurity: No hay dirección ETH.");
+        if (db && typeof clearSecurity === 'function') await clearSecurity();
+        return;
+      }
+      try {
+        logAction(`Seguridad: Inicializando para ETH ${rawAddress}...`);
+        await createSecurity(db, rawAddress, SUPERADMIN_ETH_ADDRESSES);
+        logAction(`Seguridad: Lista para ${getActiveEthAddress()}. El rol se cargará/actualizará reactivamente.`);
+      } catch (error) {
+        logAction(`Seguridad: Error al inicializar para ${rawAddress}: ${error.message}`);
+        if (db && typeof clearSecurity === 'function') await clearSecurity();
+      }
+    }
+
+    connectBtn.addEventListener('click', async () => {
+      if (!window.ethereum) return alert("MetaMask no detectado.");
+      try {
+        logAction("Conexión: Solicitando cuentas (eth_requestAccounts)...");
+        updateUI(true);
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (!accounts || accounts.length === 0) throw new Error("No se seleccionó cuenta.");
+        await initializeSessionWithSecurity(accounts[0]);
+      } catch (error) {
+        logAction(`Conexión: Error manual: ${error.message}`);
+        if (db && typeof clearSecurity === 'function') await clearSecurity();
+        updateUI();
+      }
+    });
+
+    disconnectBtn.addEventListener('click', async () => {
+      logAction("Desconexión: Iniciando...");
+      if (unsubscribeUserRoleListener) {
+        unsubscribeUserRoleListener();
+        unsubscribeUserRoleListener = null;
+        logAction("Rol Listener: Desuscrito al desconectar.");
+      }
+      if (db && typeof clearSecurity === 'function') await clearSecurity();
+      logAction("Desconexión: Completada.");
+    });
+
+    // En tu archivo HTML, dentro del <script type="module">
+
+    // ... (otras declaraciones de UI elements y funciones) ...
+    // const dataNodeIdWriteInput = document.getElementById('dataNodeIdWrite');
+    // const dataNodeValueWriteInput = document.getElementById('dataNodeValueWrite');
+    // const putDataBtnEl = document.getElementById('putDataBtn');
+
+    async function putData() {
+      const nodeId = dataNodeIdWriteInput.value.trim() || undefined; // Usar undefined si está vacío para que GDB genere ID
+      let nodeValue;
+
+      try {
+        nodeValue = JSON.parse(dataNodeValueWriteInput.value.trim());
+      } catch (e) {
+        logAction("Dato Escritura: Valor no es JSON válido. Por favor, ingrésalo en formato JSON.");
+        alert("Valor para 'Guardar Dato' no es JSON válido.");
+        return;
+      }
+
+      // No es estrictamente necesario un ID para 'put' si GDB lo genera,
+      // pero si el usuario lo provee, se usa.
+      // if (!nodeId) { 
+      //     logAction("Dato Escritura: ID de nodo requerido (aunque GDB pueda generarlo).");
+      //     alert("ID de nodo es opcional, pero si lo dejas vacío, se generará uno.");
+      // }
+
+      const activeUserEth = getActiveEthAddress(); // Función de rbac.js para obtener la dirección activa
+      if (!activeUserEth) {
+        logAction("Dato Escritura: Usuario no conectado con MetaMask.");
+        alert("Por favor, conecta tu cuenta de MetaMask primero.");
+        return;
+      }
+
+      try {
+        logAction(`Dato Escritura: Iniciando guardado para ID '${nodeId || "nuevo (auto-generado)"}'. Por favor, revisa MetaMask para la firma.`);
+        // Mostrar un estado de "cargando" en el botón o UI si se desea
+        putDataBtnEl.disabled = true;
+        putDataBtnEl.textContent = "Procesando firma...";
+
+        await executeWithPermission(db, activeUserEth, 'write', async (userAddr) => {
+          // Este await ahora espera a que db.put() complete TODO, incluyendo la firma y el envío (si gdb.js fue modificado)
+          const idResultado = await db.put(nodeValue, nodeId);
+
+          // Este código solo se ejecuta DESPUÉS de que la firma se completó (o fue rechazada y lanzó error)
+          // y después de que sendData (dentro de db.put) se completó.
+          logAction(`Dato Escritura: ¡Operación completada para ID '${idResultado}'! Firma obtenida y datos enviados.`);
+          alert(`¡Dato guardado/actualizado y enviado por la red P2P! ID: ${idResultado}`);
+        });
+
+      } catch (error) {
+        // Este catch ahora también puede capturar errores si el usuario rechaza la firma en MetaMask,
+        // o si executeWithPermission deniega el permiso 'write'.
+        logAction(`Dato Escritura: Error durante el proceso: ${error.message}`);
+        alert(`Error guardando dato: ${error.message}`); // Ej. "Usuario rechazó la solicitud de firma." o error de permiso.
+      } finally {
+        // Siempre reactivar el botón, ya sea éxito o error
+        putDataBtnEl.disabled = false;
+        putDataBtnEl.textContent = "Guardar/Actualizar Dato";
+      }
+    }
+
+    // ... (resto de tu script) ...
+    putDataBtnEl.addEventListener('click', putData);
+
+    async function getNodeData() {
+      const nodeId = dataNodeIdReadInput.value.trim();
+      if (!nodeId) {
+        logAction("Dato Lectura: ID de nodo requerido.");
+        getDataResultEl.textContent = "N/A - Ingresa un ID.";
+        return alert("ID de nodo para leer es requerido.");
+      }
+      if (!db) {
+        logAction("Dato Lectura: GDB no está lista.");
+        getDataResultEl.textContent = "N/A - GDB no lista.";
+        return;
+      }
+
+      logAction(`Dato Lectura: Intentando db.get('${nodeId}')...`);
+      getDataResultEl.textContent = "Cargando...";
+      try {
+        let tempUnsubscribe = null;
+        const { result, unsubscribe } = await db.get(nodeId, (updatedNode) => {
+          logAction(`Dato Lectura (reactivo) para '${nodeId}': ${updatedNode ? 'Actualizado' : 'Eliminado/No encontrado'}`);
+          getDataResultEl.textContent = updatedNode ? JSON.stringify(updatedNode, null, 2) : "Nodo no encontrado (o eliminado reactivamente).";
+        });
+        tempUnsubscribe = unsubscribe;
+
+        if (result) {
+          logAction(`Dato Lectura: Éxito para '${nodeId}'.`);
+          getDataResultEl.textContent = JSON.stringify(result, null, 2);
+        } else {
+          logAction(`Dato Lectura: Nodo '${nodeId}' no encontrado.`);
+          getDataResultEl.textContent = "Nodo no encontrado.";
+        }
+      } catch (error) {
+        logAction(`Dato Lectura: Error en db.get('${nodeId}'): ${error.message}`);
+        getDataResultEl.textContent = `Error: ${error.message}`;
+        alert(`Error leyendo dato: ${error.message}`);
+      }
+    }
+    getDataBtnEl.addEventListener('click', getNodeData);
+
+    async function assignRoleLocal() {
+      const targetEth = targetEthForRoleInput.value.trim();
+      const role = roleToAssignInput.value.trim();
+      if (!targetEth || !role) return logAction("Rol: Falta ETH destino o nombre del rol.");
+
+      const activeUserEth = getActiveEthAddress();
+      if (!activeUserEth) { logAction("Rol: Usuario no conectado."); return; }
+
+      try {
+        logAction(`Rol: Iniciando asignación de '${role}' a '${targetEth}'. Revisa MetaMask para firma.`);
+        await executeWithPermission(db, activeUserEth, 'assignRole', async (userAddr) => {
+          await assignRole(db, targetEth, role);
+          logAction(`Rol: Actualización local para asignación completada. Firma y envío P2P en proceso...`);
+        });
+        setTimeout(() => alert("Si aprobaste la firma, la solicitud de asignación de rol fue enviada."), 500);
+      } catch (error) { logAction(`Rol: Error asignando: ${error.message}`); alert(`Error: ${error.message}`); }
+    }
+    assignRoleBtnEl.addEventListener('click', assignRoleLocal);
+
+    async function simulateReceiveP2P() {
+      logAction(">>> P2P Sim: INICIO de la función.");
+
+      if (!db || !db.securityManager) {
+        logAction("P2P Sim: 'db' o 'db.securityManager' no está definido. ABORTANDO.");
+        return;
+      }
+      logAction("P2P Sim: db y db.securityManager OK.");
+
+      const simulatedSenderEthAddress = "0x1234567890123456789012345678901234567890";
+      logAction(`P2P Sim: simulatedSenderEthAddress = ${simulatedSenderEthAddress}`);
+
+      let simulatedOp;
+      try {
+        simulatedOp = {
+          type: 'put',
+          id: 'p2p_data_' + Date.now().toString().slice(-4),
+          value: { message: "Dato P2P simulado desde " + simulatedSenderEthAddress.slice(0, 6) },
+          timestamp: db.hybridClock.now(),
+          originEthAddress: simulatedSenderEthAddress,
+          originUser: simulatedSenderEthAddress,
+          signature: "0xINVALID_SIG_" + Date.now()
+        };
+        logAction("P2P Sim: simulatedOp creado OK.");
+      } catch (e) {
+        logAction(`P2P Sim: ERROR creando simulatedOp: ${e.message}`);
+        console.error("Error creando simulatedOp:", e);
+        return;
+      }
+
+      logAction(`P2P Sim: Preparado. Llamando a verifyIncomingOperations...`);
+
+      try {
+        if (typeof db.securityManager.verifyIncomingOperations !== 'function') {
+          logAction("P2P Sim: ERROR - db.securityManager.verifyIncomingOperations NO ES UNA FUNCIÓN.");
+          return;
+        }
+
+        const verificationResult = await db.securityManager.verifyIncomingOperations([simulatedOp]);
+        const validatedOperations = verificationResult.validatedOperations || [];
+
+        logAction("P2P Sim: verifyIncomingOperations completado.");
+
+        if (validatedOperations.length > 0) {
+          logAction("P2P Sim: VALIDATED operations > 0. Procesando...");
+          // En un flujo real, gdb.js (el wrapper de getData) llamaría a this.receiveChanges.
+          // Para esta simulación, no es necesario aplicarlo aquí a menos que se quiera probar ese efecto.
+          // db.receiveChanges(validatedOperations); 
+          logAction("P2P Sim: ¡Operación VALIDADA! (Inesperado con firma inválida, indica un problema en SecurityManager si esto ocurre).");
+        } else {
+          // Si no hay operaciones validadas, la firma inválida fue detectada y la operación descartada por SecurityManager.
+          logAction(`P2P Sim: NO HUBO operaciones validadas (esperado para firma inválida).`);
+          logAction(`P2P Sim: La operación simulada desde ${simulatedSenderEthAddress} fue descartada por SecurityManager.`);
+        }
+
+      } catch (error) {
+        logAction(`P2P Sim: ERROR durante verifyIncomingOperations: ${error.message}`);
+        console.error("Error en bloque de verifyIncomingOperations:", error);
+      }
+
+      logAction("<<< P2P Sim: FIN de la función.");
+    }
+    simulateReceiveBtnEl.addEventListener('click', simulateReceiveP2P);
+
+    function updateUI(isLoading = false) {
+      const securityIsActive = isSecurityActive();
+
+      connectBtn.disabled = securityIsActive || isLoading;
+      disconnectBtn.disabled = !securityIsActive || isLoading;
+      putDataBtnEl.disabled = !securityIsActive || isLoading;
+      getDataBtnEl.disabled = !securityIsActive || isLoading || !db;
+      assignRoleBtnEl.disabled = !securityIsActive || isLoading;
+      simulateReceiveBtnEl.disabled = !securityIsActive || isLoading;
+
+      if (isLoading) {
+        statusGlobalEl.textContent = "Procesando...";
+      } else {
+        statusGlobalEl.textContent = securityIsActive ? "Conectado y Seguridad P2P Activa" : "Desconectado. Seguridad P2P Inactiva.";
+      }
+
+      if (securityIsActive) {
+        displayUserInfoAndSetupListener();
+      } else {
+        userInfoSectionEl.style.display = 'none';
+        getDataResultEl.textContent = "N/A";
+        if (unsubscribeUserRoleListener) {
+          unsubscribeUserRoleListener();
+          unsubscribeUserRoleListener = null;
+          logAction("Rol Listener: Desuscrito (seguridad desactivada).");
+        }
+      }
+    }
+
+    async function attemptSilentReconnectOnLoad() {
+      if (window.ethereum) {
+        try {
+          logAction("Reconexión Silenciosa: Intentando (eth_accounts)...");
+          updateUI(true);
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts && accounts.length > 0) {
+            logAction(`Reconexión Silenciosa: Éxito. Cuenta: ${accounts[0]}`);
+            await initializeSessionWithSecurity(accounts[0]);
+          } else {
+            logAction("Reconexión Silenciosa: No hay cuentas autorizadas.");
+            if (db && typeof clearSecurity === 'function') await clearSecurity();
+            updateUI();
+          }
+        } catch (error) {
+          logAction(`Reconexión Silenciosa: Error: ${error.message}`);
+          if (db && typeof clearSecurity === 'function') await clearSecurity();
+          updateUI();
+        }
+      } else {
+        logAction("Reconexión Silenciosa: MetaMask no disponible al cargar.");
+        updateUI();
+      }
+    }
+
+    async function mainApp() {
+      logAction("App: Iniciada. Creando instancia GDB...");
+      db = new GraphDB("gdbSecurityStrictOnly_Final_v1");
+      await db.ready;
+      logAction("App: GDB lista.");
+
+      if (typeof setSecurityStateChangeCallback === 'function') {
+        setSecurityStateChangeCallback((securityState) => {
+          logAction(`App: Callback de RBAC - Activo: ${securityState.isActive}, ETH: ${securityState.activeAddress}`);
+          updateUI();
+        });
+      } else {
+        logAction("App: ADVERTENCIA - setSecurityStateChangeCallback no está disponible en rbac.js.");
+      }
+
+      await attemptSilentReconnectOnLoad();
+      updateUI();
+    }
+
+    mainApp();
+  </script>
+</body>
+
+</html>
