@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>GraphDB - RBAC + Security (WebAuthn Example - Corregido)</title>
+  <title>GraphDB - RBAC + Security (WebAuthn Example - Corregido vFINAL)</title>
   <style>
     body { font-family: sans-serif; margin: 20px; background-color: #f9f9f9; }
     .container { max-width: 700px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -22,7 +22,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>GraphDB - RBAC + Security (WebAuthn Example - Corregido)</h1>
+    <h1>GraphDB - RBAC + Security (WebAuthn Example - Corregido vFINAL)</h1>
     <p>Consola del navegador para logs. Usa WebAuthn (biometría/llave) para seguridad.</p>
     <p class="info-box"><em>Importante: WebAuthn requiere HTTPS o localhost/127.0.0.1.</em></p>
 
@@ -31,9 +31,8 @@
       <p><strong>Paso 1: Crear Nueva Identidad Ethereum (si no tienes)</strong></p>
       <button id="createNewIdentityBtn">A. Generar Nueva Identidad ETH</button>
       <p>Mnemónica Generada (¡GUARDAR ANTES DEL PASO B!): <pre id="newMnemonicDisplay">N/A (Se mostrará después de generar)</pre></p>
-      <input type="hidden" id="generatedPrivateKeyHex"> 
       
-      <p><strong>Paso 2: Proteger Identidad con WebAuthn (Huella/Llave)</strong><br><em>(Opcional. Habilitado después del Paso A o D si la sesión no está ya protegida con WebAuthn).</em></p>
+      <p><strong>Paso 2: Proteger Identidad con WebAuthn (Huella/Llave)</strong><br><em>(Opcional. Habilitado si hay una identidad activa no protegida por WebAuthn).</em></p>
       <button id="protectCurrentIdentityWithWebAuthnBtn" disabled>B. Proteger Identidad Actual con WebAuthn</button>
       <hr>
       <p><strong>Iniciar Sesión (si ya tienes identidad protegida con WebAuthn en este navegador)</strong></p>
@@ -51,20 +50,20 @@
        <h2>2. Información del Usuario Activo</h2>
        <p>Dirección ETH Activa: <strong id="ethAddressActive">N/A</strong></p>
        <p>Rol en GDB: <strong id="userRoleActive">N/A</strong></p>
-       <p>Protegido con WebAuthn (para esta sesión): <strong id="webAuthnProtectionStatus">Desconocido</strong></p>
+       <p>Sesión Protegida por WebAuthn: <strong id="webAuthnProtectionStatus">Desconocido</strong></p>
        <p><button id="showMnemonicCurrentSessionBtn" disabled>Mostrar Mnemónica (Sesión Actual)</button></p>
     </div>
 
     <div class="section">
       <h2>3. Escribir/Actualizar Datos (Nodo)</h2>
-      <input type="text" id="dataNodeIdWrite" placeholder="ID del Nodo" value="test_data_webauthn_v2">
-      <input type="text" id="dataNodeValueWrite" placeholder='Valor JSON' value='{"message":"Dato v2 con WebAuthn"}'>
+      <input type="text" id="dataNodeIdWrite" placeholder="ID del Nodo" value="test_data_webauthn_v_final">
+      <input type="text" id="dataNodeValueWrite" placeholder='Valor JSON' value='{"message":"Dato vFinal con WebAuthn"}'>
       <button id="putDataBtn" disabled>Guardar/Actualizar Dato</button>
     </div>
 
      <div class="section">
       <h2>4. Leer Datos (Nodo)</h2>
-      <input type="text" id="dataNodeIdRead" placeholder="ID del Nodo a Leer" value="test_data_webauthn_v2">
+      <input type="text" id="dataNodeIdRead" placeholder="ID del Nodo a Leer" value="test_data_webauthn_v_final">
       <button id="getDataBtn" disabled>Leer Dato</button>
       <div class="result-area">
         Resultado Lectura: <pre id="getDataResult">N/A</pre>
@@ -100,30 +99,26 @@
     import { GraphDB } from "../dist/index.js"; // Ajusta ruta
     import * as rbac from '../dist/rbac.min.js'; // Ajusta ruta // ¡CAMBIO IMPORTANTE!
 
-    const SUPERADMIN_ETH_ADDRESSES = ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"];
+    const SUPERADMIN_ETH_ADDRESSES = [];
     
     let db;
     let uiLog = "";
     let unsubscribeUserRoleListener = null;
-    let currentIdentityForWebAuthnProtection = null; // { privateKey, mnemonic, address }
+    let currentVolatileIdentity = null; 
 
-    // --- UI Elements ---
     const createNewIdentityBtn = document.getElementById('createNewIdentityBtn');
     const newMnemonicDisplayEl = document.getElementById('newMnemonicDisplay');
-    const generatedPrivateKeyHexInput = document.getElementById('generatedPrivateKeyHex'); 
     const protectCurrentIdentityWithWebAuthnBtn = document.getElementById('protectCurrentIdentityWithWebAuthnBtn');
     const loginWebAuthnBtn = document.getElementById('loginWebAuthnBtn');
-    const mnemonicLoginInputEl = document.getElementById('mnemonicLoginInput'); // Renombrado de mnemonicRecoveryInputEl
-    const loginOrRecoverWithMnemonicBtn = document.getElementById('loginOrRecoverWithMnemonicBtn'); // Renombrado
+    const mnemonicLoginInputEl = document.getElementById('mnemonicLoginInput');
+    const loginOrRecoverWithMnemonicBtn = document.getElementById('loginOrRecoverWithMnemonicBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const statusGlobalEl = document.getElementById('statusGlobal');
-
     const userInfoSectionEl = document.getElementById('userInfoSection');
     const ethAddressActiveEl = document.getElementById('ethAddressActive');
     const userRoleActiveEl = document.getElementById('userRoleActive');
     const webAuthnProtectionStatusEl = document.getElementById('webAuthnProtectionStatus');
     const showMnemonicCurrentSessionBtn = document.getElementById('showMnemonicCurrentSessionBtn');
-
     const dataNodeIdWriteInput = document.getElementById('dataNodeIdWrite');
     const dataNodeValueWriteInput = document.getElementById('dataNodeValueWrite');
     const putDataBtnEl = document.getElementById('putDataBtn');
@@ -175,8 +170,7 @@
             return;
         }
         ethAddressActiveEl.textContent = currentEth;
-        // Actualizar estado de protección WebAuthn para la UI
-        webAuthnProtectionStatusEl.textContent = rbac.hasExistingWebAuthnRegistration() ? "Sí (puede requerir re-login WebAuthn si es nueva sesión de navegador)" : "No (puede protegerla con Botón B)";
+        webAuthnProtectionStatusEl.textContent = rbac.isCurrentSessionProtectedByWebAuthn() ? "Sí" : "No";
         userInfoSectionEl.style.display = 'block';
         userRoleActiveEl.textContent = 'Cargando rol...';
         try {
@@ -191,15 +185,14 @@
         }
     }
     
-    // --- Manejadores de Eventos para Identidad WebAuthn ---
     createNewIdentityBtn.addEventListener('click', async () => {
       try {
         logAction("Identidad: Iniciando generación...");
         updateUIState(true, "Generando identidad ETH...");
-        currentIdentityForWebAuthnProtection = await rbac.startNewUserRegistration(); // Guarda los datos temporalmente
-        if (currentIdentityForWebAuthnProtection) {
-          newMnemonicDisplayEl.textContent = `Dirección ETH: ${currentIdentityForWebAuthnProtection.address}\n\n¡GUARDA ESTA FRASE MNEMÓNICA AHORA MISMO EN UN LUGAR SEGURO Y OFFLINE!\n\n${currentIdentityForWebAuthnProtection.mnemonic}\n\nUna vez guardada, puedes opcionalmente protegerla con WebAuthn (Botón B) o iniciar sesión directamente si lo deseas (Botón D de nuevo).`;
-          logAction(`Identidad: ETH generada para ${currentIdentityForWebAuthnProtection.address}. Mnemónica mostrada.`);
+        currentVolatileIdentity = await rbac.startNewUserRegistration();
+        if (currentVolatileIdentity) {
+          newMnemonicDisplayEl.textContent = `Dirección ETH: ${currentVolatileIdentity.address}\n\n¡GUARDA ESTA FRASE MNEMÓNICA AHORA MISMO EN UN LUGAR SEGURO Y OFFLINE!\n\n${currentVolatileIdentity.mnemonic}\n\nUna vez guardada, puedes opcionalmente protegerla con WebAuthn (Botón B) o iniciar sesión con ella (Botón D).`;
+          logAction(`Identidad: ETH generada para ${currentVolatileIdentity.address}. Mnemónica mostrada.`);
         } else {
           newMnemonicDisplayEl.textContent = "Error generando identidad.";
           logAction("Identidad: Error en startNewUserRegistration.");
@@ -214,21 +207,22 @@
     });
 
     protectCurrentIdentityWithWebAuthnBtn.addEventListener('click', async () => {
-      if (!currentIdentityForWebAuthnProtection || !currentIdentityForWebAuthnProtection.privateKey) {
+      if (!currentVolatileIdentity || !currentVolatileIdentity.privateKey) {
         alert("Primero genera (Botón A) o recupera (Botón D) una identidad ETH para proteger.");
         return;
       }
       try {
         logAction("Identidad: Iniciando protección con WebAuthn para la identidad actual...");
-        updateUIState(true, "Registrando WebAuthn... Sigue las instrucciones.");
-        const activeAddress = await rbac.protectCurrentIdentityWithWebAuthn(currentIdentityForWebAuthnProtection.privateKey);
+        updateUIState(true, "Registrando WebAuthn... Sigue las instrucciones de tu navegador/SO.");
+        const activeAddress = await rbac.protectCurrentIdentityWithWebAuthn(currentVolatileIdentity.privateKey);
         if (activeAddress) {
           logAction(`Identidad: Protegida con WebAuthn y sesión iniciada para ${activeAddress}.`);
           newMnemonicDisplayEl.textContent = "¡Identidad protegida con WebAuthn y sesión iniciada!";
-          currentIdentityForWebAuthnProtection = null; // Ya se usó y protegió
+          currentVolatileIdentity = null; 
         } else {
           logAction("Identidad: Falló la protección con WebAuthn. Revisa la consola.");
-          newMnemonicDisplayEl.textContent = "Falló el registro WebAuthn. Revisa la consola. Asegúrate de estar en HTTPS o localhost.";
+          newMnemonicDisplayEl.textContent = "Falló el registro WebAuthn. Revisa la consola del navegador para más detalles. Asegúrate de estar en HTTPS o localhost.";
+           alert("Falló la protección con WebAuthn. Revisa la consola.");
         }
       } catch (error) {
         logAction(`Identidad: Error protegiendo con WebAuthn: ${error.message}`);
@@ -246,7 +240,7 @@
         if (address) {
           logAction(`Identidad: Sesión iniciada con WebAuthn para ${address}.`);
           newMnemonicDisplayEl.textContent = "Sesión iniciada con WebAuthn.";
-          currentIdentityForWebAuthnProtection = null;
+          currentVolatileIdentity = null;
         } else {
           logAction("Identidad: Falló el inicio de sesión con WebAuthn.");
           newMnemonicDisplayEl.textContent = "Falló el inicio de sesión WebAuthn. ¿Registraste un autenticador?";
@@ -266,21 +260,22 @@
       try {
         logAction("Identidad: Intentando inicio de sesión/recuperación con mnemónica...");
         updateUIState(true, "Cargando identidad desde mnemónica...");
-        currentIdentityForWebAuthnProtection = await rbac.loginOrRecoverUserWithMnemonic(mnemonic); // Esto ahora también inicia sesión
-        if (currentIdentityForWebAuthnProtection && rbac.isSecurityActive()) {
-          newMnemonicDisplayEl.textContent = `Sesión iniciada con mnemónica para ${currentIdentityForWebAuthnProtection.address}.\nFrase: ${currentIdentityForWebAuthnProtection.mnemonic}\n\nPuedes opcionalmente proteger esta sesión con WebAuthn (Botón B).`;
+        const identityData = await rbac.loginOrRecoverUserWithMnemonic(mnemonic); 
+        if (identityData && rbac.isSecurityActive()) {
+          currentVolatileIdentity = identityData; 
+          newMnemonicDisplayEl.textContent = `Sesión iniciada con mnemónica para ${identityData.address}.\nFrase (temporalmente en memoria): ${identityData.mnemonic}\n\nPuedes opcionalmente proteger esta sesión con WebAuthn (Botón B).`;
           mnemonicLoginInputEl.value = "";
-          logAction(`Identidad: Sesión iniciada para ${currentIdentityForWebAuthnProtection.address} usando mnemónica.`);
+          logAction(`Identidad: Sesión iniciada para ${identityData.address} usando mnemónica.`);
         } else {
           logAction("Identidad: Falló el inicio de sesión/recuperación con mnemónica.");
           newMnemonicDisplayEl.textContent = "Falló. Verifica tu mnemónica.";
           alert("Error al iniciar sesión/recuperar con mnemónica. ¿Es correcta?");
-          currentIdentityForWebAuthnProtection = null;
+          currentVolatileIdentity = null;
         }
       } catch (error) {
         logAction(`Identidad: Error con mnemónica: ${error.message}`);
         alert(`Error: ${error.message}`);
-        currentIdentityForWebAuthnProtection = null;
+        currentVolatileIdentity = null;
       } finally {
         updateUIState(false);
       }
@@ -292,28 +287,25 @@
       if (unsubscribeUserRoleListener) { unsubscribeUserRoleListener(); unsubscribeUserRoleListener = null; }
       await rbac.clearSecurity();
       newMnemonicDisplayEl.textContent = 'N/A (Crea o inicia sesión)';
-      currentIdentityForWebAuthnProtection = null;
+      currentVolatileIdentity = null;
       logAction("Identidad: Sesión cerrada.");
       updateUIState(false);
     });
 
     showMnemonicCurrentSessionBtn.addEventListener('click', () => {
-        // Mostrar la mnemónica si está en currentIdentityForWebAuthnProtection (recién generada/recuperada)
-        // O si se cargó desde SWM (aunque SWM.mnemonic se limpia en login WebAuthn)
-        const mnemonicToShow = currentIdentityForWebAuthnProtection?.mnemonic || rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
+        const mnemonicToShow = currentVolatileIdentity?.mnemonic || rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
         if (mnemonicToShow) {
             const confirmation = confirm("ADVERTENCIA: Estás a punto de mostrar tu frase mnemónica secreta. Asegúrate de que nadie más esté viendo tu pantalla.\n\n¿Deseas continuar?");
             if (confirmation) {
-                alert(`Tu frase mnemónica (de la identidad actual no protegida por WebAuthn, o recién generada/recuperada) es:\n\n${mnemonicToShow}\n\n¡NO la compartas!`);
+                alert(`Tu frase mnemónica (de la identidad actual en memoria) es:\n\n${mnemonicToShow}\n\n¡NO la compartas!`);
                 logAction("Identidad: Mnemónica de sesión actual mostrada.");
             } else { logAction("Identidad: Usuario canceló mostrar mnemónica."); }
         } else {
-            alert("No hay una mnemónica \"fresca\" para mostrar en este momento. Si iniciaste sesión con WebAuthn, la mnemónica no está directamente en memoria por seguridad. Si acabas de generar/recuperar, debería estar disponible.");
+            alert("No hay una mnemónica \"fresca\" para mostrar. Genera una nueva identidad o recupérala si necesitas verla.");
             logAction("Identidad: Intento de mostrar mnemónica, pero no disponible.");
         }
     });
 
-    // --- Manejadores de Operaciones GDB (sin cambios significativos en su lógica interna) ---
     putDataBtnEl.addEventListener('click', async () => {
         const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
         let nodeValue;
@@ -398,37 +390,44 @@
 
     function updateUIState(isLoading = false, statusText = null) {
       const securityIsActive = rbac.isSecurityActive();
-      const webAuthnLocallyRegistered = rbac.hasExistingWebAuthnRegistration(); // Si hay algo en localStorage
-      const identityReadyForWebAuthn = !!currentIdentityForWebAuthnProtection; // Si generamos/recuperamos y está lista para proteger
+      const webAuthnLocallyRegistered = rbac.hasExistingWebAuthnRegistration();
+      const identityReadyForWebAuthnProtection = !!currentVolatileIdentity; 
+      const currentSessionIsWebAuthnProtectedByRbac = rbac.isCurrentSessionProtectedByWebAuthn();
 
       // Gestión de Identidad
-      createNewIdentityBtn.disabled = isLoading || securityIsActive || identityReadyForWebAuthn;
-      protectCurrentIdentityWithWebAuthnBtn.disabled = isLoading || securityIsActive || !identityReadyForWebAuthn;
+      createNewIdentityBtn.disabled = isLoading || securityIsActive || identityReadyForWebAuthnProtection;
+      
+      const canProtect = identityReadyForWebAuthnProtection && !currentSessionIsWebAuthnProtectedByRbac;
+      protectCurrentIdentityWithWebAuthnBtn.disabled = isLoading || !canProtect;
+      
       loginWebAuthnBtn.disabled = isLoading || securityIsActive || !webAuthnLocallyRegistered;
-      mnemonicLoginInputEl.disabled = isLoading || securityIsActive || identityReadyForWebAuthn;
-      loginOrRecoverWithMnemonicBtn.disabled = isLoading || securityIsActive || identityReadyForWebAuthn;
+      mnemonicLoginInputEl.disabled = isLoading || securityIsActive || identityReadyForWebAuthnProtection;
+      loginOrRecoverWithMnemonicBtn.disabled = isLoading || securityIsActive || identityReadyForWebAuthnProtection;
       logoutBtn.disabled = isLoading || !securityIsActive;
       
-      showMnemonicCurrentSessionBtn.disabled = isLoading || !identityReadyForWebAuthn; // Solo si hay una mnemónica "fresca"
+      showMnemonicCurrentSessionBtn.disabled = isLoading || !identityReadyForWebAuthnProtection;
+
 
       // Operaciones GDB
       const gdbOpsDisabled = !securityIsActive || isLoading;
       putDataBtnEl.disabled = gdbOpsDisabled;
-      getDataBtnEl.disabled = !db || isLoading; // Leer es independiente de sesión activa en este ejemplo
+      getDataBtnEl.disabled = !db || isLoading; 
       encryptSelfBtn.disabled = gdbOpsDisabled;
       decryptSelfBtn.disabled = gdbOpsDisabled || encryptedDataDisplay.textContent === 'N/A';
       assignRoleBtnEl.disabled = gdbOpsDisabled;
       simulateReceiveBtnEl.disabled = gdbOpsDisabled || !db?.securityManager;
 
+
       if (isLoading) {
         statusGlobalEl.textContent = statusText || "Procesando...";
       } else {
         if (securityIsActive) {
-            statusGlobalEl.textContent = `Seguridad Activa (${rbac.hasExistingWebAuthnRegistration() && softwareWalletManager.webAuthnCredentialId ? 'WebAuthn' : 'Mnemónica'})`;
-        } else if (identityReadyForWebAuthn) {
+            const protectionType = currentSessionIsWebAuthnProtectedByRbac ? 'WebAuthn' : 'Mnemónica';
+            statusGlobalEl.textContent = `Seguridad Activa (${protectionType})`;
+        } else if (identityReadyForWebAuthnProtection) {
             statusGlobalEl.textContent = "Identidad ETH en memoria. Guarda mnemónica y/o protege con WebAuthn (Botón B).";
         } else if (webAuthnLocallyRegistered) {
-            statusGlobalEl.textContent = "Seguridad Inactiva. Inicia sesión con WebAuthn (Botón C) o recupera con mnemónica.";
+            statusGlobalEl.textContent = "Seguridad Inactiva. Inicia sesión con WebAuthn (Botón C) o recupera.";
         } else {
             statusGlobalEl.textContent = "Seguridad Inactiva. Crea una identidad (Botón A) o recupera.";
         }
@@ -444,7 +443,7 @@
 
     async function initializeApp() {
       logAction("App: Iniciada. Creando instancia GDB...");
-      db = new GraphDB("gdbWebAuthnExample_vCorrected"); 
+      db = new GraphDB("gdbWebAuthn_vFINAL_HTML"); 
       try {
         await db.ready;
         logAction("App: GDB lista.");
@@ -455,7 +454,7 @@
       
       rbac.setSecurityStateChangeCallback((securityState) => {
         logAction(`App: Callback RBAC - Activo: ${securityState.isActive}, ETH: ${securityState.activeAddress}`);
-        if (!securityState.isActive) { currentIdentityForWebAuthnProtection = null; } // Limpiar si se desloguea
+        if (!securityState.isActive) { currentVolatileIdentity = null; } 
         updateUIState();
       });
       
