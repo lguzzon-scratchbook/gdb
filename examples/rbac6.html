@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>GraphDB - RBAC + Security (WebAuthn Example)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px 5px 5px 0;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      padding: 8px;
+      margin-right: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      background-color: #fff;
+    }
+
+    .section h2 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .section p, .section hr {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
+    pre {
+      background-color: #f0f0f0;
+      padding: 10px;
+      font-size: 0.9em;
+      max-height: 150px;
+      overflow-y: auto;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    textarea {
+        width: calc(100% - 22px);
+        min-height: 60px;
+        margin-top:5px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    .button-group button {
+        margin-right: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>GraphDB - RBAC + Security (WebAuthn Example)</h1>
+    <p>Consola del navegador para logs. Usa WebAuthn (biometría/llave) para seguridad.</p>
+    <p><em>Importante: WebAuthn requiere HTTPS o localhost/127.0.0.1.</em></p>
+
+    <div class="section">
+      <h2>1. Gestión de Identidad (WebAuthn)</h2>
+      <p><strong>Paso 1: Crear Nueva Identidad Ethereum (si no tienes)</strong></p>
+      <button id="createNewIdentityBtn">A. Generar Nueva Identidad ETH</button>
+      <p>Mnemónica Generada (¡GUARDAR ANTES DEL PASO B!): <pre id="newMnemonicDisplay">N/A (Se mostrará después de generar)</pre></p>
+      <input type="hidden" id="generatedPrivateKeyHex"> <!-- Para pasarla al siguiente paso -->
+      
+      <p><strong>Paso 2: Proteger Identidad con WebAuthn (Huella/Llave)</strong></p>
+      <button id="protectWithWebAuthnBtn" disabled>B. Proteger Identidad ETH con WebAuthn</button>
+      <hr>
+      <p><strong>Iniciar Sesión (si ya tienes identidad protegida con WebAuthn en este navegador)</strong></p>
+      <button id="loginWebAuthnBtn">C. Iniciar Sesión con WebAuthn</button>
+      <hr>
+      <p><strong>Recuperación (si perdiste acceso WebAuthn pero tienes tu mnemónica)</strong></p>
+      <input type="text" id="mnemonicRecoveryInput" placeholder="Ingresa tu frase mnemónica para recuperar" style="width:calc(100% - 100px);">
+      <button id="recoverWithMnemonicBtn">D. Recuperar Usando Mnemónica</button>
+      <hr>
+      <button id="logoutBtn" disabled>E. Cerrar Sesión</button>
+      <p>Estado Global: <strong id="statusGlobal">Inicializando...</strong></p>
+    </div>
+
+    <div class="section" id="userInfoSection" style="display:none;">
+       <h2>2. Información del Usuario Activo</h2>
+       <p>Dirección ETH Activa: <strong id="ethAddressActive">N/A</strong></p>
+       <p>Rol en GDB: <strong id="userRoleActive">N/A</strong></p>
+       <p><button id="showMnemonicCurrentSessionBtn" disabled>Mostrar Mnemónica (Sesión Actual)</button></p>
+    </div>
+
+    <div class="section">
+      <h2>3. Escribir/Actualizar Datos (Nodo)</h2>
+      <input type="text" id="dataNodeIdWrite" placeholder="ID del Nodo" value="test_data_webauthn">
+      <input type="text" id="dataNodeValueWrite" placeholder='Valor JSON' value='{"message":"Dato protegido con WebAuthn"}'>
+      <button id="putDataBtn" disabled>Guardar/Actualizar Dato</button>
+    </div>
+
+     <div class="section">
+      <h2>4. Leer Datos (Nodo)</h2>
+      <input type="text" id="dataNodeIdRead" placeholder="ID del Nodo a Leer" value="test_data_webauthn">
+      <button id="getDataBtn" disabled>Leer Dato</button>
+      <div class="result-area">
+        Resultado Lectura: <pre id="getDataResult">N/A</pre>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>5. Cifrado/Descifrado para Usuario Actual</h2>
+      <textarea id="dataToEncryptInput" placeholder='Dato JSON a cifrar, ej: {"secret":"mi mensaje secreto"}'></textarea>
+      <div class="button-group">
+        <button id="encryptSelfBtn" disabled>Cifrar Dato para Mí</button>
+        <button id="decryptSelfBtn" disabled>Descifrar Dato para Mí</button>
+      </div>
+      <p>Dato Cifrado (Resultado): <pre id="encryptedDataDisplay">N/A</pre></p>
+    </div>
+
+    <div class="section">
+      <h2>6. Administración de Roles</h2>
+      <input type="text" id="targetEthForRole" placeholder="0xTargetEthParaRol" value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"> <!-- Cambia esta dirección por una que generes -->
+      <input type="text" id="roleToAssign" placeholder="Rol (ej: manager)" value="manager">
+      <button id="assignRoleBtn" disabled>Asignar Rol</button>
+    </div>
+
+    <div class="section">
+      <h2>7. Simulación Recepción P2P</h2>
+      <button id="simulateReceiveBtn" disabled>Simular 'put' P2P (Firma Inválida)</button>
+    </div>
+
+    <p>Logs de Acciones Recientes: <pre id="actionLog">---</pre></p>
+  </div>
+
+  <script type="module">
+    import { GraphDB } from "../dist/index.js"; // Ajusta ruta
+    import * as rbac from '../dist/rbac.min.js'; // Ajusta ruta // ¡CAMBIO IMPORTANTE!
+
+    // --- CONFIGURACIÓN SUPERADMIN (REEMPLAZAR CON DIRECCIONES REALES GENERADAS) ---
+    const SUPERADMIN_ETH_ADDRESSES = [
+      // "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Ejemplo Hardhat
+      // Cuando generes una identidad con este sistema, copia su dirección aquí si quieres que sea superadmin.
+    ];
+    // -----------------------------------------------------------------------------
+
+    let db;
+    let uiLog = "";
+    let unsubscribeUserRoleListener = null;
+
+    // --- UI Elements ---
+    const createNewIdentityBtn = document.getElementById('createNewIdentityBtn');
+    const newMnemonicDisplayEl = document.getElementById('newMnemonicDisplay');
+    const generatedPrivateKeyHexInput = document.getElementById('generatedPrivateKeyHex'); // Input oculto
+    const protectWithWebAuthnBtn = document.getElementById('protectWithWebAuthnBtn');
+    const loginWebAuthnBtn = document.getElementById('loginWebAuthnBtn');
+    const mnemonicRecoveryInputEl = document.getElementById('mnemonicRecoveryInput');
+    const recoverWithMnemonicBtn = document.getElementById('recoverWithMnemonicBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const statusGlobalEl = document.getElementById('statusGlobal');
+
+    const userInfoSectionEl = document.getElementById('userInfoSection');
+    const ethAddressActiveEl = document.getElementById('ethAddressActive');
+    const userRoleActiveEl = document.getElementById('userRoleActive');
+    const showMnemonicCurrentSessionBtn = document.getElementById('showMnemonicCurrentSessionBtn');
+
+    const dataNodeIdWriteInput = document.getElementById('dataNodeIdWrite');
+    const dataNodeValueWriteInput = document.getElementById('dataNodeValueWrite');
+    const putDataBtnEl = document.getElementById('putDataBtn');
+
+    const dataNodeIdReadInput = document.getElementById('dataNodeIdRead');
+    const getDataBtnEl = document.getElementById('getDataBtn');
+    const getDataResultEl = document.getElementById('getDataResult');
+
+    const dataToEncryptInput = document.getElementById('dataToEncryptInput');
+    const encryptSelfBtn = document.getElementById('encryptSelfBtn');
+    const encryptedDataDisplay = document.getElementById('encryptedDataDisplay');
+    const decryptSelfBtn = document.getElementById('decryptSelfBtn');
+
+    const assignRoleBtnEl = document.getElementById('assignRoleBtn');
+    const targetEthForRoleInput = document.getElementById('targetEthForRole');
+    const roleToAssignInput = document.getElementById('roleToAssign');
+
+    const simulateReceiveBtnEl = document.getElementById('simulateReceiveBtn');
+    const actionLogEl = document.getElementById('actionLog');
+
+    function logAction(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logMessage = `[${timestamp}] ${message}`;
+        console.log("APP_LOG:", logMessage);
+
+        uiLog = logMessage + "\n" + uiLog; // Añadir al principio
+        const maxLogLines = 50;
+        const lines = uiLog.split('\n');
+        if (lines.length > maxLogLines) {
+            uiLog = lines.slice(0, maxLogLines).join('\n');
+        }
+        actionLogEl.textContent = uiLog;
+    }
+
+    function updateUserRoleInUI(userNodeData) {
+        const currentEth = rbac.getActiveEthAddress();
+        if (!currentEth) { // Si no hay usuario activo, no mostrar nada.
+            userRoleActiveEl.textContent = 'N/A';
+            return;
+        }
+        if (userNodeData && userNodeData.value && userNodeData.value.role) {
+            let roleText = userNodeData.value.role;
+            if (userNodeData.value.expiresAt && new Date(userNodeData.value.expiresAt) < new Date()) {
+                roleText += " (Expirado)";
+            }
+            userRoleActiveEl.textContent = roleText;
+            logAction(`Rol (reactivo): Actualizado a ${roleText} para ${currentEth}`);
+        } else if (userNodeData === null) { // Nodo explícitamente no encontrado o eliminado
+             userRoleActiveEl.textContent = 'No asignado (o nodo eliminado)';
+             logAction(`Rol (reactivo): Nodo de usuario no encontrado o sin rol para ${currentEth}`);
+        } else {
+             userRoleActiveEl.textContent = 'Cargando...'; // Estado inicial o si userNodeData es undefined
+        }
+    }
+
+    async function displayUserInfoAndSetupListener() {
+        const currentEth = rbac.getActiveEthAddress();
+
+        if (unsubscribeUserRoleListener) {
+            unsubscribeUserRoleListener();
+            unsubscribeUserRoleListener = null;
+        }
+
+        if (!currentEth || !db) {
+            userInfoSectionEl.style.display = 'none';
+            userRoleActiveEl.textContent = 'N/A';
+            ethAddressActiveEl.textContent = 'N/A';
+            return;
+        }
+
+        ethAddressActiveEl.textContent = currentEth;
+        userInfoSectionEl.style.display = 'block';
+        userRoleActiveEl.textContent = 'Cargando rol...';
+
+        try {
+            await db.ready; // Asegurar que GDB esté lista
+            const userNodeKey = `user:${currentEth}`;
+            const { result, unsubscribe } = await db.get(userNodeKey, updateUserRoleInUI);
+            unsubscribeUserRoleListener = unsubscribe;
+            logAction(`Rol Listener: Suscrito a cambios para ${userNodeKey}`);
+            updateUserRoleInUI(result); // Llamada inicial con el resultado actual
+        } catch (error) {
+            logAction(`Error obteniendo rol/listener para ${currentEth}: ${error.message}`);
+            userRoleActiveEl.textContent = 'Error al cargar rol';
+        }
+    }
+    
+    // --- Manejadores de Eventos para Identidad WebAuthn ---
+    createNewIdentityBtn.addEventListener('click', async () => {
+      try {
+        logAction("Identidad: Iniciando generación de nueva identidad ETH...");
+        updateUIState(true, "Generando identidad ETH...");
+        const identityData = await rbac.startNewUserRegistration();
+        if (identityData) {
+          newMnemonicDisplayEl.textContent = `Dirección ETH: ${identityData.address}\n\n¡GUARDA ESTA FRASE MNEMÓNICA AHORA MISMO EN UN LUGAR SEGURO Y OFFLINE!\n\n${identityData.mnemonic}\n\nUna vez guardada, procede a protegerla con WebAuthn (Botón B).`;
+          generatedPrivateKeyHexInput.value = identityData.privateKey;
+          protectWithWebAuthnBtn.disabled = false; // Habilitar el siguiente paso
+          logAction(`Identidad: ETH generada para ${identityData.address}. Mnemónica mostrada. Lista para WebAuthn.`);
+        } else {
+          newMnemonicDisplayEl.textContent = "Error generando identidad.";
+          logAction("Identidad: Error en startNewUserRegistration.");
+        }
+      } catch (error) {
+        logAction(`Identidad: Error generando: ${error.message}`);
+        alert(`Error: ${error.message}`);
+        newMnemonicDisplayEl.textContent = "Error.";
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    protectWithWebAuthnBtn.addEventListener('click', async () => {
+      const pkHex = generatedPrivateKeyHexInput.value;
+      if (!pkHex) {
+        alert("Primero genera una nueva identidad ETH (Botón A) o recupera una existente (Botón D).");
+        return;
+      }
+      try {
+        logAction("Identidad: Iniciando protección con WebAuthn...");
+        updateUIState(true, "Registrando WebAuthn... Sigue las instrucciones de tu navegador/SO.");
+        const activeAddress = await rbac.protectNewIdentityWithWebAuthn(pkHex);
+        if (activeAddress) {
+          logAction(`Identidad: Protegida con WebAuthn y sesión iniciada para ${activeAddress}.`);
+          newMnemonicDisplayEl.textContent = "¡Identidad protegida con WebAuthn y sesión iniciada!";
+          generatedPrivateKeyHexInput.value = ""; 
+          protectWithWebAuthnBtn.disabled = true;
+        } else {
+          logAction("Identidad: Falló la protección con WebAuthn. Revisa la consola.");
+          newMnemonicDisplayEl.textContent = "Falló el registro WebAuthn. Revisa la consola del navegador para más detalles. Asegúrate de estar en HTTPS o localhost.";
+        }
+      } catch (error) {
+        logAction(`Identidad: Error protegiendo con WebAuthn: ${error.message}`);
+        alert(`Error en WebAuthn: ${error.message || error}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    loginWebAuthnBtn.addEventListener('click', async () => {
+      try {
+        logAction("Identidad: Intentando iniciar sesión con WebAuthn...");
+        updateUIState(true, "Autenticando con WebAuthn... Sigue las instrucciones.");
+        const address = await rbac.loginCurrentUserWithWebAuthn();
+        if (address) {
+          logAction(`Identidad: Sesión iniciada con WebAuthn para ${address}.`);
+          newMnemonicDisplayEl.textContent = "Sesión iniciada con WebAuthn.";
+        } else {
+          logAction("Identidad: Falló el inicio de sesión con WebAuthn (¿no registrado, cancelado, o error?).");
+          newMnemonicDisplayEl.textContent = "Falló el inicio de sesión WebAuthn. ¿Registraste un autenticador para este sitio?";
+        }
+      } catch (error) {
+        logAction(`Identidad: Error iniciando sesión con WebAuthn: ${error.message}`);
+        alert(`Error en WebAuthn: ${error.message || error}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    recoverWithMnemonicBtn.addEventListener('click', async () => {
+      const mnemonic = mnemonicRecoveryInputEl.value.trim();
+      if (!mnemonic) { alert("Ingresa tu frase mnemónica para recuperación."); return; }
+      try {
+        logAction("Identidad: Intentando recuperación con mnemónica...");
+        updateUIState(true, "Recuperando identidad...");
+        const recoveryData = await rbac.recoverUserWithMnemonic(mnemonic);
+        if (recoveryData) {
+          newMnemonicDisplayEl.textContent = `Identidad recuperada para ${recoveryData.address}.\nFrase: ${recoveryData.mnemonic}\n\nAHORA DEBES PROTEGERLA CON WEBAUTHN (Botón B).`;
+          generatedPrivateKeyHexInput.value = recoveryData.privateKey;
+          protectWithWebAuthnBtn.disabled = false;
+          mnemonicRecoveryInputEl.value = "";
+          logAction(`Identidad: Recuperada para ${recoveryData.address}. Lista para proteger con WebAuthn.`);
+        } else {
+          logAction("Identidad: Falló la recuperación con mnemónica.");
+          newMnemonicDisplayEl.textContent = "Falló la recuperación. Verifica tu mnemónica.";
+          alert("Error al recuperar con mnemónica. ¿Es correcta?");
+        }
+      } catch (error) {
+        logAction(`Identidad: Error recuperando con mnemónica: ${error.message}`);
+        alert(`Error: ${error.message}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+    
+    logoutBtn.addEventListener('click', async () => {
+      logAction("Identidad: Cerrando sesión...");
+      updateUIState(true, "Cerrando sesión...");
+      if (unsubscribeUserRoleListener) {
+        unsubscribeUserRoleListener();
+        unsubscribeUserRoleListener = null;
+      }
+      await rbac.clearSecurity();
+      newMnemonicDisplayEl.textContent = 'N/A (Crea o inicia sesión)';
+      generatedPrivateKeyHexInput.value = "";
+      logAction("Identidad: Sesión cerrada.");
+      updateUIState(false);
+    });
+
+    showMnemonicCurrentSessionBtn.addEventListener('click', () => {
+        const mnemonic = rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
+        if (mnemonic) {
+            const confirmation = confirm("ADVERTENCIA: Estás a punto de mostrar tu frase mnemónica secreta. Asegúrate de que nadie más esté viendo tu pantalla.\n\n¿Deseas continuar?");
+            if (confirmation) {
+                alert(`Tu frase mnemónica actual (para esta sesión de creación/recuperación) es:\n\n${mnemonic}\n\n¡NO la compartas con nadie! Si ya la protegiste con WebAuthn, este es solo un recordatorio.`);
+                logAction("Identidad: Mnemónica de sesión actual mostrada al usuario.");
+            } else {
+                logAction("Identidad: Usuario canceló mostrar mnemónica.");
+            }
+        } else {
+            alert("No hay una mnemónica activa en esta sesión (quizás ya la protegiste con WebAuthn o iniciaste sesión directamente con WebAuthn). La mnemónica solo se muestra inmediatamente después de la generación o recuperación.");
+            logAction("Identidad: Intento de mostrar mnemónica, pero no disponible en este momento.");
+        }
+    });
+
+    // --- Manejadores de Operaciones GDB ---
+    putDataBtnEl.addEventListener('click', async () => {
+        const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
+        let nodeValue;
+        try { nodeValue = JSON.parse(dataNodeValueWriteInput.value.trim()); }
+        catch (e) { logAction("Escritura: Valor no es JSON válido."); alert("Valor no es JSON."); return; }
+
+        if (!rbac.isSecurityActive()) { logAction("Escritura: Usuario no conectado."); alert("Conéctate primero."); return; }
+
+        try {
+            logAction(`Escritura: Iniciando para ID '${nodeId || "nuevo"}'.`);
+            updateUIState(true, "Firmando y guardando...");
+            await rbac.executeWithPermission(db, 'write', async (userAddr) => {
+                const idResultado = await db.put(nodeValue, nodeId);
+                logAction(`Escritura: ¡Operación completada para ID '${idResultado}'! Firmada y enviada.`);
+                alert(`¡Dato guardado/actualizado! ID: ${idResultado}`);
+            });
+        } catch (error) {
+            logAction(`Escritura: Error: ${error.message}`);
+            alert(`Error guardando dato: ${error.message}`);
+        } finally {
+            updateUIState(false);
+        }
+    });
+
+    getDataBtnEl.addEventListener('click', async () => {
+        const nodeId = dataNodeIdReadInput.value.trim();
+        if (!nodeId) { logAction("Lectura: ID requerido."); getDataResultEl.textContent = "N/A - Ingresa ID."; return; }
+        if (!db) { logAction("Lectura: GDB no lista."); getDataResultEl.textContent = "N/A - GDB no lista."; return; }
+        
+        logAction(`Lectura: db.get('${nodeId}')...`);
+        getDataResultEl.textContent = "Cargando...";
+        updateUIState(true, "Leyendo dato...");
+        try {
+            // Para db.get con callback reactivo:
+            // let tempUnsubscribe = null; // Para manejar la desuscripción si es necesario
+            // const { result, unsubscribe } = await db.get(nodeId, (updatedNode) => {
+            //   logAction(`Lectura (reactivo) para '${nodeId}': ${updatedNode ? 'Actualizado' : 'Eliminado/No encontrado'}`);
+            //   getDataResultEl.textContent = updatedNode ? JSON.stringify(updatedNode, null, 2) : "Nodo no encontrado (o eliminado reactivamente).";
+            // });
+            // tempUnsubscribe = unsubscribe;
+            
+            // Para db.get simple (no reactivo para este botón):
+            const { result } = await db.get(nodeId);
+
+
+            if (result) {
+                logAction(`Lectura: Éxito para '${nodeId}'.`);
+                getDataResultEl.textContent = JSON.stringify(result, null, 2);
+            } else {
+                logAction(`Lectura: Nodo '${nodeId}' no encontrado.`);
+                getDataResultEl.textContent = "Nodo no encontrado.";
+            }
+        } catch (error) {
+            logAction(`Lectura: Error en db.get('${nodeId}'): ${error.message}`);
+            getDataResultEl.textContent = `Error: ${error.message}`;
+        } finally {
+            updateUIState(false);
+        }
+    });
+
+    encryptSelfBtn.addEventListener('click', async () => {
+        if (!rbac.isSecurityActive()) { alert("Inicia sesión primero."); return; }
+        let dataToEncrypt;
+        try {
+            const inputText = dataToEncryptInput.value.trim();
+            if (!inputText) { alert("Ingresa un dato JSON para cifrar."); return; }
+            dataToEncrypt = JSON.parse(inputText);
+        } catch(e) { alert("El dato a cifrar no es JSON válido."); return; }
+
+        try {
+            logAction("Cifrado: Cifrando dato para el usuario actual...");
+            updateUIState(true, "Cifrando...");
+            const encrypted = await rbac.encryptDataForCurrentUser(dataToEncrypt);
+            encryptedDataDisplay.textContent = encrypted;
+            logAction("Cifrado: Dato cifrado con éxito.");
+        } catch(error) {
+            logAction(`Cifrado: Error: ${error.message}`);
+            alert(`Error cifrando: ${error.message || error}`);
+        } finally {
+            updateUIState(false);
+        }
+    });
+
+    decryptSelfBtn.addEventListener('click', async () => {
+        if (!rbac.isSecurityActive()) { alert("Inicia sesión primero."); return; }
+        const encryptedString = encryptedDataDisplay.textContent;
+        if (!encryptedString || encryptedString === 'N/A') { alert("No hay dato cifrado para descifrar."); return; }
+
+        try {
+            logAction("Descifrado: Descifrando dato para el usuario actual...");
+            updateUIState(true, "Descifrando...");
+            const decrypted = await rbac.decryptDataForCurrentUser(encryptedString);
+            alert("Dato Descifrado:\n\n" + JSON.stringify(decrypted, null, 2));
+            logAction("Descifrado: Dato descifrado con éxito.");
+        } catch(error) {
+            logAction(`Descifrado: Error: ${error.message}`);
+            alert(`Error descifrando: ${error.message || error}`);
+        } finally {
+            updateUIState(false);
+        }
+    });
+
+    assignRoleBtnEl.addEventListener('click', async () => {
+        const targetEth = targetEthForRoleInput.value.trim();
+        const role = roleToAssignInput.value.trim();
+        if (!targetEth || !role) { logAction("Rol: Falta ETH o rol."); alert("Ingresa ETH y rol."); return; }
+        if (!rbac.isSecurityActive()) { logAction("Rol: Usuario no conectado."); alert("Conéctate primero."); return; }
+
+        try {
+            logAction(`Rol: Asignando '${role}' a '${targetEth}'.`);
+            updateUIState(true, "Asignando rol...");
+            await rbac.executeWithPermission(db, 'assignRole', async (userAddr) => {
+                await rbac.assignRole(db, targetEth, role);
+                logAction(`Rol: Asignación completada. Firmada y enviada.`);
+            });
+            alert("Solicitud de asignación de rol enviada.");
+        } catch (error) {
+            logAction(`Rol: Error asignando: ${error.message}`);
+            alert(`Error: ${error.message}`);
+        } finally {
+            updateUIState(false);
+        }
+    });
+
+    simulateReceiveBtnEl.addEventListener('click', async () => {
+        logAction(">>> P2P Sim: INICIO.");
+        if (!db || !db.securityManager) { logAction("P2P Sim: db o db.securityManager no definido. ABORTANDO."); return; }
+
+        const simulatedSenderEthAddress = "0x1234567890123456789012345678901234567890";
+        const simulatedOp = {
+            type: 'put',
+            id: 'p2p_data_sim_' + Date.now().toString().slice(-4),
+            value: { message: "Dato P2P simulado (firma inválida)" },
+            timestamp: db.hybridClock ? db.hybridClock.now() : Date.now(), // Fallback si hybridClock no existe
+            originEthAddress: simulatedSenderEthAddress,
+            originUser: simulatedSenderEthAddress,
+            signature: "0xESTA_ES_UNA_FIRMA_INVALIDA_A_PROPOSITO_" + Date.now()
+        };
+        logAction(`P2P Sim: Preparado. Llamando a verifyIncomingOperations con op de ${simulatedSenderEthAddress.slice(0,8)}...`);
+        try {
+            updateUIState(true, "Simulando P2P...");
+            const { validatedOperations } = await db.securityManager.verifyIncomingOperations([simulatedOp]);
+            if (validatedOperations && validatedOperations.length > 0) {
+                logAction("P2P Sim: ¡Operación VALIDADA! (Inesperado con firma inválida, REVISAR SecurityManager).");
+            } else {
+                logAction(`P2P Sim: NO HUBO operaciones validadas (esperado). Operación de ${simulatedSenderEthAddress.slice(0,8)} descartada.`);
+            }
+        } catch (error) {
+            logAction(`P2P Sim: ERROR durante verifyIncomingOperations: ${error.message}`);
+        } finally {
+            updateUIState(false);
+            logAction("<<< P2P Sim: FIN.");
+        }
+    });
+
+    function updateUIState(isLoading = false, statusText = null) {
+      const securityIsActive = rbac.isSecurityActive();
+
+      createNewIdentityBtn.disabled = isLoading || securityIsActive;
+      // protectWithWebAuthnBtn se habilita después de createNewIdentityBtn o recover
+      loginWebAuthnBtn.disabled = isLoading || securityIsActive;
+      mnemonicRecoveryInputEl.disabled = isLoading || securityIsActive;
+      recoverWithMnemonicBtn.disabled = isLoading || securityIsActive;
+      
+      logoutBtn.disabled = isLoading || !securityIsActive;
+      showMnemonicCurrentSessionBtn.disabled = isLoading || !securityIsActive;
+
+
+      putDataBtnEl.disabled = !securityIsActive || isLoading;
+      getDataBtnEl.disabled = !db || isLoading; // Leer podría funcionar sin sesión si es público y RBAC lo permite
+      encryptSelfBtn.disabled = !securityIsActive || isLoading;
+      decryptSelfBtn.disabled = !securityIsActive || isLoading || encryptedDataDisplay.textContent === 'N/A';
+      assignRoleBtnEl.disabled = !securityIsActive || isLoading;
+      simulateReceiveBtnEl.disabled = !securityIsActive || isLoading || !db?.securityManager;
+
+
+      if (isLoading) {
+        statusGlobalEl.textContent = statusText || "Procesando...";
+      } else {
+        statusGlobalEl.textContent = securityIsActive ? "Seguridad Activa (WebAuthn)" : "Seguridad Inactiva.";
+      }
+
+      if (securityIsActive) {
+        displayUserInfoAndSetupListener();
+        // Si la sesión está activa, el botón de proteger ya no es relevante
+        // a menos que se haya recuperado con mnemónica y aún no se haya reprotegido.
+        // Esta lógica se maneja al habilitar/deshabilitar protectWithWebAuthnBtn en sus propios handlers.
+      } else {
+        userInfoSectionEl.style.display = 'none';
+        protectWithWebAuthnBtn.disabled = true; // Deshabilitar si no hay identidad generada/recuperada
+        if (unsubscribeUserRoleListener) {
+          unsubscribeUserRoleListener();
+          unsubscribeUserRoleListener = null;
+        }
+      }
+    }
+
+    async function initializeApp() {
+      logAction("App: Iniciada. Creando instancia GDB...");
+      db = new GraphDB("gdbWebAuthnExample_vFinal"); // Nombre de BD único
+      try {
+        await db.ready;
+        logAction("App: GDB lista.");
+      } catch (e) {
+        logAction("App: Error al inicializar GDB. ¿OPFS no disponible o problema con worker? " + e.message);
+        alert("Error grave inicializando GDB. Revisa la consola.");
+        return;
+      }
+      
+
+      rbac.setSecurityStateChangeCallback((securityState) => {
+        logAction(`App: Callback RBAC - Activo: ${securityState.isActive}, ETH: ${securityState.activeAddress}`);
+        updateUIState();
+      });
+      
+      await rbac.createSecurityContext(db, SUPERADMIN_ETH_ADDRESSES);
+
+      if (rbac.hasExistingWebAuthnRegistration()) {
+        logAction("App: Registro WebAuthn detectado. El usuario puede intentar 'Iniciar Sesión con WebAuthn'.");
+        statusGlobalEl.textContent = "Registro WebAuthn encontrado. Haz clic en 'Iniciar Sesión con WebAuthn' (Botón C).";
+        // loginWebAuthnBtn.focus(); // Opcional
+      } else {
+        logAction("App: No hay registro WebAuthn previo. El usuario debe crear una identidad.");
+        statusGlobalEl.textContent = "Seguridad Inactiva. Crea una nueva identidad (Botón A).";
+      }
+      updateUIState(); // Estado inicial de la UI
+    }
+
+    initializeApp();
+  </script>
+</body>
+</html>
