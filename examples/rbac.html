@@ -378,7 +378,7 @@
     simulateReceiveBtnEl.addEventListener('click', async () => {
         logAction(">>> P2P Sim: START.");
         if (!db || !db.securityManager) { logAction("P2P Sim: No db/SM."); return; }
-        const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: {msg:"sim"}, timestamp: Date.now(), originUser:"0x123", originEthAddress:"0x123", signature:"0xbad"};
+        const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: {msg:"sim"}, timestamp: Date.now(), originUser:"0x62c48827e883f114821211673Dc309a29Aae7e6A", originEthAddress:"0x62c48827e883f114821211673Dc309a29Aae7e6A", signature:"0xbad"};
         logAction(`P2P Sim: Verifying op...`); updateUIState(true, "Simulating P2P...");
         try {
             const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
