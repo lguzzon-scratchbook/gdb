@@ -2,374 +2,469 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GraphDB - Role-Based Access Control (RBAC Example)</title>
-    <style>
-        /* General styles */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f8f9fa;
-            color: #343a40;
-            line-height: 1.6;
-        }
-
-        h1,
-        h2,
-        h3 {
-            color: #007bff;
-        }
-
-        /* Main container */
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Form styles */
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input[type="email"],
-        input[type="text"],
-        input[type="datetime-local"],
-        select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        /* Button styles */
-        button {
-            margin: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            transition: background-color 0.2s ease;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        /* Record list styles */
-        .record-list {
-            margin-top: 20px;
-        }
-
-        .record-item {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 5px;
-            padding: 10px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .record-item span {
-            flex: 1;
-            min-width: 200px;
-            word-break: break-word;
-        }
-
-        .record-item button {
-            margin-left: 10px;
-        }
-
-        /* Style to truncate text */
-        .truncate {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* Edit dialog styles */
-        .edit-dialog {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 500px;
-        }
-
-        .edit-dialog input {
-            width: 100%;
-            padding: 5px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-
-        /* Overlay styles */
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        /* Media query for smaller screens */
-        @media (max-width: 768px) {
-            .record-item {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .record-item span {
-                min-width: auto;
-                margin-bottom: 5px;
-            }
-
-            .record-item button {
-                margin-left: 0;
-                width: 100%;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>GraphDB RBAC + Security (WebAuthn Example)</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background-color: #f9f9f9; }
+    .container { max-width: 700px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    button { padding: 8px 12px; margin: 5px 5px 5px 0; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; transition: background-color 0.2s; }
+    button:hover { background-color: #0056b3; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; color: #666;}
+    input[type="text"], input[type="password"] { padding: 8px; margin-right: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 5px; background-color: #fff; }
+    .section h2 { margin-top: 0; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .section p, .section hr { margin-top: 10px; margin-bottom: 10px; }
+    pre { background-color: #f0f0f0; padding: 10px; font-size: 0.9em; max-height: 150px; overflow-y: auto; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-all; }
+    textarea { width: calc(100% - 22px); min-height: 60px; margin-top:5px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;}
+    .button-group button { margin-right: 10px; }
+    .info-box { background-color: #e7f3fe; border-left: 6px solid #2196F3; padding: 10px; margin-bottom:15px; }
+  </style>
 </head>
-
 <body>
-    <div class="container">
-        <h1>GraphDB - Database Role System</h1>
+  <div class="container">
+    <h1>GraphDB RBAC + Security (WebAuthn Example)</h1>
+    <p>Browser console for logs. Uses WebAuthn (biometrics/key) for security.</p>
+    <p class="info-box"><em>Important: WebAuthn requires HTTPS or localhost/127.0.0.1.</em></p>
 
-        <label for="userEmail">User Email:</label>
-        <input type="email" id="userEmail" placeholder="Enter user email" />
-        <br /><br />
-
-        <button id="assignRole">Assign Role</button>
-        <select id="roleSelect">
-            <option value="superadmin">superadmin</option>
-            <option value="admin">admin</option>
-            <option value="manager">manager</option>
-            <option value="user">user</option>
-            <option value="guest">guest</option>
-        </select>
-        <input type="datetime-local" id="expirationInput" />
-        <br /><br />
-
-        <button id="insertData">Insert Data</button>
-        <h2>Records in the Database:</h2>
-        <div id="databaseOutput"></div>
-
-        <!-- Edit Dialog -->
-        <div class="overlay" id="editOverlay"></div>
-        <div class="edit-dialog" id="editDialog">
-            <h3>Edit Record</h3>
-            <input type="text" id="editValue" placeholder="New value" />
-            <button id="saveEdit">Save Changes</button>
-            <button id="cancelEdit">Cancel</button>
-        </div>
+    <div class="section">
+      <h2>1. Identity Management (WebAuthn)</h2>
+      <p><strong>Step 1: Create New Ethereum Identity (if you don't have one)</strong></p>
+      <button id="createNewIdentityBtn">A. Generate New ETH Identity</button>
+      <p>Generated Mnemonic (SAVE BEFORE STEP B!): <pre id="newMnemonicDisplay">N/A (Will be shown after generation)</pre></p>
+      
+      <p><strong>Step 2: Protect Identity with WebAuthn (Fingerprint/Key)</strong><br><em>(Optional. Enabled if there's an active identity not protected by WebAuthn).</em></p>
+      <button id="protectCurrentIdentityWithWebAuthnBtn" disabled>B. Protect Current Identity with WebAuthn</button>
+      <hr>
+      <p><strong>Log In (if you already have an identity protected with WebAuthn in this browser)</strong></p>
+      <button id="loginWebAuthnBtn">C. Log In with WebAuthn</button>
+      <hr>
+      <p><strong>Log In / Recovery (using your saved mnemonic phrase)</strong></p>
+      <input type="text" id="mnemonicLoginInput" placeholder="Enter your mnemonic phrase" style="width:calc(100% - 250px); margin-bottom:5px;">
+      <button id="loginOrRecoverWithMnemonicBtn">D. Log In / Recover with Mnemonic</button>
+      <hr>
+      <button id="logoutBtn" disabled>E. Log Out</button>
+      <p>Global Status: <strong id="statusGlobal">Initializing...</strong></p>
     </div>
 
-    <script type="module">
-        import { GraphDB, setCustomRoles, executeWithPermission, assignRole } from "../dist/index.js";
+    <div class="section" id="userInfoSection" style="display:none;">
+       <h2>2. Active User Information</h2>
+       <p>Active ETH Address: <strong id="ethAddressActive">N/A</strong></p>
+       <p>Role in GDB: <strong id="userRoleActive">N/A</strong></p>
+       <p>Session Protected by WebAuthn: <strong id="webAuthnProtectionStatus">Unknown</strong></p>
+       <p><button id="showMnemonicCurrentSessionBtn" disabled>Show Mnemonic (Current Session)</button></p>
+    </div>
 
-        let db;
-        let userAddress = null;
-        let currentEditId = null;
+    <div class="section">
+      <h2>3. Write/Update Data (Node)</h2>
+      <input type="text" id="dataNodeIdWrite" placeholder="Node ID" value="test_data_webauthn_v_final">
+      <input type="text" id="dataNodeValueWrite" placeholder='JSON Value' value='{"message":"Data vFinal with WebAuthn"}'>
+      <button id="putDataBtn" disabled>Save/Update Data</button>
+    </div>
 
-        // Function to save userEmail to localStorage
-        function saveUserEmail(email) {
-            localStorage.setItem('userEmail', email);
+     <div class="section">
+      <h2>4. Read Data (Node)</h2>
+      <input type="text" id="dataNodeIdRead" placeholder="Node ID to Read" value="test_data_webauthn_v_final">
+      <button id="getDataBtn" disabled>Read Data</button>
+      <div class="result-area">
+        Read Result: <pre id="getDataResult">N/A</pre>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>5. Encryption/Decryption for Current User</h2>
+      <textarea id="dataToEncryptInput" placeholder='JSON data to encrypt, e.g.: {"secret":"my secret message"}'></textarea>
+      <div class="button-group">
+        <button id="encryptSelfBtn" disabled>Encrypt Data for Myself</button>
+        <button id="decryptSelfBtn" disabled>Decrypt Data for Myself</button>
+      </div>
+      <p>Encrypted Data (Result): <pre id="encryptedDataDisplay">N/A</pre></p>
+    </div>
+
+    <div class="section">
+      <h2>6. Role Management</h2>
+      <input type="text" id="targetEthForRole" placeholder="0xTargetEthForRole" value=""> 
+      <input type="text" id="roleToAssign" placeholder="Role (e.g., manager)" value="manager">
+      <button id="assignRoleBtn" disabled>Assign Role</button>
+    </div>
+
+    <div class="section">
+      <h2>7. P2P Reception Simulation</h2>
+      <button id="simulateReceiveBtn" disabled>Simulate P2P 'put' (Invalid Signature)</button>
+    </div>
+
+    <p>Recent Action Logs: <pre id="actionLog">---</pre></p>
+  </div>
+
+  <script type="module">
+    import { GraphDB } from "../dist/index.js"; // Adjust path
+    import * as rbac from '../dist/rbac.min.js'; // Adjust path // IMPORTANT CHANGE!
+
+    const SUPERADMIN_ETH_ADDRESSES = ["0x62c48827e883f114821211673Dc309a29Aae7e6A"];
+    
+    let db;
+    let uiLog = "";
+    let unsubscribeUserRoleListener = null;
+    let currentVolatileIdentity = null; 
+
+    const createNewIdentityBtn = document.getElementById('createNewIdentityBtn');
+    const newMnemonicDisplayEl = document.getElementById('newMnemonicDisplay');
+    const protectCurrentIdentityWithWebAuthnBtn = document.getElementById('protectCurrentIdentityWithWebAuthnBtn');
+    const loginWebAuthnBtn = document.getElementById('loginWebAuthnBtn');
+    const mnemonicLoginInputEl = document.getElementById('mnemonicLoginInput');
+    const loginOrRecoverWithMnemonicBtn = document.getElementById('loginOrRecoverWithMnemonicBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const statusGlobalEl = document.getElementById('statusGlobal');
+    const userInfoSectionEl = document.getElementById('userInfoSection');
+    const ethAddressActiveEl = document.getElementById('ethAddressActive');
+    const userRoleActiveEl = document.getElementById('userRoleActive');
+    const webAuthnProtectionStatusEl = document.getElementById('webAuthnProtectionStatus');
+    const showMnemonicCurrentSessionBtn = document.getElementById('showMnemonicCurrentSessionBtn');
+    const dataNodeIdWriteInput = document.getElementById('dataNodeIdWrite');
+    const dataNodeValueWriteInput = document.getElementById('dataNodeValueWrite');
+    const putDataBtnEl = document.getElementById('putDataBtn');
+    const dataNodeIdReadInput = document.getElementById('dataNodeIdRead');
+    const getDataBtnEl = document.getElementById('getDataBtn');
+    const getDataResultEl = document.getElementById('getDataResult');
+    const dataToEncryptInput = document.getElementById('dataToEncryptInput');
+    const encryptSelfBtn = document.getElementById('encryptSelfBtn');
+    const encryptedDataDisplay = document.getElementById('encryptedDataDisplay');
+    const decryptSelfBtn = document.getElementById('decryptSelfBtn');
+    const assignRoleBtnEl = document.getElementById('assignRoleBtn');
+    const targetEthForRoleInput = document.getElementById('targetEthForRole');
+    const roleToAssignInput = document.getElementById('roleToAssign');
+    const simulateReceiveBtnEl = document.getElementById('simulateReceiveBtn');
+    const actionLogEl = document.getElementById('actionLog');
+
+    function logAction(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logMessage = `[${timestamp}] ${message}`;
+        console.log("APP_LOG:", logMessage);
+        uiLog = logMessage + "\n" + uiLog; 
+        const maxLogLines = 50;
+        const lines = uiLog.split('\n');
+        if (lines.length > maxLogLines) { uiLog = lines.slice(0, maxLogLines).join('\n'); }
+        actionLogEl.textContent = uiLog;
+    }
+
+    function updateUserRoleInUI(userNodeData) {
+        const currentEth = rbac.getActiveEthAddress();
+        if (!currentEth) { userRoleActiveEl.textContent = 'N/A'; return; }
+        if (userNodeData && userNodeData.value && userNodeData.value.role) {
+            let roleText = userNodeData.value.role;
+            if (userNodeData.value.expiresAt && new Date(userNodeData.value.expiresAt) < new Date()) {
+                roleText += " (Expired)";
+            }
+            userRoleActiveEl.textContent = roleText;
+        } else if (userNodeData === null) { 
+             userRoleActiveEl.textContent = 'Not assigned (or node deleted)';
+        } else {
+             userRoleActiveEl.textContent = 'Loading...'; 
         }
+    }
 
-        // Function to get userEmail from localStorage
-        function getUserEmail() {
-          
-          const test = db.graph.get(`user:estebanrfp@gmail.com`)
-          console.log(test)
-            // return db.graph.get(`user:${userEmail}`)
-            return localStorage.getItem('userEmail');
+    async function displayUserInfoAndSetupListener() {
+        const currentEth = rbac.getActiveEthAddress();
+        if (unsubscribeUserRoleListener) { unsubscribeUserRoleListener(); unsubscribeUserRoleListener = null; }
+        if (!currentEth || !db) {
+            userInfoSectionEl.style.display = 'none';
+            return;
         }
+        ethAddressActiveEl.textContent = currentEth;
+        webAuthnProtectionStatusEl.textContent = rbac.isCurrentSessionProtectedByWebAuthn() ? "Yes" : "No";
+        userInfoSectionEl.style.display = 'block';
+        userRoleActiveEl.textContent = 'Loading role...';
+        try {
+            await db.ready; 
+            const userNodeKey = `user:${currentEth}`;
+            const { result, unsubscribe } = await db.get(userNodeKey, updateUserRoleInUI);
+            unsubscribeUserRoleListener = unsubscribe;
+            updateUserRoleInUI(result); 
+        } catch (error) {
+            logAction(`Error getting role/listener for ${currentEth}: ${error.message}`);
+            userRoleActiveEl.textContent = 'Error loading role';
+        }
+    }
+    
+    createNewIdentityBtn.addEventListener('click', async () => {
+      try {
+        logAction("Identity: Starting generation...");
+        updateUIState(true, "Generating ETH identity...");
+        currentVolatileIdentity = await rbac.startNewUserRegistration();
+        if (currentVolatileIdentity) {
+          newMnemonicDisplayEl.textContent = `ETH Address: ${currentVolatileIdentity.address}\n\nSAVE THIS MNEMONIC PHRASE NOW IN A SAFE AND OFFLINE PLACE!\n\n${currentVolatileIdentity.mnemonic}\n\nOnce saved, you can optionally protect it with WebAuthn (Button B) or log in with it (Button D).`;
+          logAction(`Identity: ETH generated for ${currentVolatileIdentity.address}. Mnemonic displayed.`);
+        } else {
+          newMnemonicDisplayEl.textContent = "Error generating identity.";
+          logAction("Identity: Error in startNewUserRegistration.");
+        }
+      } catch (error) {
+        logAction(`Identity: Error generating: ${error.message}`);
+        alert(`Error: ${error.message}`);
+        newMnemonicDisplayEl.textContent = "Error.";
+      } finally {
+        updateUIState(false); 
+      }
+    });
 
-        // Initialize the database when the page loads
-        document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                db = new GraphDB("example");
-                await db.ready;
+    protectCurrentIdentityWithWebAuthnBtn.addEventListener('click', async () => {
+      if (!currentVolatileIdentity || !currentVolatileIdentity.privateKey) {
+        alert("First generate (Button A) or recover (Button D) an ETH identity to protect.");
+        return;
+      }
+      try {
+        logAction("Identity: Starting protection with WebAuthn for the current identity...");
+        updateUIState(true, "Registering WebAuthn... Follow your browser/OS instructions.");
+        const activeAddress = await rbac.protectCurrentIdentityWithWebAuthn(currentVolatileIdentity.privateKey);
+        if (activeAddress) {
+          logAction(`Identity: Protected with WebAuthn and session started for ${activeAddress}.`);
+          newMnemonicDisplayEl.textContent = "Identity protected with WebAuthn and session started!";
+          currentVolatileIdentity = null; 
+        } else {
+          logAction("Identity: WebAuthn protection failed. Check the console.");
+          newMnemonicDisplayEl.textContent = "WebAuthn registration failed. Check the browser console for more details. Ensure you are on HTTPS or localhost.";
+           alert("WebAuthn protection failed. Check the console.");
+        }
+      } catch (error) {
+        logAction(`Identity: Error protecting with WebAuthn: ${error.message}`);
+        alert(`WebAuthn Error: ${error.message || error}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
 
-                // Load userEmail from localStorage
-                const savedUserEmail = getUserEmail();
-                if (savedUserEmail) {
-                    document.getElementById("userEmail").value = savedUserEmail;
-                    updateDatabaseOutput(); // Update the view on startup if userEmail is available
-                }
-            } catch (error) {
-                console.error("Error initializing the database:", error.message);
-                alert("Error loading the data.");
-            }
-        });
+    loginWebAuthnBtn.addEventListener('click', async () => {
+      try {
+        logAction("Identity: Attempting to log in with WebAuthn...");
+        updateUIState(true, "Authenticating with WebAuthn... Follow instructions.");
+        const address = await rbac.loginCurrentUserWithWebAuthn();
+        if (address) {
+          logAction(`Identity: Session started with WebAuthn for ${address}.`);
+          newMnemonicDisplayEl.textContent = "Session started with WebAuthn.";
+          currentVolatileIdentity = null;
+        } else {
+          logAction("Identity: WebAuthn login failed.");
+          newMnemonicDisplayEl.textContent = "WebAuthn login failed. Did you register an authenticator?";
+          alert("WebAuthn login failed. Make sure you have registered an authenticator for this site and are using it correctly.");
+        }
+      } catch (error) {
+        logAction(`Identity: Error logging in with WebAuthn: ${error.message}`);
+        alert(`WebAuthn Error: ${error.message || error}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
 
-        // Assign Role
-        document.getElementById("assignRole").addEventListener("click", async () => {
-            try {
-                const userEmail = document.getElementById("userEmail").value.trim();
-                if (!userEmail) throw new Error("You must enter a user email.");
-                const role = document.getElementById("roleSelect").value;
-                if (!role) throw new Error("You must select a valid role.");
-                const expiration = document.getElementById("expirationInput").value || null;
+    loginOrRecoverWithMnemonicBtn.addEventListener('click', async () => {
+      const mnemonic = mnemonicLoginInputEl.value.trim();
+      if (!mnemonic) { alert("Enter your mnemonic phrase."); return; }
+      try {
+        logAction("Identity: Attempting login/recovery with mnemonic...");
+        updateUIState(true, "Loading identity from mnemonic...");
+        const identityData = await rbac.loginOrRecoverUserWithMnemonic(mnemonic); 
+        if (identityData && rbac.isSecurityActive()) {
+          currentVolatileIdentity = identityData; 
+          newMnemonicDisplayEl.textContent = `Session started with mnemonic for ${identityData.address}.\nPhrase (temporarily in memory): ${identityData.mnemonic}\n\nYou can optionally protect this session with WebAuthn (Button B).`;
+          mnemonicLoginInputEl.value = "";
+          logAction(`Identity: Session started for ${identityData.address} using mnemonic.`);
+        } else {
+          logAction("Identity: Mnemonic login/recovery failed.");
+          newMnemonicDisplayEl.textContent = "Failed. Check your mnemonic.";
+          alert("Error logging in/recovering with mnemonic. Is it correct?");
+          currentVolatileIdentity = null;
+        }
+      } catch (error) {
+        logAction(`Identity: Error with mnemonic: ${error.message}`);
+        alert(`Error: ${error.message}`);
+        currentVolatileIdentity = null;
+      } finally {
+        updateUIState(false);
+      }
+    });
+    
+    logoutBtn.addEventListener('click', async () => {
+      logAction("Identity: Logging out...");
+      updateUIState(true, "Logging out...");
+      if (unsubscribeUserRoleListener) { unsubscribeUserRoleListener(); unsubscribeUserRoleListener = null; }
+      await rbac.clearSecurity();
+      newMnemonicDisplayEl.textContent = 'N/A (Create or log in)';
+      currentVolatileIdentity = null;
+      logAction("Identity: Session closed.");
+      updateUIState(false);
+    });
 
-                await assignRole(db, userEmail, role, expiration); // Pasar userEmail a assignRole
-                saveUserEmail(userEmail)
+    showMnemonicCurrentSessionBtn.addEventListener('click', () => {
+        const mnemonicToShow = currentVolatileIdentity?.mnemonic || rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
+        if (mnemonicToShow) {
+            const confirmation = confirm("WARNING: You are about to display your secret mnemonic phrase. Make sure no one else is watching your screen.\n\nDo you wish to continue?");
+            if (confirmation) {
+                alert(`Your mnemonic phrase (from the current identity in memory) is:\n\n${mnemonicToShow}\n\nDO NOT share it!`);
+                logAction("Identity: Current session mnemonic displayed.");
+            } else { logAction("Identity: User canceled showing mnemonic."); }
+        } else {
+            alert("There is no \"fresh\" mnemonic to display. Generate a new identity or recover it if you need to see it.");
+            logAction("Identity: Attempted to show mnemonic, but not available.");
+        }
+    });
 
-                updateDatabaseOutput();
-                console.log(`Role '${role}' assigned to user '${userEmail}' successfully.${expiration ? ` Expires on ${expiration}` : ""}`)
-            } catch (error) {
-                console.error(error.message);
-                alert(error.message);
-            }
-        });
-
-        // Insert Data
-        document.getElementById("insertData").addEventListener("click", async () => {
-            try {
-                const userEmail = document.getElementById("userEmail").value.trim();
-                if (!userEmail) throw new Error("You must enter a user email.");
-                userAddress = await executeWithPermission(db, userEmail, "write")
-                const value = { data: `Record created at ${new Date().toLocaleTimeString()}` };
-                const id = await db.put(value);
-                saveUserEmail(userEmail)
-                console.log(`Data inserted with ID: ${id}`);
-                updateDatabaseOutput();
-            } catch (error) {
-                console.error(error.message);
-                alert(error.message);
-            }
-        });
-
-        // Save changes when editing
-        document.getElementById("saveEdit").addEventListener("click", async () => {
-            try {
-                const userEmail = document.getElementById("userEmail").value.trim();
-                if (!userEmail) throw new Error("You must enter a user email.");
-                const newValue = document.getElementById("editValue").value.trim();
-                if (!newValue) throw new Error("The new value cannot be empty.");
-
-                await executeWithPermission(db, userEmail, "write");
-                await db.put({ data: newValue }, currentEditId);
-                saveUserEmail(userEmail)
-
-                console.log(`Record with ID '${currentEditId}' updated.`);
-                closeEditDialog();
-                updateDatabaseOutput();
-
-            } catch (error) {
-                console.error(error.message);
-                alert(error.message);
-            }
-        });
-
-        // Cancel editing
-        document.getElementById("cancelEdit").addEventListener("click", () => {
-            closeEditDialog();
-        });
-
-        // Update the database output
-        async function updateDatabaseOutput() {
-            const outputDiv = document.getElementById("databaseOutput");
-            outputDiv.innerHTML = ""; // Clear previous content
-            const userEmail = document.getElementById("userEmail").value.trim();
-            if (!userEmail) {
-                 outputDiv.textContent = "No records in the database.";
-                return
-            }
-            const nodes = [];
-
-            await db.map(({ id, value, edges, timestamp }) => {
-                nodes.push({ id, value, edges, timestamp });
+    putDataBtnEl.addEventListener('click', async () => {
+        const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
+        let nodeValue;
+        try { nodeValue = JSON.parse(dataNodeValueWriteInput.value.trim()); }
+        catch (e) { logAction("Write: Value is not valid JSON."); alert("Value is not JSON."); return; }
+        if (!rbac.isSecurityActive()) { logAction("Write: User not connected."); alert("Connect first."); return; }
+        try {
+            logAction(`Write: Starting for ID '${nodeId || "new"}'.`);
+            updateUIState(true, "Signing and saving...");
+            await rbac.executeWithPermission(db, 'write', async (userAddr) => {
+                const idResultado = await db.put(nodeValue, nodeId);
+                logAction(`Write: Operation completed for ID '${idResultado}'!`);
+                alert(`Data saved/updated! ID: ${idResultado}`);
             });
-
-            if (nodes.length === 0) {
-                outputDiv.textContent = "No records in the database.";
-                return;
-            }
-
-            const recordList = document.createElement("div");
-            recordList.className = "record-list";
-
-            nodes.forEach(({ id, value, timestamp }) => {
-              console.log(id)
-                const recordItem = document.createElement("div");
-                recordItem.className = "record-item";
-
-                let storedCredentialDisplay = "";
-                if (value.storedCredential) {
-                    storedCredentialDisplay = JSON.stringify(value.storedCredential);
-                } else {
-                    storedCredentialDisplay = "No credential stored";
-                }
-                let rol = db.graph.get(`user:${userEmail}`)
-                const recordText = document.createElement("span");
-                recordText.className = "truncate"; // Apply the truncate class
-                recordText.innerHTML = `ID: ${id}, Value: ${JSON.stringify(value)}, Rol:${rol}, StoredCredential: ${storedCredentialDisplay}, Timestamp: ${timestamp}`;
-
-                const editButton = document.createElement("button");
-                editButton.textContent = "Edit";
-                editButton.onclick = () => openEditDialog(id, value.data);
-
-                const deleteButton = document.createElement("button");
-                deleteButton.textContent = "Delete";
-                deleteButton.onclick = async () => {
-                    try {
-                        await executeWithPermission(db, userEmail, "delete");
-                        await db.remove(id);
-                        console.log(`Data with ID '${id}' deleted.`);
-                        updateDatabaseOutput();
-                    } catch (error) {
-                        console.error(error.message);
-                        alert(error.message);
-                    }
-                };
-
-                recordItem.appendChild(recordText);
-                recordItem.appendChild(editButton);
-                recordItem.appendChild(deleteButton);
-                recordList.appendChild(recordItem);
+        } catch (error) { logAction(`Write: Error: ${error.message}`); alert(`Error: ${error.message}`); }
+        finally { updateUIState(false); }
+    });
+    getDataBtnEl.addEventListener('click', async () => {
+        const nodeId = dataNodeIdReadInput.value.trim();
+        if (!nodeId) { logAction("Read: ID required."); getDataResultEl.textContent = "N/A - Enter ID."; return; }
+        if (!db) { logAction("Read: GDB not ready."); getDataResultEl.textContent = "N/A - GDB not ready."; return; }
+        logAction(`Read: db.get('${nodeId}')...`);
+        getDataResultEl.textContent = "Loading...";
+        updateUIState(true, "Reading data...");
+        try {
+            const { result } = await db.get(nodeId);
+            if (result) { getDataResultEl.textContent = JSON.stringify(result, null, 2); }
+            else { getDataResultEl.textContent = "Node not found."; }
+            logAction(`Read: Finished for '${nodeId}'.`);
+        } catch (error) { logAction(`Read: Error: ${error.message}`); getDataResultEl.textContent = `Error: ${error.message}`; }
+        finally { updateUIState(false); }
+    });
+    encryptSelfBtn.addEventListener('click', async () => {
+        if (!rbac.isSecurityActive()) { alert("Log in first."); return; }
+        let dataToEncrypt;
+        try { const inputText = dataToEncryptInput.value.trim(); if (!inputText) { alert("Enter JSON."); return; } dataToEncrypt = JSON.parse(inputText); }
+        catch(e) { alert("Not valid JSON."); return; }
+        try {
+            logAction("Encryption: Encrypting..."); updateUIState(true, "Encrypting...");
+            const encrypted = await rbac.encryptDataForCurrentUser(dataToEncrypt);
+            encryptedDataDisplay.textContent = encrypted; logAction("Encryption: Success.");
+        } catch(error) { logAction(`Encryption: Error: ${error.message}`); alert(`Error: ${error.message || error}`);}
+        finally { updateUIState(false); }
+    });
+    decryptSelfBtn.addEventListener('click', async () => {
+        if (!rbac.isSecurityActive()) { alert("Log in first."); return; }
+        const encryptedString = encryptedDataDisplay.textContent;
+        if (!encryptedString || encryptedString === 'N/A') { alert("No encrypted data."); return; }
+        try {
+            logAction("Decryption: Decrypting..."); updateUIState(true, "Decrypting...");
+            const decrypted = await rbac.decryptDataForCurrentUser(encryptedString);
+            alert("Decrypted Data:\n\n" + JSON.stringify(decrypted, null, 2)); logAction("Decryption: Success.");
+        } catch(error) { logAction(`Decryption: Error: ${error.message}`); alert(`Error: ${error.message || error}`);}
+        finally { updateUIState(false); }
+    });
+    assignRoleBtnEl.addEventListener('click', async () => {
+        const targetEth = targetEthForRoleInput.value.trim(); const role = roleToAssignInput.value.trim();
+        if (!targetEth || !role) { alert("Enter ETH and role."); return; }
+        if (!rbac.isSecurityActive()) { alert("Connect first."); return; }
+        try {
+            logAction(`Role: Assigning '${role}' to '${targetEth}'.`); updateUIState(true, "Assigning role...");
+            await rbac.executeWithPermission(db, 'assignRole', async (userAddr) => {
+                await rbac.assignRole(db, targetEth, role);
+                logAction(`Role: Assignment completed.`);
             });
+            alert("Role assignment request sent.");
+        } catch (error) { logAction(`Role: Error: ${error.message}`); alert(`Error: ${error.message}`); }
+        finally { updateUIState(false); }
+    });
+    simulateReceiveBtnEl.addEventListener('click', async () => {
+        logAction(">>> P2P Sim: START.");
+        if (!db || !db.securityManager) { logAction("P2P Sim: No db/SM."); return; }
+        const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: {msg:"sim"}, timestamp: Date.now(), originUser:"0x123", originEthAddress:"0x123", signature:"0xbad"};
+        logAction(`P2P Sim: Verifying op...`); updateUIState(true, "Simulating P2P...");
+        try {
+            const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
+            if (validatedOperations && validatedOperations.length > 0) { logAction("P2P Sim: VALIDATED! (Error in SM)."); }
+            else { logAction(`P2P Sim: NOT validated (expected).`); }
+        } catch (e) { logAction(`P2P Sim: ERROR: ${e.message}`); }
+        finally { updateUIState(false); logAction("<<< P2P Sim: END.");}
+    });
 
-            outputDiv.appendChild(recordList);
-        }
+    function updateUIState(isLoading = false, statusText = null) {
+      const securityIsActive = rbac.isSecurityActive();
+      const webAuthnLocallyRegistered = rbac.hasExistingWebAuthnRegistration();
+      const identityReadyForWebAuthnProtection = !!currentVolatileIdentity; 
+      const currentSessionIsWebAuthnProtectedByRbac = rbac.isCurrentSessionProtectedByWebAuthn();
 
-        // Open the edit dialog
-        function openEditDialog(id, currentValue) {
-            currentEditId = id;
-            document.getElementById("editValue").value = currentValue;
-            document.getElementById("editOverlay").style.display = "block";
-            document.getElementById("editDialog").style.display = "block";
-        }
+      // Identity Management
+      createNewIdentityBtn.disabled = isLoading || securityIsActive || identityReadyForWebAuthnProtection;
+      
+      const canProtect = identityReadyForWebAuthnProtection && !currentSessionIsWebAuthnProtectedByRbac;
+      protectCurrentIdentityWithWebAuthnBtn.disabled = isLoading || !canProtect;
+      
+      loginWebAuthnBtn.disabled = isLoading || securityIsActive || !webAuthnLocallyRegistered;
+      mnemonicLoginInputEl.disabled = isLoading || securityIsActive || identityReadyForWebAuthnProtection;
+      loginOrRecoverWithMnemonicBtn.disabled = isLoading || securityIsActive || identityReadyForWebAuthnProtection;
+      logoutBtn.disabled = isLoading || !securityIsActive;
+      
+      showMnemonicCurrentSessionBtn.disabled = isLoading || !identityReadyForWebAuthnProtection;
 
-        // Close the edit dialog
-        function closeEditDialog() {
-            currentEditId = null;
-            document.getElementById("editValue").value = "";
-            document.getElementById("editOverlay").style.display = "none";
-            document.getElementById("editDialog").style.display = "none";
+
+      // GDB Operations
+      const gdbOpsDisabled = !securityIsActive || isLoading;
+      putDataBtnEl.disabled = gdbOpsDisabled;
+      getDataBtnEl.disabled = !db || isLoading; 
+      encryptSelfBtn.disabled = gdbOpsDisabled;
+      decryptSelfBtn.disabled = gdbOpsDisabled || encryptedDataDisplay.textContent === 'N/A';
+      assignRoleBtnEl.disabled = gdbOpsDisabled;
+      simulateReceiveBtnEl.disabled = gdbOpsDisabled || !db?.securityManager;
+
+
+      if (isLoading) {
+        statusGlobalEl.textContent = statusText || "Processing...";
+      } else {
+        if (securityIsActive) {
+            const protectionType = currentSessionIsWebAuthnProtectedByRbac ? 'WebAuthn' : 'Mnemonic';
+            statusGlobalEl.textContent = `Security Active (${protectionType})`;
+        } else if (identityReadyForWebAuthnProtection) {
+            statusGlobalEl.textContent = "ETH identity in memory. Save mnemonic and/or protect with WebAuthn (Button B).";
+        } else if (webAuthnLocallyRegistered) {
+            statusGlobalEl.textContent = "Security Inactive. Log in with WebAuthn (Button C) or recover.";
+        } else {
+            statusGlobalEl.textContent = "Security Inactive. Create an identity (Button A) or recover.";
         }
-    </script>
+      }
+
+      if (securityIsActive) {
+        displayUserInfoAndSetupListener();
+      } else {
+        userInfoSectionEl.style.display = 'none';
+        if (unsubscribeUserRoleListener) { unsubscribeUserRoleListener(); unsubscribeUserRoleListener = null; }
+      }
+    }
+
+    async function initializeApp() {
+      logAction("App: Started. Creating GDB instance...");
+      db = new GraphDB("gdbWebAuthn_vFINAL_HTML"); 
+      try {
+        await db.ready;
+        logAction("App: GDB ready.");
+      } catch (e) {
+        logAction("App: GDB Error: " + e.message); alert("GDB Error. Check console.");
+        statusGlobalEl.textContent = "GDB Error."; return;
+      }
+      
+      rbac.setSecurityStateChangeCallback((securityState) => {
+        logAction(`App: RBAC Callback - Active: ${securityState.isActive}, ETH: ${securityState.activeAddress}`);
+        if (!securityState.isActive) { currentVolatileIdentity = null; } 
+        updateUIState();
+      });
+      
+      await rbac.createSecurityContext(db, SUPERADMIN_ETH_ADDRESSES);
+      logAction("App: RBAC security context established.");
+      
+      updateUIState(); 
+    }
+
+    initializeApp();
+  </script>
 </body>
-
 </html>
