@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>GraphDB - RBAC + Security (WebAuthn Example - Corregido vFINAL)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px 5px 5px 0;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+      color: #666;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      padding: 8px;
+      margin-right: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      background-color: #fff;
+    }
+
+    .section h2 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+
+    .section p,
+    .section hr {
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+
+    pre {
+      background-color: #f0f0f0;
+      padding: 10px;
+      font-size: 0.9em;
+      max-height: 150px;
+      /* O la altura que desees para el scroll */
+      overflow-y: auto;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    textarea {
+      width: calc(100% - 22px);
+      min-height: 60px;
+      margin-top: 5px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .button-group button {
+      margin-right: 10px;
+    }
+
+    .info-box {
+      background-color: #e7f3fe;
+      border-left: 6px solid #2196F3;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>GraphDB - RBAC + Security (WebAuthn Example - Corregido vFINAL)</h1>
+    <p>Consola del navegador para logs. Usa WebAuthn (biometría/llave) para seguridad.</p>
+    <p class="info-box"><em>Importante: WebAuthn requiere HTTPS o localhost/127.0.0.1.</em></p>
+
+    <div class="section">
+      <h2>1. Gestión de Identidad (WebAuthn)</h2>
+      <p><strong>Paso 1: Crear Nueva Identidad Ethereum (si no tienes)</strong></p>
+      <button id="createNewIdentityBtn">A. Generar Nueva Identidad ETH</button>
+      <p>Mnemónica Generada (¡GUARDAR ANTES DEL PASO B!):
+      <pre id="newMnemonicDisplay">N/A (Se mostrará después de generar)</pre>
+      </p>
+
+      <p><strong>Paso 2: Proteger Identidad con WebAuthn (Huella/Llave)</strong><br><em>(Opcional. Habilitado si hay una
+          identidad activa no protegida por WebAuthn).</em></p>
+      <button id="protectCurrentIdentityWithWebAuthnBtn" disabled>B. Proteger Identidad Actual con WebAuthn</button>
+      <hr>
+      <p><strong>Iniciar Sesión (si ya tienes identidad protegida con WebAuthn en este navegador)</strong></p>
+      <button id="loginWebAuthnBtn">C. Iniciar Sesión con WebAuthn</button>
+      <hr>
+      <p><strong>Iniciar Sesión / Recuperación (usando tu frase mnemónica guardada)</strong></p>
+      <input type="text" id="mnemonicLoginInput" placeholder="Ingresa tu frase mnemónica"
+        style="width:calc(100% - 250px); margin-bottom:5px;">
+      <button id="loginOrRecoverWithMnemonicBtn">D. Iniciar Sesión / Recuperar con Mnemónica</button>
+      <hr>
+      <button id="logoutBtn" disabled>E. Cerrar Sesión</button>
+      <p>Estado Global: <strong id="statusGlobal">Inicializando...</strong></p>
+    </div>
+
+    <div class="section" id="userInfoSection" style="display:none;">
+      <h2>2. Información del Usuario Activo</h2>
+      <p>Dirección ETH Activa: <strong id="ethAddressActive">N/A</strong></p>
+      <p>Rol en GDB: <strong id="userRoleActive">N/A</strong></p>
+      <p>Sesión Protegida por WebAuthn: <strong id="webAuthnProtectionStatus">Desconocido</strong></p>
+      <p><button id="showMnemonicCurrentSessionBtn" disabled>Mostrar Mnemónica (Sesión Actual)</button></p>
+    </div>
+
+    <div class="section">
+      <h2>3. Escribir/Actualizar Datos (Nodo)</h2>
+      <input type="text" id="dataNodeIdWrite" placeholder="ID del Nodo" value="test_data_webauthn_v_final">
+      <input type="text" id="dataNodeValueWrite" placeholder='Valor JSON'
+        value='{"message":"Dato vFinal con WebAuthn"}'>
+      <button id="putDataBtn" disabled>Guardar/Actualizar Dato</button>
+    </div>
+
+    <div class="section">
+      <h2>4. Leer Datos (Nodo)</h2>
+      <input type="text" id="dataNodeIdRead" placeholder="ID del Nodo a Leer" value="test_data_webauthn_v_final">
+      <button id="getDataBtn" disabled>Leer Dato</button>
+      <div class="result-area">
+        Resultado Lectura:
+        <pre id="getDataResult">N/A</pre>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>5. Cifrado/Descifrado para Usuario Actual</h2>
+      <textarea id="dataToEncryptInput"
+        placeholder='Dato JSON a cifrar, ej: {"secret":"mi mensaje secreto"}'></textarea>
+      <div class="button-group">
+        <button id="encryptSelfBtn" disabled>Cifrar Dato para Mí</button>
+        <button id="decryptSelfBtn" disabled>Descifrar Dato para Mí</button>
+      </div>
+      <p>Dato Cifrado (Resultado):
+      <pre id="encryptedDataDisplay">N/A</pre>
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>6. Administración de Roles</h2>
+      <input type="text" id="targetEthForRole" placeholder="0xTargetEthParaRol" value="">
+      <input type="text" id="roleToAssign" placeholder="Rol (ej: manager)" value="manager">
+      <button id="assignRoleBtn" disabled>Asignar Rol</button>
+    </div>
+
+    <div class="section">
+      <h2>7. Simulación Recepción P2P (Firma Malformada)</h2>
+      <button id="simulateMalformedSigBtn" disabled>Simular 'put' P2P (Firma Malformada)</button>
+    </div>
+
+    <div class="section">
+      <h2>8. Pruebas de Seguridad P2P en Tiempo Real</h2>
+      <p>
+        Esta sección prueba cómo los datos se reciben (o no) en tiempo real basado en la validez de la firma.
+        El nodo de prueba es: <strong><code>realtime_security_test_node</code></strong>.
+        Los cambios en este nodo (si son válidos y este navegador está logueado) se mostrarán abajo.
+      </p>
+
+      <p>Log de Suscripción en Tiempo Real (para <code>realtime_security_test_node</code>):
+      <pre id="realtimeNodeLogDisplay">Esperando inicialización de GDB y suscripción...</pre>
+      </p>
+      <hr>
+      <p><strong>Desde otro navegador (o este mismo después de iniciar sesión):</strong></p>
+      <p>Valor a escribir: <input type="text" id="realtimeNodeValueForTest" value='{"message":"Prueba P2P en vivo"}'
+          style="width:250px;"></p>
+
+      <button id="putLegitP2PBtn" disabled>A. Enviar 'put' LEGÍTIMO</button>
+      <button id="putFakeSigP2PBtn" disabled>B. Enviar 'put' con FIRMA FALSA (Sim. Local)</button>
+    </div>
+
+
+    <p>Logs de Acciones Recientes (UI):
+    <pre id="actionLog">---</pre>
+    </p>
+  </div>
+
+  <script type="module">
+    import { GraphDB } from "../dist/index.js"; // Ajusta ruta según tu estructura
+    import * as rbac from '../dist/rbac.min.js'; // Ajusta ruta según tu estructura
+
+    const SUPERADMIN_ETH_ADDRESSES = ["0x62c48827e883f114821211673Dc309a29Aae7e6A"]; // Reemplaza con tu(s) dirección(es) superadmin
+
+    let db;
+    let uiLog = "";
+    let unsubscribeUserRoleListener = null;
+    let currentVolatileIdentity = null;
+
+    // Selectores de Elementos DOM
+    const createNewIdentityBtn = document.getElementById('createNewIdentityBtn');
+    const newMnemonicDisplayEl = document.getElementById('newMnemonicDisplay');
+    const protectCurrentIdentityWithWebAuthnBtn = document.getElementById('protectCurrentIdentityWithWebAuthnBtn');
+    const loginWebAuthnBtn = document.getElementById('loginWebAuthnBtn');
+    const mnemonicLoginInputEl = document.getElementById('mnemonicLoginInput');
+    const loginOrRecoverWithMnemonicBtn = document.getElementById('loginOrRecoverWithMnemonicBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const statusGlobalEl = document.getElementById('statusGlobal');
+
+    const userInfoSectionEl = document.getElementById('userInfoSection');
+    const ethAddressActiveEl = document.getElementById('ethAddressActive');
+    const userRoleActiveEl = document.getElementById('userRoleActive');
+    const webAuthnProtectionStatusEl = document.getElementById('webAuthnProtectionStatus');
+    const showMnemonicCurrentSessionBtn = document.getElementById('showMnemonicCurrentSessionBtn');
+
+    const dataNodeIdWriteInput = document.getElementById('dataNodeIdWrite');
+    const dataNodeValueWriteInput = document.getElementById('dataNodeValueWrite');
+    const putDataBtnEl = document.getElementById('putDataBtn');
+
+    const dataNodeIdReadInput = document.getElementById('dataNodeIdRead');
+    const getDataBtnEl = document.getElementById('getDataBtn');
+    const getDataResultEl = document.getElementById('getDataResult');
+
+    const dataToEncryptInput = document.getElementById('dataToEncryptInput');
+    const encryptSelfBtn = document.getElementById('encryptSelfBtn');
+    const encryptedDataDisplay = document.getElementById('encryptedDataDisplay');
+    const decryptSelfBtn = document.getElementById('decryptSelfBtn');
+
+    const assignRoleBtnEl = document.getElementById('assignRoleBtn');
+    const targetEthForRoleInput = document.getElementById('targetEthForRole');
+    const roleToAssignInput = document.getElementById('roleToAssign');
+
+    const simulateMalformedSigBtnEl = document.getElementById('simulateMalformedSigBtn');
+
+    const realtimeNodeLogDisplayEl = document.getElementById('realtimeNodeLogDisplay');
+    const realtimeNodeValueForTestInput = document.getElementById('realtimeNodeValueForTest');
+    const putLegitP2PBtn = document.getElementById('putLegitP2PBtn');
+    const putFakeSigP2PBtn = document.getElementById('putFakeSigP2PBtn');
+
+    const actionLogEl = document.getElementById('actionLog');
+
+    const NODE_ID_FOR_REALTIME_TEST = 'realtime_security_test_node';
+    let unsubscribeFromRealtimeTestNode = null;
+
+    function logAction(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logMessage = `[${timestamp}] ${message}`;
+      console.log("APP_LOG:", logMessage);
+      uiLog = logMessage + "\n" + uiLog;
+      const maxLogLines = 50;
+      const lines = uiLog.split('\n');
+      if (lines.length > maxLogLines) { uiLog = lines.slice(0, maxLogLines).join('\n'); }
+      if (actionLogEl) actionLogEl.textContent = uiLog;
+    }
+
+    function scrollToBottom(element) {
+      if (element) {
+        // Usar scrollTo con behavior: 'smooth' para un efecto más agradable
+        element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+        // Si 'smooth' no funciona bien en <pre> o prefieres instantáneo:
+        // element.scrollTop = element.scrollHeight;
+      }
+    }
+
+    function logToRealtimeDisplay(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const formattedMessage = `[${timestamp}] ${message}`;
+
+      if (realtimeNodeLogDisplayEl) {
+        const currentLog = realtimeNodeLogDisplayEl.textContent;
+        // Añadir el nuevo mensaje al final
+        let newLogText = currentLog + (currentLog.endsWith('\n') || currentLog === "" ? "" : "\n") + formattedMessage;
+
+        // Limitar el número de líneas visibles en el <pre>
+        const maxLogLinesInUI = 50;
+        let lines = newLogText.split('\n');
+        if (lines.length > maxLogLinesInUI) {
+          lines = lines.slice(lines.length - maxLogLinesInUI);
+        }
+        realtimeNodeLogDisplayEl.textContent = lines.join('\n');
+
+        scrollToBottom(realtimeNodeLogDisplayEl);
+      } else {
+        console.warn("logToRealtimeDisplay: realtimeNodeLogDisplayEl no encontrado en el DOM.");
+      }
+      console.log("REALTIME_CALLBACK_CONSOLE_LOG:", formattedMessage);
+    }
+
+
+    function updateUserRoleInUI(userNodeData) {
+      const currentEth = rbac.getActiveEthAddress();
+      if (!userRoleActiveEl) return;
+      if (!currentEth) { userRoleActiveEl.textContent = 'N/A'; return; }
+
+      if (userNodeData && userNodeData.value && userNodeData.value.role) {
+        let roleText = userNodeData.value.role;
+        if (userNodeData.value.expiresAt && new Date(userNodeData.value.expiresAt) < new Date()) {
+          roleText += " (Expirado)";
+        }
+        userRoleActiveEl.textContent = roleText;
+      } else if (userNodeData === null) {
+        userRoleActiveEl.textContent = 'No asignado (o nodo eliminado)';
+      } else {
+        userRoleActiveEl.textContent = 'Cargando... (o sin rol)';
+      }
+    }
+
+    async function displayUserInfoAndSetupListener() {
+      const currentEth = rbac.getActiveEthAddress();
+      if (unsubscribeUserRoleListener) { unsubscribeUserRoleListener(); unsubscribeUserRoleListener = null; }
+
+      if (!currentEth || !db || !userInfoSectionEl || !ethAddressActiveEl || !webAuthnProtectionStatusEl) {
+        if (userInfoSectionEl) userInfoSectionEl.style.display = 'none';
+        return;
+      }
+      ethAddressActiveEl.textContent = currentEth;
+      webAuthnProtectionStatusEl.textContent = rbac.isCurrentSessionProtectedByWebAuthn() ? "Sí" : "No";
+      userInfoSectionEl.style.display = 'block';
+      if (userRoleActiveEl) userRoleActiveEl.textContent = 'Cargando rol...';
+
+      try {
+        await db.ready;
+        const userNodeKey = `user:${currentEth}`;
+        const { result, unsubscribe } = await db.get(userNodeKey, updateUserRoleInUI);
+        unsubscribeUserRoleListener = unsubscribe;
+        updateUserRoleInUI(result);
+      } catch (error) {
+        logAction(`Error obteniendo rol/listener para ${currentEth}: ${error.message}`);
+        if (userRoleActiveEl) userRoleActiveEl.textContent = 'Error al cargar rol';
+      }
+    }
+
+    createNewIdentityBtn.addEventListener('click', async () => {
+      try {
+        logAction("Identidad: Iniciando generación...");
+        updateUIState(true, "Generando identidad ETH...");
+        currentVolatileIdentity = await rbac.startNewUserRegistration();
+        if (currentVolatileIdentity) {
+          newMnemonicDisplayEl.textContent = `Dirección ETH: ${currentVolatileIdentity.address}\n\n¡GUARDA ESTA FRASE MNEMÓNICA AHORA MISMO EN UN LUGAR SEGURO Y OFFLINE!\n\n${currentVolatileIdentity.mnemonic}\n\nUna vez guardada, puedes opcionalmente protegerla con WebAuthn (Botón B) o iniciar sesión con ella (Botón D).`;
+          logAction(`Identidad: ETH generada para ${currentVolatileIdentity.address}. Mnemónica mostrada.`);
+        } else {
+          newMnemonicDisplayEl.textContent = "Error generando identidad.";
+          logAction("Identidad: Error en startNewUserRegistration.");
+        }
+      } catch (error) {
+        logAction(`Identidad: Error generando: ${error.message}`);
+        alert(`Error: ${error.message}`);
+        newMnemonicDisplayEl.textContent = "Error.";
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    protectCurrentIdentityWithWebAuthnBtn.addEventListener('click', async () => {
+      const privateKeyToUse = currentVolatileIdentity?.privateKey;
+      if (!privateKeyToUse) {
+        alert("Primero genera (Botón A) o recupera (Botón D con mnemónica) una identidad ETH para proteger.");
+        return;
+      }
+      try {
+        logAction("Identidad: Iniciando protección con WebAuthn para la identidad actual...");
+        updateUIState(true, "Registrando WebAuthn... Sigue las instrucciones de tu navegador/SO.");
+        const activeAddress = await rbac.protectCurrentIdentityWithWebAuthn(privateKeyToUse);
+        if (activeAddress) {
+          logAction(`Identidad: Protegida con WebAuthn y sesión iniciada para ${activeAddress}.`);
+          newMnemonicDisplayEl.textContent = "¡Identidad protegida con WebAuthn y sesión iniciada!";
+          currentVolatileIdentity = null;
+        } else {
+          logAction("Identidad: Falló la protección con WebAuthn. Revisa la consola.");
+          newMnemonicDisplayEl.textContent = "Falló el registro WebAuthn. Revisa la consola del navegador para más detalles. Asegúrate de estar en HTTPS o localhost.";
+          alert("Falló la protección con WebAuthn. Revisa la consola.");
+        }
+      } catch (error) {
+        logAction(`Identidad: Error protegiendo con WebAuthn: ${error.message}`);
+        alert(`Error en WebAuthn: ${error.message || error}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    loginWebAuthnBtn.addEventListener('click', async () => {
+      try {
+        logAction("Identidad: Intentando iniciar sesión con WebAuthn...");
+        updateUIState(true, "Autenticando con WebAuthn... Sigue las instrucciones.");
+        const address = await rbac.loginCurrentUserWithWebAuthn();
+        if (address) {
+          logAction(`Identidad: Sesión iniciada con WebAuthn para ${address}.`);
+          newMnemonicDisplayEl.textContent = "Sesión iniciada con WebAuthn.";
+          currentVolatileIdentity = null;
+        } else {
+          logAction("Identidad: Falló el inicio de sesión con WebAuthn.");
+          newMnemonicDisplayEl.textContent = "Falló el inicio de sesión WebAuthn. ¿Registraste un autenticador?";
+          alert("Falló el inicio de sesión WebAuthn. Asegúrate de haber registrado un autenticador para este sitio y que lo estés usando correctamente.");
+        }
+      } catch (error) {
+        logAction(`Identidad: Error iniciando sesión con WebAuthn: ${error.message}`);
+        alert(`Error en WebAuthn: ${error.message || error}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    loginOrRecoverWithMnemonicBtn.addEventListener('click', async () => {
+      const mnemonic = mnemonicLoginInputEl.value.trim();
+      if (!mnemonic) { alert("Ingresa tu frase mnemónica."); return; }
+      try {
+        logAction("Identidad: Intentando inicio de sesión/recuperación con mnemónica...");
+        updateUIState(true, "Cargando identidad desde mnemónica...");
+        const identityData = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
+        if (identityData && rbac.isSecurityActive()) {
+          currentVolatileIdentity = identityData;
+          newMnemonicDisplayEl.textContent = `Sesión iniciada con mnemónica para ${identityData.address}.\nFrase (temporalmente en memoria):\n${identityData.mnemonic}\n\nPuedes opcionalmente proteger esta sesión con WebAuthn (Botón B).`;
+          mnemonicLoginInputEl.value = "";
+          logAction(`Identidad: Sesión iniciada para ${identityData.address} usando mnemónica.`);
+        } else {
+          logAction("Identidad: Falló el inicio de sesión/recuperación con mnemónica.");
+          newMnemonicDisplayEl.textContent = "Falló. Verifica tu mnemónica.";
+          alert("Error al iniciar sesión/recuperar con mnemónica. ¿Es correcta?");
+          currentVolatileIdentity = null;
+        }
+      } catch (error) {
+        logAction(`Identidad: Error con mnemónica: ${error.message}`);
+        alert(`Error: ${error.message}`);
+        currentVolatileIdentity = null;
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      logAction("Identidad: Cerrando sesión...");
+      updateUIState(true, "Cerrando sesión...");
+      if (unsubscribeUserRoleListener) { unsubscribeUserRoleListener(); unsubscribeUserRoleListener = null; }
+      if (unsubscribeFromRealtimeTestNode) { unsubscribeFromRealtimeTestNode(); unsubscribeFromRealtimeTestNode = null; } // Cancelar suscripción P2P
+      await rbac.clearSecurity();
+      newMnemonicDisplayEl.textContent = 'N/A (Crea o inicia sesión)';
+      currentVolatileIdentity = null;
+      if (realtimeNodeLogDisplayEl) realtimeNodeLogDisplayEl.textContent = "Sesión cerrada. Suscripción P2P detenida.";
+      logAction("Identidad: Sesión cerrada.");
+      updateUIState(false);
+    });
+
+    showMnemonicCurrentSessionBtn.addEventListener('click', () => {
+      const mnemonicToShow = rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
+      if (mnemonicToShow) {
+        const confirmation = confirm("ADVERTENCIA: Estás a punto de mostrar tu frase mnemónica secreta. Asegúrate de que nadie más esté viendo tu pantalla.\n\n¿Deseas continuar?");
+        if (confirmation) {
+          alert(`Tu frase mnemónica (de la identidad actual en memoria) es:\n\n${mnemonicToShow}\n\n¡NO la compartas!`);
+          logAction("Identidad: Mnemónica de sesión actual mostrada.");
+        } else { logAction("Identidad: Usuario canceló mostrar mnemónica."); }
+      } else {
+        alert("No hay una mnemónica \"fresca\" para mostrar (p.ej., si la sesión es WebAuthn pura o no hay identidad volátil). Genera (A) o recupera (D) si necesitas verla.");
+        logAction("Identidad: Intento de mostrar mnemónica, pero no disponible.");
+      }
+    });
+
+    putDataBtnEl.addEventListener('click', async () => {
+      const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
+      let nodeValue;
+      try { nodeValue = JSON.parse(dataNodeValueWriteInput.value.trim()); }
+      catch (e) { logAction("Escritura: Valor no es JSON válido."); alert("Valor no es JSON."); return; }
+      if (!rbac.isSecurityActive()) { logAction("Escritura: Usuario no conectado."); alert("Conéctate primero."); return; }
+      try {
+        logAction(`Escritura: Iniciando para ID '${nodeId || "nuevo"}'.`);
+        updateUIState(true, "Firmando y guardando...");
+        const idResultado = await db.put(nodeValue, nodeId);
+        logAction(`Escritura: ¡Operación enviada para ID '${idResultado}'!`);
+        alert(`¡Dato guardado/actualizado! ID: ${idResultado}`);
+      } catch (error) { logAction(`Escritura: Error: ${error.message}`); alert(`Error: ${error.message}`); }
+      finally { updateUIState(false); }
+    });
+
+    getDataBtnEl.addEventListener('click', async () => {
+      const nodeId = dataNodeIdReadInput.value.trim();
+      if (!nodeId) { logAction("Lectura: ID requerido."); getDataResultEl.textContent = "N/A - Ingresa ID."; return; }
+      if (!db) { logAction("Lectura: GDB no lista."); getDataResultEl.textContent = "N/A - GDB no lista."; return; }
+      logAction(`Lectura: db.get('${nodeId}')...`);
+      getDataResultEl.textContent = "Cargando...";
+      updateUIState(true, "Leyendo dato...");
+      try {
+        const { result } = await db.get(nodeId);
+        if (result) { getDataResultEl.textContent = JSON.stringify(result, null, 2); }
+        else { getDataResultEl.textContent = "Nodo no encontrado."; }
+        logAction(`Lectura: Finalizada para '${nodeId}'.`);
+      } catch (error) { logAction(`Lectura: Error: ${error.message}`); getDataResultEl.textContent = `Error: ${error.message}`; }
+      finally { updateUIState(false); }
+    });
+
+    encryptSelfBtn.addEventListener('click', async () => {
+      if (!rbac.isSecurityActive()) { alert("Inicia sesión primero."); return; }
+      let dataToEncrypt;
+      try { const inputText = dataToEncryptInput.value.trim(); if (!inputText) { alert("Ingresa JSON."); return; } dataToEncrypt = JSON.parse(inputText); }
+      catch (e) { alert("No es JSON válido."); return; }
+      try {
+        logAction("Cifrado: Cifrando..."); updateUIState(true, "Cifrando...");
+        const encrypted = await rbac.encryptDataForCurrentUser(dataToEncrypt);
+        encryptedDataDisplay.textContent = encrypted; logAction("Cifrado: Éxito.");
+      } catch (error) { logAction(`Cifrado: Error: ${error.message}`); alert(`Error: ${error.message || error}`); }
+      finally { updateUIState(false); }
+    });
+
+    decryptSelfBtn.addEventListener('click', async () => {
+      if (!rbac.isSecurityActive()) { alert("Inicia sesión primero."); return; }
+      const encryptedString = encryptedDataDisplay.textContent;
+      if (!encryptedString || encryptedString === 'N/A') { alert("No hay dato cifrado."); return; }
+      try {
+        logAction("Descifrado: Descifrando..."); updateUIState(true, "Descifrando...");
+        const decrypted = await rbac.decryptDataForCurrentUser(encryptedString);
+        alert("Dato Descifrado:\n\n" + JSON.stringify(decrypted, null, 2)); logAction("Descifrado: Éxito.");
+      } catch (error) { logAction(`Descifrado: Error: ${error.message}`); alert(`Error: ${error.message || error}`); }
+      finally { updateUIState(false); }
+    });
+
+    assignRoleBtnEl.addEventListener('click', async () => {
+      const targetEth = targetEthForRoleInput.value.trim(); const role = roleToAssignInput.value.trim();
+      if (!targetEth || !role) { alert("Ingresa ETH y rol."); return; }
+      if (!rbac.isSecurityActive()) { alert("Conéctate primero."); return; }
+      try {
+        logAction(`Rol: Asignando '${role}' a '${targetEth}'.`); updateUIState(true, "Asignando rol...");
+        await rbac.executeWithPermission(db, 'assignRole', async (userAddr) => {
+          await rbac.assignRole(db, targetEth, role);
+          logAction(`Rol: Asignación completada (enviada a GDB).`);
+        });
+        alert("Solicitud de asignación de rol enviada.");
+      } catch (error) { logAction(`Rol: Error: ${error.message}`); alert(`Error: ${error.message}`); }
+      finally { updateUIState(false); }
+    });
+
+    // simulateMalformedSigBtnEl.addEventListener('click', async () => {
+    //   logAction(">>> P2P Sim: START.");
+    //   if (!db || !db.securityManager) { logAction("P2P Sim: No db/SM."); return; }
+    //   const simulatedTimestamp = db.hybridClock.now();
+    //   const fakeFormattedSignature = "0x975ff3abe5c7df0e95ab76f308f5b73ca0b803f1c7d74d44098bc75c6efd845c7908ff2b2e4b1a9bee653237475e59d17c13634042e4759154e70618850aa89e1c";
+    //   const realAddress = "0x62c48827e883f114821211673Dc309a29Aae7e6A"; // Fake address for simulation
+    //   console.log("P2P Sim: Simulated timestamp:", simulatedTimestamp);
+    //   const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: { msg: "sim" }, timestamp: simulatedTimestamp, originUser: realAddress, originEthAddress: realAddress, signature: fakeFormattedSignature };
+    //   logAction(`P2P Sim: Verifying op...`); updateUIState(true, "Simulating P2P...");
+    //   try {
+    //     const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
+    //     if (validatedOperations && validatedOperations.length > 0) { logAction("P2P Sim: VALIDATED! (Error in SM)."); }
+    //     else { logAction(`P2P Sim: NOT validated (expected).`); }
+    //   } catch (e) { logAction(`P2P Sim: ERROR: ${e.message}`); }
+    //   finally { updateUIState(false); logAction("<<< P2P Sim: END."); }
+    // });
+
+    simulateMalformedSigBtnEl.addEventListener('click', async () => {
+      logAction(">>> P2P Sim (Malformed): INICIO.");
+      if (!db || !db.securityManager) { logAction("P2P Sim (Malformed): No db/SM."); return; }
+
+      // const simulatedTimestampObject = db.hybridClock ? db.hybridClock.now() : { physical: Date.now(), logical: 1 };
+
+      const simulatedTimestamp = db.hybridClock.now();
+      const realAddress = "0x62c48827e883f114821211673Dc309a29Aae7e6A"; // Fake address for simulation
+      const fakeFormattedSignature = "0x975ff3abe5c7df0e95ab76f308f5b73ca0b803f1c7d74d44098bc75c6efd845c7908ff2b2e4b1a9bee653237475e59d17c13634042e4759154e70618850aa89e1c";
+      const op = {
+        type: 'put',
+        id: 'p2p_sim_malformed_' + Date.now(),
+        value: { msg: "sim_malformed" },
+        timestamp: simulatedTimestamp,
+        originUser: realAddress,
+        originEthAddress: realAddress,
+        signature: fakeFormattedSignature
+      };
+      
+      logAction(`P2P Sim (Malformed): Verificando op...`); updateUIState(true, "Simulando P2P (Malformed)...");
+      try {
+        const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
+        if (validatedOperations && validatedOperations.length > 0) {
+          logAction("P2P Sim (Malformed): ¡VALIDADA! (Error en SM).");
+        } else {
+          logAction(`P2P Sim (Malformed): NO validada (esperado).`);
+        }
+      } catch (e) {
+        logAction(`P2P Sim (Malformed): ERROR en verifyIncomingOperations: ${e.message}`);
+      }
+      finally { updateUIState(false); logAction("<<< P2P Sim (Malformed): FIN."); }
+    });
+
+    async function setupAutomaticRealtimeSubscription() {
+      if (!db) {
+        logToRealtimeDisplay("GDB no está lista para la suscripción automática.");
+        return;
+      }
+      if (unsubscribeFromRealtimeTestNode) {
+        unsubscribeFromRealtimeTestNode();
+        logToRealtimeDisplay("Suscripción automática anterior cancelada.");
+      }
+
+      logToRealtimeDisplay(`Suscribiéndose automáticamente a: ${NODE_ID_FOR_REALTIME_TEST}`);
+      try {
+        await db.ready;
+        const { result, unsubscribe } = await db.get(NODE_ID_FOR_REALTIME_TEST, (nodeData) => {
+          if (nodeData) {
+            const displayMessage = `Nodo CAMBIÓ:\n  Valor: ${JSON.stringify(nodeData.value, null, 2)}\n  TS: ${JSON.stringify(nodeData.timestamp, null, 2)}`;
+            logToRealtimeDisplay(displayMessage);
+          } else {
+            logToRealtimeDisplay(`Nodo no encontrado o eliminado.`);
+          }
+        });
+        unsubscribeFromRealtimeTestNode = unsubscribe;
+
+        if (result) {
+          const initialMessage = `Estado INICIAL Nodo:\n  Valor: ${JSON.stringify(result.value, null, 2)}\n  TS: ${JSON.stringify(result.timestamp, null, 2)}`;
+          logToRealtimeDisplay(initialMessage);
+        } else {
+          logToRealtimeDisplay(`Estado INICIAL Nodo: No encontrado.`);
+        }
+        logToRealtimeDisplay(`Suscripción ACTIVA para '${NODE_ID_FOR_REALTIME_TEST}'.`);
+
+      } catch (error) {
+        logToRealtimeDisplay(`Error en suscripción a '${NODE_ID_FOR_REALTIME_TEST}': ${error.message}`);
+      }
+    }
+
+    putLegitP2PBtn.addEventListener('click', async () => {
+      if (!rbac.isSecurityActive() || !db) { logAction("Put Legítimo P2P: No conectado o GDB no lista."); alert("Conéctate y espera GDB."); return; }
+      const nodeId = NODE_ID_FOR_REALTIME_TEST;
+      let nodeValue;
+      try { nodeValue = JSON.parse(realtimeNodeValueForTestInput.value.trim()); }
+      catch (e) { logAction("Put Legítimo P2P: Valor no es JSON."); alert("Valor no es JSON."); return; }
+
+      logAction(`Put Legítimo P2P: Iniciando para ID '${nodeId}'.`);
+      updateUIState(true, "Enviando put legítimo P2P...");
+      try {
+        const idResultado = await db.put(nodeValue, nodeId);
+        logAction(`Put Legítimo P2P: Operación enviada para ID '${idResultado}'!`);
+        alert(`¡Put legítimo P2P enviado! ID: ${idResultado}\nObserva el log de suscripción en otras pestañas/navegadores.`);
+      } catch (error) {
+        logAction(`Put Legítimo P2P: Error: ${error.message}`);
+        alert(`Error en Put Legítimo P2P: ${error.message}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    putFakeSigP2PBtn.addEventListener('click', async () => {
+      if (!rbac.isSecurityActive() || !db) { logAction("Put Falso P2P: No conectado o GDB no lista."); alert("Conéctate y espera GDB."); return; }
+      const nodeId = NODE_ID_FOR_REALTIME_TEST;
+      let nodeValue;
+      try { nodeValue = JSON.parse(realtimeNodeValueForTestInput.value.trim()); }
+      catch (e) { logAction("Put Falso P2P: Valor no es JSON."); alert("Valor no es JSON."); return; }
+
+      const currentUserAddress = rbac.getActiveEthAddress();
+      if (!currentUserAddress) { logAction("Put Falso P2P: No se pudo obtener ETH actual."); alert("No se pudo obtener ETH actual."); return; }
+
+      logAction(`Put Falso P2P: Preparando op. con firma FALSA para '${nodeId}' como de ${currentUserAddress}.`);
+      updateUIState(true, "Simulando put con firma falsa P2P...");
+
+      const simulatedTimestamp = db.hybridClock.now();
+      const realAddress = "0x62c48827e883f114821211673Dc309a29Aae7e6A"; // Fake address for simulation
+      const fakeFormattedSignature = "0x975ff3abe5c7df0e95ab76f308f5b73ca0b803f1c7d74d44098bc75c6efd845c7908ff2b2e4b1a9bee653237475e59d17c13634042e4759154e70618850aa89e1c";
+
+      const maliciousOp = {
+        type: 'put',
+        id: nodeId,
+        value: nodeValue,
+        timestamp: simulatedTimestamp,
+        originUser: currentUserAddress,
+        originEthAddress: currentUserAddress,
+        signature: fakeFormattedSignature
+      };
+
+      try {
+        if (db.securityManager) {
+          logAction("Put Falso P2P: Simulando recepción local de op. con firma falsa...");
+          const { validatedOperations } = await db.securityManager.verifyIncomingOperations([maliciousOp]);
+          if (validatedOperations && validatedOperations.length > 0) {
+            logAction("Put Falso P2P: ¡ERROR! Op. falsa FUE VALIDADA localmente.");
+            alert("¡ERROR DE SIMULACIÓN! Op. con firma falsa fue validada localmente.");
+          } else {
+            logAction("Put Falso P2P: Op. falsa NO VALIDADA localmente (esperado).");
+            logAction("Put Falso P2P: Esta op. NO se aplicaría y NO se emitiría a listeners.");
+            alert("Simulación firma falsa: Op. rechazada localmente (esperado).\nEl log de suscripción NO debería cambiar por esto.");
+          }
+        } else { logAction("Put Falso P2P: No hay SM para probar verificación."); alert("No hay SM activo."); }
+      } catch (error) {
+        logAction(`Put Falso P2P: Error en simulación: ${error.message}`);
+        alert(`Error en Simulación Firma Falsa: ${error.message}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    function updateUIState(isLoading = false, statusText = null) {
+      const securityIsActive = rbac.isSecurityActive();
+      const webAuthnLocallyRegistered = rbac.hasExistingWebAuthnRegistration();
+      const identityReadyForWebAuthnProtection = !!currentVolatileIdentity && !rbac.isCurrentSessionProtectedByWebAuthn();
+
+      createNewIdentityBtn.disabled = isLoading || securityIsActive || identityReadyForWebAuthnProtection;
+      protectCurrentIdentityWithWebAuthnBtn.disabled = isLoading || !identityReadyForWebAuthnProtection;
+      loginWebAuthnBtn.disabled = isLoading || securityIsActive || !webAuthnLocallyRegistered;
+      mnemonicLoginInputEl.disabled = isLoading || securityIsActive;
+      loginOrRecoverWithMnemonicBtn.disabled = isLoading || securityIsActive;
+      logoutBtn.disabled = isLoading || !securityIsActive;
+      showMnemonicCurrentSessionBtn.disabled = isLoading || !rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
+
+
+      const gdbOpsDisabled = !securityIsActive || isLoading || !db;
+      putDataBtnEl.disabled = gdbOpsDisabled;
+      getDataBtnEl.disabled = isLoading || !db;
+      encryptSelfBtn.disabled = gdbOpsDisabled;
+      decryptSelfBtn.disabled = gdbOpsDisabled || (encryptedDataDisplay && encryptedDataDisplay.textContent === 'N/A');
+      assignRoleBtnEl.disabled = gdbOpsDisabled;
+      simulateMalformedSigBtnEl.disabled = gdbOpsDisabled || !db?.securityManager;
+
+      const realtimeTestOpsDisabled = isLoading || !securityIsActive || !db;
+      putLegitP2PBtn.disabled = realtimeTestOpsDisabled;
+      putFakeSigP2PBtn.disabled = realtimeTestOpsDisabled;
+
+
+      if (isLoading) {
+        statusGlobalEl.textContent = statusText || "Procesando...";
+      } else {
+        if (securityIsActive) {
+          const protectionType = rbac.isCurrentSessionProtectedByWebAuthn() ? 'WebAuthn' : 'Mnemónica';
+          statusGlobalEl.textContent = `Seguridad Activa (${protectionType}) - ETH: ${rbac.getActiveEthAddress()}`;
+        } else if (identityReadyForWebAuthnProtection && currentVolatileIdentity) {
+          statusGlobalEl.textContent = `Identidad ETH (${currentVolatileIdentity.address.substring(0, 10)}...) en memoria. Guarda mnemónica y/o protege con WebAuthn (B).`;
+        } else if (webAuthnLocallyRegistered) {
+          statusGlobalEl.textContent = "Seguridad Inactiva. Inicia sesión con WebAuthn (C) o recupera con mnemónica (D).";
+        } else {
+          statusGlobalEl.textContent = "Seguridad Inactiva. Crea identidad (A) o recupera con mnemónica (D).";
+        }
+      }
+
+      if (securityIsActive) {
+        displayUserInfoAndSetupListener();
+      } else {
+        if (userInfoSectionEl) userInfoSectionEl.style.display = 'none';
+        if (unsubscribeUserRoleListener) { unsubscribeUserRoleListener(); unsubscribeUserRoleListener = null; }
+      }
+    }
+
+    async function initializeApp() {
+      logAction("App: Iniciada. Creando instancia GDB...");
+      if (realtimeNodeLogDisplayEl) {
+        realtimeNodeLogDisplayEl.textContent = "Inicializando GDB y suscripción...";
+      }
+      db = new GraphDB("gdbWebAuthn_vFINAL_HTML");
+      try {
+        await db.ready;
+        logAction("App: GDB lista.");
+        await setupAutomaticRealtimeSubscription();
+      } catch (e) {
+        logAction("App: Error GDB: " + e.message); alert("Error GDB. Revisa consola.");
+        if (realtimeNodeLogDisplayEl) realtimeNodeLogDisplayEl.textContent = "Error inicializando GDB.";
+        if (statusGlobalEl) statusGlobalEl.textContent = "Error GDB.";
+        return;
+      }
+
+      rbac.setSecurityStateChangeCallback((securityState) => {
+        logAction(`App: Callback RBAC - Activo: ${securityState.isActive}, ETH: ${securityState.activeAddress}, WebAuthnSes: ${securityState.isWebAuthnProtected}, Volatil: ${securityState.hasVolatileIdentity}, WebAuthnReg: ${securityState.hasWebAuthnHardwareRegistration}`);
+
+        if ((securityState.isActive && !securityState.hasVolatileIdentity) || !securityState.isActive) {
+          currentVolatileIdentity = null;
+        }
+        updateUIState();
+
+        if (db && db.ready && !unsubscribeFromRealtimeTestNode) {
+          setupAutomaticRealtimeSubscription();
+        }
+      });
+
+      await rbac.createSecurityContext(db, SUPERADMIN_ETH_ADDRESSES);
+      logAction("App: Contexto de seguridad RBAC establecido.");
+    }
+
+    initializeApp();
+  </script>
+</body>
+
+</html>
