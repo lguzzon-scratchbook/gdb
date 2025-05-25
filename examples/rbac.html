@@ -379,10 +379,10 @@
         logAction(">>> P2P Sim: START.");
         if (!db || !db.securityManager) { logAction("P2P Sim: No db/SM."); return; }
         const simulatedTimestamp = db.hybridClock.now(); 
-        const fakeFormattedSignature = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcde";
+        const fakeFormattedSignature = "0x869d1bbcbd30c4283b187d08fee49388653f690ae2271995ff67d30c6f36cd4c";
         const realAddress = "0x62c48827e883f114821211673Dc309a29Aae7e6A"; // Fake address for simulation
         console.log("P2P Sim: Simulated timestamp:", simulatedTimestamp);
-        const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: {msg:"sim"}, timestamp: simulatedTimestamp, originUser: realAddress, originEthAddress: realAddress, signature: fakeFormattedSignature};
+        const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: { msg:"sim" }, timestamp: simulatedTimestamp, originUser: realAddress, originEthAddress: realAddress, signature: fakeFormattedSignature};
         logAction(`P2P Sim: Verifying op...`); updateUIState(true, "Simulating P2P...");
         try {
             const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
