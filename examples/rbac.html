@@ -379,7 +379,7 @@
         logAction(">>> P2P Sim: START.");
         if (!db || !db.securityManager) { logAction("P2P Sim: No db/SM."); return; }
         const simulatedTimestamp = db.hybridClock.now(); 
-        const fakeFormattedSignature = "0x869d1bbcbd30c4283b187d08fee49388653f690ae2271995ff67d30c6f36cd4c";
+        const fakeFormattedSignature = "0x975ff3abe5c7df0e95ab76f308f5b73ca0b803f1c7d74d44098bc75c6efd845c7908ff2b2e4b1a9bee653237475e59d17c13634042e4759154e70618850aa89e1c";
         const realAddress = "0x62c48827e883f114821211673Dc309a29Aae7e6A"; // Fake address for simulation
         console.log("P2P Sim: Simulated timestamp:", simulatedTimestamp);
         const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: { msg:"sim" }, timestamp: simulatedTimestamp, originUser: realAddress, originEthAddress: realAddress, signature: fakeFormattedSignature};
