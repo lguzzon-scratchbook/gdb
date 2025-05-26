@@ -206,6 +206,7 @@
 
       <button id="putLegitP2PBtn" disabled>A. Enviar 'put' LEGÍTIMO</button>
       <button id="putFakeSigP2PBtn" disabled>B. Enviar 'put' con FIRMA FALSA (Sim. Local)</button>
+      <button id="putNoPermissionP2PBtn" disabled>C. Enviar 'put' SIN PERMISO (Firma Válida)</button>
     </div>
 
 
@@ -264,6 +265,7 @@
     const realtimeNodeValueForTestInput = document.getElementById('realtimeNodeValueForTest');
     const putLegitP2PBtn = document.getElementById('putLegitP2PBtn');
     const putFakeSigP2PBtn = document.getElementById('putFakeSigP2PBtn');
+    const putNoPermissionP2PBtn = document.getElementById('putNoPermissionP2PBtn'); //
 
     const actionLogEl = document.getElementById('actionLog');
 
@@ -554,22 +556,6 @@
       finally { updateUIState(false); }
     });
 
-    // simulateMalformedSigBtnEl.addEventListener('click', async () => {
-    //   logAction(">>> P2P Sim: START.");
-    //   if (!db || !db.securityManager) { logAction("P2P Sim: No db/SM."); return; }
-    //   const simulatedTimestamp = db.hybridClock.now();
-    //   const fakeFormattedSignature = "0x975ff3abe5c7df0e95ab76f308f5b73ca0b803f1c7d74d44098bc75c6efd845c7908ff2b2e4b1a9bee653237475e59d17c13634042e4759154e70618850aa89e1c";
-    //   const realAddress = "0x62c48827e883f114821211673Dc309a29Aae7e6A"; // Fake address for simulation
-    //   console.log("P2P Sim: Simulated timestamp:", simulatedTimestamp);
-    //   const op = { type: 'put', id: 'p2p_sim_' + Date.now(), value: { msg: "sim" }, timestamp: simulatedTimestamp, originUser: realAddress, originEthAddress: realAddress, signature: fakeFormattedSignature };
-    //   logAction(`P2P Sim: Verifying op...`); updateUIState(true, "Simulating P2P...");
-    //   try {
-    //     const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
-    //     if (validatedOperations && validatedOperations.length > 0) { logAction("P2P Sim: VALIDATED! (Error in SM)."); }
-    //     else { logAction(`P2P Sim: NOT validated (expected).`); }
-    //   } catch (e) { logAction(`P2P Sim: ERROR: ${e.message}`); }
-    //   finally { updateUIState(false); logAction("<<< P2P Sim: END."); }
-    // });
 
     simulateMalformedSigBtnEl.addEventListener('click', async () => {
       logAction(">>> P2P Sim (Malformed): INICIO.");
@@ -581,7 +567,7 @@
       const realAddress = "0x62c48827e883f114821211673Dc309a29Aae7e6A"; // Fake address for simulation
       const fakeFormattedSignature = "0x975ff3abe5c7df0e95ab76f308f5b73ca0b803f1c7d74d44098bc75c6efd845c7908ff2b2e4b1a9bee653237475e59d17c13634042e4759154e70618850aa89e1c";
       const op = {
-        type: 'put',
+        type: 'insert',
         id: 'p2p_sim_malformed_' + Date.now(),
         value: { msg: "sim_malformed" },
         timestamp: simulatedTimestamp,
@@ -589,7 +575,7 @@
         originEthAddress: realAddress,
         signature: fakeFormattedSignature
       };
-      
+
       logAction(`P2P Sim (Malformed): Verificando op...`); updateUIState(true, "Simulando P2P (Malformed)...");
       try {
         const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
@@ -679,7 +665,7 @@
       const fakeFormattedSignature = "0x975ff3abe5c7df0e95ab76f308f5b73ca0b803f1c7d74d44098bc75c6efd845c7908ff2b2e4b1a9bee653237475e59d17c13634042e4759154e70618850aa89e1c";
 
       const maliciousOp = {
-        type: 'put',
+        type: 'insert',
         id: nodeId,
         value: nodeValue,
         timestamp: simulatedTimestamp,
@@ -704,6 +690,45 @@
       } catch (error) {
         logAction(`Put Falso P2P: Error en simulación: ${error.message}`);
         alert(`Error en Simulación Firma Falsa: ${error.message}`);
+      } finally {
+        updateUIState(false);
+      }
+    });
+
+    // --- NUEVO EVENT LISTENER ---
+    putNoPermissionP2PBtn.addEventListener('click', async () => {
+      if (!rbac.isSecurityActive() || !db) {
+        logAction("Put Sin Permiso: No conectado o GDB no lista.");
+        alert("Conéctate y espera a que GDB esté lista.");
+        return;
+      }
+      const nodeId = NODE_ID_FOR_REALTIME_TEST; // Usamos el mismo nodo de prueba
+      let nodeValue;
+      try {
+        nodeValue = JSON.parse(realtimeNodeValueForTestInput.value.trim());
+      } catch (e) {
+        logAction("Put Sin Permiso: Valor no es JSON válido.");
+        alert("El valor a escribir no es JSON válido.");
+        return;
+      }
+
+      const currentUserAddress = await rbac.getActiveEthAddress();
+      await rbac.assignRole(db, currentUserAddress, "guest");
+      logAction(`Put Sin Permiso: Usuario '${currentUserAddress}' intentando 'put' en '${nodeId}'. Su firma será válida, pero se espera fallo de permisos en el receptor.`);
+      updateUIState(true, "Enviando 'put' con firma válida (esperando fallo de permisos)...");
+
+      try {
+        // Simplemente hacemos db.put(). El SSM local firmará esto correctamente.
+        // El rechazo (si ocurre) será en el nodo receptor debido a la verificación de permisos RBAC.
+        const idResultado = await db.put(nodeValue, nodeId);
+        logAction(`Put Sin Permiso: Operación 'put' enviada para ID '${idResultado}'.`);
+        logAction(`Put Sin Permiso: El NODO RECEPTOR debe verificar los permisos RBAC. Si el rol de '${currentUserAddress}' no permite 'write', el receptor lo descartará.`);
+        alert(`'Put' (con firma válida) enviado desde '${currentUserAddress}'.\nObserva el log de suscripción y la consola del NAVEGADOR RECEPTOR para ver si fue aceptado o rechazado por permisos.`);
+      } catch (error) {
+        // Este catch sería para errores locales al hacer el put (ej. GDB no conectada),
+        // no para el rechazo por permisos en el receptor.
+        logAction(`Put Sin Permiso: Error local al enviar: ${error.message}`);
+        alert(`Error local al enviar 'Put Sin Permiso': ${error.message}`);
       } finally {
         updateUIState(false);
       }
@@ -734,6 +759,7 @@
       const realtimeTestOpsDisabled = isLoading || !securityIsActive || !db;
       putLegitP2PBtn.disabled = realtimeTestOpsDisabled;
       putFakeSigP2PBtn.disabled = realtimeTestOpsDisabled;
+      putNoPermissionP2PBtn.disabled = realtimeTestOpsDisabled;
 
 
       if (isLoading) {
