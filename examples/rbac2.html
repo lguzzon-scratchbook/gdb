@@ -484,19 +484,37 @@
       }
     });
 
+    // putDataBtnEl.addEventListener('click', async () => {
+    //   const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
+    //   let nodeValue;
+    //   try { nodeValue = JSON.parse(dataNodeValueWriteInput.value.trim()); }
+    //   catch (e) { logAction("Escritura: Valor no es JSON válido."); alert("Valor no es JSON."); return; }
+    //   if (!rbac.isSecurityActive()) { logAction("Escritura: Usuario no conectado."); alert("Conéctate primero."); return; }
+    //   try {
+    //     logAction(`Escritura: Iniciando para ID '${nodeId || "nuevo"}'.`);
+    //     updateUIState(true, "Firmando y guardando...");
+    //     const idResultado = await db.put(nodeValue, nodeId);
+    //     logAction(`Escritura: ¡Operación enviada para ID '${idResultado}'!`);
+    //     alert(`¡Dato guardado/actualizado! ID: ${idResultado}`);
+    //   } catch (error) { logAction(`Escritura: Error: ${error.message}`); alert(`Error: ${error.message}`); }
+    //   finally { updateUIState(false); }
+    // });
+
     putDataBtnEl.addEventListener('click', async () => {
       const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
       let nodeValue;
       try { nodeValue = JSON.parse(dataNodeValueWriteInput.value.trim()); }
-      catch (e) { logAction("Escritura: Valor no es JSON válido."); alert("Valor no es JSON."); return; }
-      if (!rbac.isSecurityActive()) { logAction("Escritura: Usuario no conectado."); alert("Conéctate primero."); return; }
+      catch (e) { logAction("Write: Value is not valid JSON."); alert("Value is not JSON."); return; }
+      if (!rbac.isSecurityActive()) { logAction("Write: User not connected."); alert("Connect first."); return; }
       try {
-        logAction(`Escritura: Iniciando para ID '${nodeId || "nuevo"}'.`);
-        updateUIState(true, "Firmando y guardando...");
-        const idResultado = await db.put(nodeValue, nodeId);
-        logAction(`Escritura: ¡Operación enviada para ID '${idResultado}'!`);
-        alert(`¡Dato guardado/actualizado! ID: ${idResultado}`);
-      } catch (error) { logAction(`Escritura: Error: ${error.message}`); alert(`Error: ${error.message}`); }
+        logAction(`Write: Starting for ID '${nodeId || "new"}'.`);
+        updateUIState(true, "Signing and saving...");
+        await rbac.executeWithPermission(db, 'write', async (userAddr) => {
+          const idResultado = await db.put(nodeValue, nodeId);
+          logAction(`Write: Operation completed for ID '${idResultado}'!`);
+          alert(`Data saved/updated! ID: ${idResultado}`);
+        });
+      } catch (error) { logAction(`Write: Error: ${error.message}`); alert(`Error: ${error.message}`); }
       finally { updateUIState(false); }
     });
 
