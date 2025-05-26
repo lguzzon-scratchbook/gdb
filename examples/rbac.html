@@ -493,12 +493,11 @@
       try {
         logAction(`Write: Starting for ID '${nodeId || "new"}'.`);
         updateUIState(true, "Signing and saving...");
-        // await rbac.executeWithPermission(db, 'write', async (userAddr) => {
-        //   const idResultado = await db.put(nodeValue, nodeId);
-        //   logAction(`Write: Operation completed for ID '${idResultado}'!`);
-        //   alert(`Data saved/updated! ID: ${idResultado}`);
-        // });
-        const idResultado = await db.put(nodeValue, nodeId);
+        await rbac.executeWithPermission(db, 'write', async (userAddr) => {
+          const idResultado = await db.put(nodeValue, nodeId);
+          logAction(`Write: Operation completed for ID '${idResultado}'!`);
+          alert(`Data saved/updated! ID: ${idResultado}`);
+        });
 
         logAction(`Write: Operation completed for ID '${idResultado}'!`);
       } catch (error) { logAction(`Write: Error: ${error.message}`); alert(`Error: ${error.message}`); }
