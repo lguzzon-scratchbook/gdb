@@ -484,6 +484,8 @@
       }
     });
 
+
+    
     putDataBtnEl.addEventListener('click', async () => {
       const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
       let nodeValue;
@@ -493,13 +495,11 @@
       try {
         logAction(`Write: Starting for ID '${nodeId || "new"}'.`);
         updateUIState(true, "Signing and saving...");
-        await rbac.executeWithPermission(db, 'write', async (userAddr) => {
-          const idResultado = await db.put(nodeValue, nodeId);
-          logAction(`Write: Operation completed for ID '${idResultado}'!`);
-          alert(`Data saved/updated! ID: ${idResultado}`);
-        });
 
-        logAction(`Write: Operation completed for ID '${idResultado}'!`);
+        const userEthAddress = await rbac.executeWithPermission(db, 'write');
+        const idResultado = await db.put(nodeValue, nodeId);
+
+        logAction(`Write: Success. ID: ${idResultado}. User: ${userEthAddress.substring(0,10)}...`); // Opcional
       } catch (error) { logAction(`Write: Error: ${error.message}`); alert(`Error: ${error.message}`); }
       finally { updateUIState(false); }
     });
@@ -551,10 +551,11 @@
       if (!rbac.isSecurityActive()) { alert("Connect first."); return; }
       try {
         logAction(`Role: Assigning '${role}' to '${targetEth}'.`); updateUIState(true, "Assigning role...");
-        await rbac.executeWithPermission(db, 'assignRole', async (userAddr) => {
-          await rbac.assignRole(db, targetEth, role);
-          logAction(`Role: Assignment completed (sent to GDB).`);
-        });
+
+        const userEthAddress = await rbac.executeWithPermission(db, 'assignRole');
+        await rbac.assignRole(db, targetEth, role);
+        logAction(`Role: Assignment completed (sent to GDB).`);
+        
         alert("Role assignment request sent.");
       } catch (error) { logAction(`Role: Error: ${error.message}`); alert(`Error: ${error.message}`); }
       finally { updateUIState(false); }
