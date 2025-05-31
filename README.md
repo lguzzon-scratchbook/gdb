@@ -1,6 +1,6 @@
-# GDB (GraphDB) + RBAC (Role Based Access Control)
+# GraphDB (gdb) – Decentralized P2P Graph Database
 
-Graph database with Role-Based Access Control (RBAC), P2P synchronization, and local storage in OPFS.
+A lightweight, decentralized graph database designed for modern web applications, offering real-time peer-to-peer synchronization, WebAuthn-based authentication, role-based access control (RBAC), and efficient local storage utilizing OPFS.
 
 ![GraphDB](https://i.imgur.com/7Xqrht1.png)
 
