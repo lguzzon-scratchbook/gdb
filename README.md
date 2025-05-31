@@ -60,7 +60,6 @@ This project is under active development. Do not use it in production environmen
 ### ✅ **Role Based Access Control (RBAC)**
 
 - Customizable role hierarchy (`superadmin`, `admin`, etc)
-- Authentication with Metamask
 - Biometric Registration and Authentication with WebAuthn
 - Granular permissions (`read`/`write`/`delete`/`publish`)
 - Role assignment with automatic expiration
@@ -71,7 +70,7 @@ This project is under active development. Do not use it in production environmen
 - Digital signature of critical operations
 - Real-time permission validation
 - Secure storage of roles in internal graph
-- [Security Implementation proposal](https://github.com/estebanrfp/gdb/wiki/RBAC-Security)
+- [Security Implementation](https://github.com/estebanrfp/gdb/wiki/RBAC-Security)
 
 > **Important Notice**: This project is currently in the research and development phase and is not yet ready for production use. Please wait until it reaches the beta or stable phase before deploying it in a live environment. Refer to the [Project Status](#project-status) section for more details.
 ---
@@ -176,6 +175,10 @@ For more details on contributing, check out our [Contributing Guidelines](https:
 This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](https://github.com/estebanrfp/gdb/wiki/Licenses/) in the Wiki.
 
 The source code of this project is licensed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](LICENSE) file.
+
+## Maintenance
+
+This repository provides minified builds of GraphDB (gdb), a decentralized P2P graph database designed for modern web applications. These builds are freely available for anyone to use and integrate into their projects. Please note that the source code is not publicly available at this time; only the minified versions are provided. The project is actively maintained by Esteban Fuster Pozzi.
 
 ## Author
 
