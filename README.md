@@ -1,4 +1,4 @@
-# GraphDB (gdb) – Decentralized P2P Graph Database
+# GraphDB (GDB) – Decentralized P2P Graph Database
 
 A lightweight, decentralized graph database designed for modern web applications, offering real-time peer-to-peer synchronization, WebAuthn-based authentication, role-based access control (RBAC), and efficient local storage utilizing OPFS.
 
