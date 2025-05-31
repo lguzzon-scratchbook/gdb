@@ -4,13 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GraphDB RBAC - WebAuthn Demo (Register, Login, Logout)</title>
-    <script type="module">
-        import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm";
-        import * as rbac from "https://cdn.jsdelivr.net/npm/gdb-p2p/dist/rbac.min.js/+esm";
-        
-        window.GraphDB = GraphDB;
-        window.rbac = rbac;
-    </script>
+
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -132,6 +126,9 @@
     </div>
 
     <script type="module">
+        import { GraphDB } from "../dist/index.js";
+        import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
+
         // DOM Elements
         const statusArea = document.getElementById('statusArea');
         const notLoggedInSection = document.getElementById('notLoggedInSection');
@@ -148,7 +145,6 @@
         const sessionWebAuthnStatusElem = document.getElementById('sessionWebAuthnStatus');
         const btnLogout = document.getElementById('btnLogout');
 
-        let db;
         let volatileIdentity = null; // Stores { address, mnemonic, privateKey }
 
         function updateStatus(message, isError = false) {
@@ -195,31 +191,26 @@
             }
         }
         
-        async function initializeApp() {
-            if (!window.GraphDB || !window.rbac) {
-                updateStatus("GraphDB or RBAC library not loaded.", true);
-                return;
-            }
-            
+        async function initializeApp() {            
             try {
                 updateStatus("Initializing GraphDB...");
-                db = new window.GraphDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
-                await db.ready;
+                let db = new GraphDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
+  
                 updateStatus("GraphDB ready. Initializing RBAC Security Context...");
 
-                await window.rbac.createSecurityContext(db); 
+                await rbac.createSecurityContext(db); 
                 
                 // Set the callback that will manage UI updates
-                window.rbac.setSecurityStateChangeCallback(updateUI);
+                rbac.setSecurityStateChangeCallback(updateUI);
 
                 // Manually trigger an initial UI update based on the current state
                 // This is important because createSecurityContext might silently log in a user via WebAuthn
                 const initialState = {
-                    isActive: window.rbac.isSecurityActive(),
-                    activeAddress: window.rbac.getActiveEthAddress(),
-                    isWebAuthnProtected: window.rbac.isCurrentSessionProtectedByWebAuthn(),
-                    hasVolatileIdentity: !!(volatileIdentity || window.rbac.getMnemonicForDisplayAfterRegistrationOrRecovery()),
-                    hasWebAuthnHardwareRegistration: window.rbac.hasExistingWebAuthnRegistration()
+                    isActive: rbac.isSecurityActive(),
+                    activeAddress: rbac.getActiveEthAddress(),
+                    isWebAuthnProtected: rbac.isCurrentSessionProtectedByWebAuthn(),
+                    hasVolatileIdentity: !!(volatileIdentity || rbac.getMnemonicForDisplayAfterRegistrationOrRecovery()),
+                    hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
                 };
                 updateUI(initialState); // This will correctly set button states on page load
 
@@ -236,7 +227,7 @@
             try {
                 updateStatus("Generating new identity...");
                 // This will also clear any existing session, if any
-                volatileIdentity = await window.rbac.startNewUserRegistration(); 
+                volatileIdentity = await rbac.startNewUserRegistration(); 
                 
                 if (volatileIdentity) {
                     ethAddressElem.textContent = volatileIdentity.address;
@@ -258,7 +249,7 @@
             }
             try {
                 updateStatus("Starting WebAuthn registration... Follow browser prompts.");
-                const protectedAddress = await window.rbac.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey); 
+                const protectedAddress = await rbac.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey); 
                 
                 if (protectedAddress) {
                     updateStatus(`Identity ${protectedAddress} protected with WebAuthn & session started!`);
@@ -275,7 +266,7 @@
         btnLoginWebAuthn.addEventListener('click', async () => {
             try {
                 updateStatus("Attempting WebAuthn login... Follow browser prompts.");
-                const loggedInAddress = await window.rbac.loginCurrentUserWithWebAuthn();
+                const loggedInAddress = await rbac.loginCurrentUserWithWebAuthn();
                 if (loggedInAddress) {
                     updateStatus(`Successfully logged in with WebAuthn as ${loggedInAddress}!`);
                     // UI updates via securityStateChangeCallback
@@ -290,16 +281,16 @@
         btnLogout.addEventListener('click', async () => {
             try {
                 updateStatus("Logging out...");
-                await window.rbac.clearSecurity();
+                await rbac.clearSecurity();
                 updateStatus("Successfully logged out.");
                 volatileIdentity = null; // Ensure no lingering volatile identity
                 // UI updates via securityStateChangeCallback. Force one if needed.
                  const refreshedState = { // Re-fetch state after logout
-                    isActive: window.rbac.isSecurityActive(),
-                    activeAddress: window.rbac.getActiveEthAddress(),
-                    isWebAuthnProtected: window.rbac.isCurrentSessionProtectedByWebAuthn(),
+                    isActive: rbac.isSecurityActive(),
+                    activeAddress: rbac.getActiveEthAddress(),
+                    isWebAuthnProtected: rbac.isCurrentSessionProtectedByWebAuthn(),
                     hasVolatileIdentity: false, 
-                    hasWebAuthnHardwareRegistration: window.rbac.hasExistingWebAuthnRegistration()
+                    hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
                 };
                 updateUI(refreshedState);
 
