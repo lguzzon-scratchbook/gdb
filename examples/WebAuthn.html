@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GraphDB RBAC - WebAuthn Registration Demo</title>
+    <title>GraphDB RBAC - WebAuthn Demo (Register, Login, Logout)</title>
     <script type="module">
-        // Import GraphDB and RBAC module from CDN
-        // Ensure these URLs are up-to-date if needed.
         import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm";
         import * as rbac from "https://cdn.jsdelivr.net/npm/gdb-p2p/dist/rbac.min.js/+esm";
         
-        // Make them globally accessible for easier interaction in this simple demo
         window.GraphDB = GraphDB;
         window.rbac = rbac;
     </script>
@@ -45,8 +42,14 @@
             border-radius: 5px; 
             cursor: pointer; 
             font-size: 16px;
-            display: block; /* Make buttons take full width */
+            display: block;
             width: 100%;
+        }
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
         }
         button:hover { 
             background-color: #1558b0; 
@@ -61,6 +64,7 @@
             border: 1px solid #ddd; 
             border-radius: 5px; 
             background-color: #e9ecef;
+            word-wrap: break-word;
         }
         .info code {
             background-color: #d4d4d4;
@@ -79,46 +83,74 @@
         .hidden {
             display: none;
         }
+        .auth-actions, .session-actions {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>WebAuthn Registration Demo</h1>
-        <p>This demo shows how to generate a new identity and protect it using WebAuthn with the GDB RBAC module.</p>
+        <h1>WebAuthn Demo</h1>
+        <p>Register a new identity, protect it with WebAuthn, log out, and log back in using WebAuthn.</p>
 
-        <!-- Step 1: Generate Identity -->
-        <button id="btnGenerateIdentity">1. Generate New ETH Identity</button>
-        
-        <div id="identityDetails" class="info hidden">
-            <p><strong>New Ethereum Address:</strong> <code id="ethAddress"></code></p>
-            <p><strong>Your Mnemonic Phrase:</strong> <code id="mnemonicPhrase"></code></p>
-            <div class="warning">
-                ⚠️ IMPORTANT: Securely save this Mnemonic Phrase! It's your backup if WebAuthn fails or you change devices.
+        <div id="statusArea" class="status">Status: Awaiting initialization...</div>
+
+        <!-- Actions when NOT logged in -->
+        <div id="notLoggedInSection">
+            <div class="auth-actions">
+                <h3>New User?</h3>
+                <button id="btnGenerateIdentity">1. Generate New ETH Identity</button>
+                <div id="identityDetails" class="info hidden">
+                    <p><strong>New Ethereum Address:</strong> <code id="ethAddress"></code></p>
+                    <p><strong>Your Mnemonic Phrase:</strong> <code id="mnemonicPhrase"></code></p>
+                    <div class="warning">
+                        ⚠️ IMPORTANT: Securely save this Mnemonic Phrase!
+                    </div>
+                </div>
+                <button id="btnProtectWebAuthn" disabled>2. Protect Current Identity with WebAuthn & Login</button>
+            </div>
+
+            <div class="auth-actions">
+                <h3>Existing User with WebAuthn?</h3>
+                <button id="btnLoginWebAuthn" disabled>Login with WebAuthn</button>
             </div>
         </div>
 
-        <!-- Step 2: Protect with WebAuthn -->
-        <button id="btnProtectWebAuthn" disabled>2. Protect Current Identity with WebAuthn</button>
-
-        <!-- Status Area -->
-        <div id="statusArea" class="status">
-            Status: Awaiting initialization...
+        <!-- Actions when logged in -->
+        <div id="loggedInSection" class="hidden">
+            <div class="info">
+                <p><strong>Logged In As:</strong> <code id="loggedInUserAddress"></code></p>
+                <p>Session protected by WebAuthn: <span id="sessionWebAuthnStatus"></span></p>
+            </div>
+            <div class="session-actions">
+                <button id="btnLogout" class="secondary">Logout</button>
+            </div>
         </div>
+
     </div>
 
     <script type="module">
-        // Get references to DOM elements
+        // DOM Elements
+        const statusArea = document.getElementById('statusArea');
+        const notLoggedInSection = document.getElementById('notLoggedInSection');
+        const loggedInSection = document.getElementById('loggedInSection');
+        
         const btnGenerateIdentity = document.getElementById('btnGenerateIdentity');
         const identityDetailsDiv = document.getElementById('identityDetails');
         const ethAddressElem = document.getElementById('ethAddress');
         const mnemonicPhraseElem = document.getElementById('mnemonicPhrase');
         const btnProtectWebAuthn = document.getElementById('btnProtectWebAuthn');
-        const statusArea = document.getElementById('statusArea');
+        const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
+        
+        const loggedInUserAddressElem = document.getElementById('loggedInUserAddress');
+        const sessionWebAuthnStatusElem = document.getElementById('sessionWebAuthnStatus');
+        const btnLogout = document.getElementById('btnLogout');
 
         let db;
-        let volatileIdentity = null; // To store { address, mnemonic, privateKey } from startNewUserRegistration
+        let volatileIdentity = null; // Stores { address, mnemonic, privateKey }
 
-        // Function to update status messages
         function updateStatus(message, isError = false) {
             statusArea.textContent = `Status: ${message}`;
             statusArea.style.color = isError ? '#d93025' : '#333';
@@ -126,7 +158,43 @@
             console.log(message);
         }
 
-        // Initialize the GraphDB and RBAC security context
+        // Main UI update function based on security state
+        function updateUI(securityState) {
+            if (!securityState) {
+                updateStatus("Security context not active or state unavailable.", true);
+                return;
+            }
+
+            if (securityState.isActive) {
+                notLoggedInSection.classList.add('hidden');
+                loggedInSection.classList.remove('hidden');
+                identityDetailsDiv.classList.add('hidden'); // Hide registration details
+
+                loggedInUserAddressElem.textContent = securityState.activeAddress;
+                sessionWebAuthnStatusElem.textContent = securityState.isWebAuthnProtected ? "Yes" : "No (Mnemonic/Other)";
+                updateStatus(`Logged in as ${securityState.activeAddress.substring(0,10)}...`);
+            } else {
+                notLoggedInSection.classList.remove('hidden');
+                loggedInSection.classList.add('hidden');
+                
+                btnGenerateIdentity.disabled = false;
+                // Enable WebAuthn login button only if a registration exists for this site
+                btnLoginWebAuthn.disabled = !securityState.hasWebAuthnHardwareRegistration;
+                updateStatus(securityState.hasWebAuthnHardwareRegistration ? "Ready. Or login with WebAuthn if registered." : "Ready for new identity generation.");
+            }
+
+            // Handle volatile identity display (newly generated, not yet protected)
+            if (securityState.hasVolatileIdentity && !securityState.isActive) {
+                identityDetailsDiv.classList.remove('hidden');
+                btnProtectWebAuthn.disabled = false;
+            } else {
+                identityDetailsDiv.classList.add('hidden');
+                if (!securityState.isActive) { // Only re-enable if not logged in
+                    btnProtectWebAuthn.disabled = true;
+                }
+            }
+        }
+        
         async function initializeApp() {
             if (!window.GraphDB || !window.rbac) {
                 updateStatus("GraphDB or RBAC library not loaded.", true);
@@ -135,34 +203,28 @@
             
             try {
                 updateStatus("Initializing GraphDB...");
-                db = new window.GraphDB("webAuthnDemoDB"); // Create a GDB instance
-                await db.ready; // Wait for DB to be ready
+                db = new window.GraphDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
+                await db.ready;
                 updateStatus("GraphDB ready. Initializing RBAC Security Context...");
 
-                // Initialize the RBAC security context for the GDB instance.
-                // No superAdmins needed for this basic demo.
                 await window.rbac.createSecurityContext(db); 
-                updateStatus("RBAC Security Context Initialized. Ready to generate identity.");
+                
+                // Set the callback that will manage UI updates
+                window.rbac.setSecurityStateChangeCallback(updateUI);
 
-                // Set a callback for security state changes (optional for this simple demo, but good practice)
-                window.rbac.setSecurityStateChangeCallback(securityState => {
-                    if (securityState) {
-                        console.log("Security state changed:", securityState);
-                        // Example: Update UI if WebAuthn becomes available/unavailable
-                        if (securityState.hasWebAuthnHardwareRegistration) {
-                            console.log("WebAuthn hardware/browser support detected.");
-                        }
-                         // If a user is logged in (e.g. after WebAuthn registration),
-                         // you might disable registration buttons.
-                        if (securityState.isActive) {
-                            btnGenerateIdentity.disabled = true;
-                            btnProtectWebAuthn.disabled = true;
-                            updateStatus(`Session active for ${securityState.activeAddress}. Refresh to register new identity.`);
-                        } else {
-                            btnGenerateIdentity.disabled = false;
-                        }
-                    }
-                });
+                // Manually trigger an initial UI update based on the current state
+                // This is important because createSecurityContext might silently log in a user via WebAuthn
+                const initialState = {
+                    isActive: window.rbac.isSecurityActive(),
+                    activeAddress: window.rbac.getActiveEthAddress(),
+                    isWebAuthnProtected: window.rbac.isCurrentSessionProtectedByWebAuthn(),
+                    hasVolatileIdentity: !!(volatileIdentity || window.rbac.getMnemonicForDisplayAfterRegistrationOrRecovery()),
+                    hasWebAuthnHardwareRegistration: window.rbac.hasExistingWebAuthnRegistration()
+                };
+                updateUI(initialState); // This will correctly set button states on page load
+
+                updateStatus("RBAC Initialized. " + (initialState.hasWebAuthnHardwareRegistration ? "WebAuthn registration found. " : "No prior WebAuthn registration found. ") + "Ready.");
+
 
             } catch (error) {
                 updateStatus(`Initialization Error: ${error.message}`, true);
@@ -170,57 +232,82 @@
             }
         }
 
-        // Event listener for "Generate New ETH Identity" button
         btnGenerateIdentity.addEventListener('click', async () => {
             try {
                 updateStatus("Generating new identity...");
-                // Clears any previous security session and generates a new ETH identity in memory
+                // This will also clear any existing session, if any
                 volatileIdentity = await window.rbac.startNewUserRegistration(); 
                 
                 if (volatileIdentity) {
                     ethAddressElem.textContent = volatileIdentity.address;
                     mnemonicPhraseElem.textContent = volatileIdentity.mnemonic;
-                    identityDetailsDiv.classList.remove('hidden');
-                    
-                    btnProtectWebAuthn.disabled = false; // Enable the next step
-                    updateStatus("New identity generated. SAVE YOUR MNEMONIC and proceed to WebAuthn protection.");
+                    // The securityStateChangeCallback will handle showing identityDetailsDiv
+                    updateStatus("New identity generated. SAVE YOUR MNEMONIC.");
                 } else {
                     updateStatus("Failed to generate new identity.", true);
                 }
             } catch (error) {
                 updateStatus(`Error generating identity: ${error.message}`, true);
-                console.error("Error in startNewUserRegistration:", error);
             }
         });
 
-        // Event listener for "Protect Current Identity with WebAuthn" button
         btnProtectWebAuthn.addEventListener('click', async () => {
             if (!volatileIdentity || !volatileIdentity.privateKey) {
-                updateStatus("No identity generated or private key missing. Please generate an identity first.", true);
+                updateStatus("No identity to protect. Please generate one first.", true);
                 return;
             }
-
             try {
                 updateStatus("Starting WebAuthn registration... Follow browser prompts.");
-                // Protects the private key from volatileIdentity using WebAuthn
-                // and activates a session with this identity.
                 const protectedAddress = await window.rbac.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey); 
                 
                 if (protectedAddress) {
-                    updateStatus(`Successfully protected identity for ${protectedAddress} with WebAuthn! Session is now active.`);
-                    btnProtectWebAuthn.disabled = true; // Optionally disable after successful registration
-                    btnGenerateIdentity.disabled = true; // User is now "logged in"
-                    volatileIdentity = null; // Clear the temporary identity from memory
+                    updateStatus(`Identity ${protectedAddress} protected with WebAuthn & session started!`);
+                    volatileIdentity = null; // Clear after protection
+                    // UI updates via securityStateChangeCallback
                 } else {
-                    updateStatus("WebAuthn protection failed. User may have cancelled or an error occurred. Check browser console.", true);
+                    updateStatus("WebAuthn protection failed. User cancelled or error.", true);
                 }
             } catch (error) {
-                updateStatus(`WebAuthn protection error: ${error.message}. Ensure HTTPS/localhost and browser support.`, true);
-                console.error("Error in protectCurrentIdentityWithWebAuthn:", error);
+                updateStatus(`WebAuthn protection error: ${error.message}`, true);
             }
         });
 
-        // Start the application initialization
+        btnLoginWebAuthn.addEventListener('click', async () => {
+            try {
+                updateStatus("Attempting WebAuthn login... Follow browser prompts.");
+                const loggedInAddress = await window.rbac.loginCurrentUserWithWebAuthn();
+                if (loggedInAddress) {
+                    updateStatus(`Successfully logged in with WebAuthn as ${loggedInAddress}!`);
+                    // UI updates via securityStateChangeCallback
+                } else {
+                    updateStatus("WebAuthn login failed. No registration or user cancelled.", true);
+                }
+            } catch (error) {
+                updateStatus(`WebAuthn login error: ${error.message}`, true);
+            }
+        });
+        
+        btnLogout.addEventListener('click', async () => {
+            try {
+                updateStatus("Logging out...");
+                await window.rbac.clearSecurity();
+                updateStatus("Successfully logged out.");
+                volatileIdentity = null; // Ensure no lingering volatile identity
+                // UI updates via securityStateChangeCallback. Force one if needed.
+                 const refreshedState = { // Re-fetch state after logout
+                    isActive: window.rbac.isSecurityActive(),
+                    activeAddress: window.rbac.getActiveEthAddress(),
+                    isWebAuthnProtected: window.rbac.isCurrentSessionProtectedByWebAuthn(),
+                    hasVolatileIdentity: false, 
+                    hasWebAuthnHardwareRegistration: window.rbac.hasExistingWebAuthnRegistration()
+                };
+                updateUI(refreshedState);
+
+            } catch (error) {
+                updateStatus(`Logout error: ${error.message}`, true);
+            }
+        });
+
         initializeApp();
     </script>
 </body>
