@@ -95,7 +95,6 @@
         const logArea = document.getElementById('logArea');
 
         // --- APP STATE ---
-        let gdb = null;
         let currentUnsubscribe = null;
         let lastKnownWatchedNodeId = null;
 
@@ -143,11 +142,11 @@
             log(`Initializing GDB: ${dbName}...`);
 
             try {
-                gdb = new GraphDB(dbName);
-                await gdb.ready;
+                let db = new GraphDB(dbName);
+
                 log("GDB Ready.", 'success');
                 
-                await rbac.createSecurityContext(gdb); // No superadmins for this simple test
+                await rbac.createSecurityContext(db); // No superadmins for this simple test
                 rbac.setSecurityStateChangeCallback(securityUpdateHandler);
                 log("RBAC Context Ready. Attempting session restore...", 'success');
 
