@@ -496,7 +496,7 @@
         logAction(`Write: Starting for ID '${nodeId || "new"}'.`);
         updateUIState(true, "Signing and saving...");
 
-        const userEthAddress = await rbac.executeWithPermission(db, 'write');
+        const userEthAddress = await rbac.executeWithPermission('write');
         const idResultado = await db.put(nodeValue, nodeId);
 
         logAction(`Write: Success. ID: ${idResultado}. User: ${userEthAddress.substring(0,10)}...`); // Opcional
@@ -552,8 +552,8 @@
       try {
         logAction(`Role: Assigning '${role}' to '${targetEth}'.`); updateUIState(true, "Assigning role...");
 
-        const userEthAddress = await rbac.executeWithPermission(db, 'assignRole');
-        await rbac.assignRole(db, targetEth, role);
+        const userEthAddress = await rbac.executeWithPermission('assignRole');
+        await rbac.assignRole(targetEth, role);
         logAction(`Role: Assignment completed (sent to GDB).`);
         
         alert("Role assignment request sent.");
@@ -716,7 +716,7 @@
       }
 
       const currentUserAddress = await rbac.getActiveEthAddress();
-      // await rbac.assignRole(db, currentUserAddress, "guest");
+      // await rbac.assignRole(currentUserAddress, "guest");
       logAction(`No Permission Put: User '${currentUserAddress}' attempting 'put' on '${nodeId}'. Signature will be valid, but permission failure expected at receiver.`);
       updateUIState(true, "Sending 'put' with valid signature (expecting permission failure)...");
 
@@ -795,7 +795,6 @@
       }
       db = new GraphDB("gdbWebAuthn_vFINAL_HTML");
       try {
-        await db.ready;
         logAction("App: GDB ready.");
         await setupAutomaticRealtimeSubscription();
       } catch (e) {
@@ -813,7 +812,7 @@
         }
         updateUIState();
 
-        if (db && db.ready && !unsubscribeFromRealtimeTestNode) {
+        if (db && !unsubscribeFromRealtimeTestNode) {
           setupAutomaticRealtimeSubscription();
         }
       });
