@@ -194,7 +194,7 @@
         async function initializeApp() {            
             try {
                 updateStatus("Initializing GraphDB...");
-                let db = new GraphDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
+                const db = new GraphDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
   
                 updateStatus("GraphDB ready. Initializing RBAC Security Context...");
 
