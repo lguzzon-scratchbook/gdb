@@ -193,7 +193,7 @@
         const logConsole = document.getElementById('logConsole');
 
         // App State
-        let gdbInstanceInternal = null; // Renamed to avoid conflict if GraphDB is global
+        let db = null; // Renamed to avoid conflict if GraphDB is global
         let volatileIdentityCache = null;
 
         // --- Logging Utility ---
@@ -238,11 +238,11 @@
                 newIdentityInfo.classList.add('hidden');
             }
 
-            if (securityState.isActive && securityState.activeAddress && gdbInstanceInternal) {
+            if (securityState.isActive && securityState.activeAddress && db) {
                 try {
                     const userNodeKey = `user:${securityState.activeAddress}`;
-                    // Use gdbInstanceInternal.get because rbac.get would try to decrypt, which might not be desired for a user node
-                    const userNodeQuery = await gdbInstanceInternal.get(userNodeKey); 
+                    // Use db.get because rbac.get would try to decrypt, which might not be desired for a user node
+                    const userNodeQuery = await db.get(userNodeKey); 
                     const userNode = userNodeQuery.result;
                     let role = 'N/A (Node not found/synced)';
                     if (userNode && userNode.value) {
@@ -275,7 +275,7 @@
         }
         
         async function initializeDBAndRBAC() {
-            if (gdbInstanceInternal) {
+            if (db) {
                 logToUI("DB already initialized.", "warn");
                 return;
             }
@@ -288,12 +288,12 @@
             initStatus.textContent = "Initializing...";
             logToUI(`Initializing GDB with name: ${dbName}...`);
             try {
-                gdbInstanceInternal = new GraphDB(dbName);
-                await gdbInstanceInternal.ready; // GDB's internal ready promise
+                db = new GraphDB(dbName);
+
                 logToUI("GDB instance ready.", "success");
 
                 const superAdmins = superAdminInput.value.split(',').map(s => s.trim()).filter(Boolean);
-                await rbac.createSecurityContext(gdbInstanceInternal, superAdmins);
+                await rbac.createSecurityContext(superAdmins);
                 rbac.setSecurityStateChangeCallback(handleSecurityStateChange);
                 logToUI("RBAC Security Context initialized. Attempting to restore session...", "success");
                 
@@ -316,14 +316,14 @@
             } catch (error) {
                 logToUI(`Initialization failed: ${error.message || error}`, "error");
                 initStatus.textContent = "Initialization failed.";
-                gdbInstanceInternal = null;
+                db = null;
             }
         }
         btnInitializeDB.addEventListener('click', initializeDBAndRBAC);
         
         // --- Identity Actions ---
         btnRegisterNewUser.addEventListener('click', async () => {
-            if (!gdbInstanceInternal) { logToUI("Initialize DB first!", "error"); return; }
+            if (!db) { logToUI("Initialize DB first!", "error"); return; }
             logToUI("Registering new user (Mnemonic)...", "info");
             try {
                 const identity = await rbac.startNewUserRegistration();
@@ -336,7 +336,7 @@
         });
 
         btnProtectWebAuthn.addEventListener('click', async () => {
-            if (!gdbInstanceInternal) { logToUI("Initialize DB first!", "error"); return; }
+            if (!db) { logToUI("Initialize DB first!", "error"); return; }
             if (!volatileIdentityCache || !volatileIdentityCache.privateKey) {
                  logToUI("No volatile identity to protect. Generate one first.", "error"); return;
             }
@@ -351,7 +351,7 @@
         });
 
         btnLoginWebAuthn.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */ 
-            if (!gdbInstanceInternal) { logToUI("Initialize DB first!", "error"); return; }
+            if (!db) { logToUI("Initialize DB first!", "error"); return; }
             logToUI("Attempting WebAuthn login...", "info");
             try {
                 const address = await rbac.loginCurrentUserWithWebAuthn();
@@ -364,7 +364,7 @@
         });
         
         btnLoginMnemonic.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */ 
-            if (!gdbInstanceInternal) { logToUI("Initialize DB first!", "error"); return; }
+            if (!db) { logToUI("Initialize DB first!", "error"); return; }
             const mnemonic = mnemonicLoginInput.value.trim();
             if (!mnemonic) { logToUI("Please enter mnemonic.", "error"); return; }
             logToUI("Attempting mnemonic login...", "info");
@@ -381,7 +381,7 @@
         });
 
         btnLogout.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */ 
-            if (!gdbInstanceInternal) { logToUI("Initialize DB first!", "error"); return; }
+            if (!db) { logToUI("Initialize DB first!", "error"); return; }
             logToUI("Logging out...", "info");
             try {
                 await rbac.clearSecurity();
@@ -460,7 +460,7 @@
 
         // --- RBAC Permissioned Actions ---
         btnWritePublicData.addEventListener('click', async () => {
-            if (!gdbInstanceInternal || !rbac.isSecurityActive()) { logToUI("Login required for permissioned writes.", "error"); return; }
+            if (!db || !rbac.isSecurityActive()) { logToUI("Login required for permissioned writes.", "error"); return; }
             const dataValue = publicDataValueInput.value.trim();
             let nodeId = publicDataNodeIdInput.value.trim();
             if (!dataValue) { logToUI("No data to write.", "warn"); return; }
@@ -471,9 +471,9 @@
                 logToUI(`User ${currentUserAddress.substring(0,10)}... has 'write' permission. Proceeding...`, "info");
 
                 nodeId = nodeId || ("publicData:" + Date.now());
-                // Using gdbInstanceInternal.put directly as this is 'public' (not using rbac.put for encryption)
+                // Using db.put directly as this is 'public' (not using rbac.put for encryption)
                 // but the 'write' permission was checked by rbac.executeWithPermission
-                await gdbInstanceInternal.put(
+                await db.put(
                     { publicInfo: dataValue, owner: currentUserAddress, writtenAt: new Date().toISOString() },
                     nodeId,
                     { _gdbSecurityMeta: { encrypted: false } } // Explicitly not encrypted
@@ -485,7 +485,7 @@
         });
 
         btnAssignRole.addEventListener('click', async () => {
-            if (!gdbInstanceInternal || !rbac.isSecurityActive()) { logToUI("Login required to assign roles.", "error"); return; }
+            if (!db || !rbac.isSecurityActive()) { logToUI("Login required to assign roles.", "error"); return; }
             // ... (same logic as before, but rbac.executeWithPermission and rbac.assignRole will use internal gdbInstance)
             const targetUser = targetUserEthInput.value.trim();
             const roleToAssign = roleToAssignInput.value.trim();
