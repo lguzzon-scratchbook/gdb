@@ -4,14 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GDB RBAC Chat</title>
-    <script type="module">
-        // Ensure this path is correct if rbac.min.js is hosted elsewhere or in a different structure.
-        // Using jsdelivr for both gdb-p2p and its rbac module (assuming rbac.min.js is in dist of gdb-p2p package)
-        import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm";
-        import * as rbac from "https://cdn.jsdelivr.net/npm/gdb-p2p/dist/rbac.min.js/+esm";
-        window.GraphDB = GraphDB; // Make accessible for easier debugging if needed
-        window.rbac = rbac;       // Make accessible
-    </script>
+
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
         .container { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
@@ -172,11 +165,11 @@
             try {
                 statusBar.textContent = "Status: Initializing DB...";
                 db = new GraphDB("rbacChatAppDB");
-                await db.ready;
+
                 statusBar.textContent = "Status: DB Ready. Initializing Security Context...";
 
                 rbac.setCustomRoles(CHAT_APP_ROLES);
-                await rbac.createSecurityContext(db, SUPERADMIN_ADDRESSES);
+                await rbac.createSecurityContext(SUPERADMIN_ADDRESSES);
                 rbac.setSecurityStateChangeCallback(updateUI);
                 
                 // Trigger initial UI update based on current state (e.g. from silent WebAuthn login)
@@ -348,7 +341,7 @@
 
             try {
                 // Check permission to send message (defined as 'write' in custom roles)
-                const senderAddress = await rbac.executeWithPermission(db, 'write'); 
+                const senderAddress = await rbac.executeWithPermission('write'); 
                 
                 const messageData = {
                     type: 'message',
