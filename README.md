@@ -21,6 +21,8 @@ A lightweight, decentralized graph database designed for modern web applications
 
 ![npm package minimized gzipped size](https://img.shields.io/bundlejs/size/gdb-p2p)
 
+[![Liberapay receiving](https://img.shields.io/liberapay/receives/estebanrfp.svg?logo=liberapay)](https://liberapay.com/estebanrfp/donate)
+
 <!-- ### Nostr.band Followers
 
 ![Nostr.band Followers](https://img.shields.io/nostr-band/followers/npub18c556t7n8xa3df2q82rwxejfglw5przds7sqvefylzjh8tjne28qld0we7) -->
