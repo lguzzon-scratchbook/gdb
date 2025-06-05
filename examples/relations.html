@@ -9,7 +9,8 @@
   <style>
     /* --- Base Styles --- */
     html {
-      box-sizing: border-box; /* Better sizing calculations */
+      box-sizing: border-box;
+      /* Better sizing calculations */
     }
 
     *,
@@ -19,25 +20,35 @@
     }
 
     body {
-      font-family: 'Roboto', Arial, sans-serif; /* Prioritize Roboto if available */
+      font-family: 'Roboto', Arial, sans-serif;
+      /* Prioritize Roboto if available */
       margin: 0;
       padding: 0;
-      display: grid; /* Use CSS Grid for layout */
-      grid-template-columns: 280px 1fr; /* Thin sidebar, rest for graph */
-      grid-template-rows: 1fr; /* Single row taking full height */
-      min-height: 100vh; /* Ensure body takes at least full viewport height */
-      background-color: #f4f4f4; /* Light background for the page */
+      display: grid;
+      /* Use CSS Grid for layout */
+      grid-template-columns: 280px 1fr;
+      /* Thin sidebar, rest for graph */
+      grid-template-rows: 1fr;
+      /* Single row taking full height */
+      min-height: 100vh;
+      /* Ensure body takes at least full viewport height */
+      background-color: #f4f4f4;
+      /* Light background for the page */
     }
 
     /* --- Controls Sidebar (#controls) --- */
     #controls {
-      grid-column: 1 / 2; /* Place in the first column */
-      background-color: #ffffff; /* White background for sidebar */
+      grid-column: 1 / 2;
+      /* Place in the first column */
+      background-color: #ffffff;
+      /* White background for sidebar */
       padding: 25px 20px;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid #e0e0e0; /* Subtle separator */
-      overflow-y: auto; /* Add scroll if content overflows */
+      border-right: 1px solid #e0e0e0;
+      /* Subtle separator */
+      overflow-y: auto;
+      /* Add scroll if content overflows */
     }
 
     #controls h2 {
@@ -45,115 +56,152 @@
       color: #67b0f4;
       margin-top: 0;
       margin-bottom: 25px;
-      font-weight: 500; /* Material-like font weight */
+      font-weight: 500;
+      /* Material-like font weight */
     }
 
     /* --- Graph Area (#cy) --- */
     #cy {
-      grid-column: 2 / 3; /* Place in the second column */
+      grid-column: 2 / 3;
+      /* Place in the second column */
       width: 100%;
       /* Height will be controlled by the grid row (1fr) */
-      height: 100%; /* Override potential fixed height */
-      min-height: 400px; /* Ensure a minimum height */
-      border: none; /* Remove the original border */
-      background-color: #ffffff; /* White background for graph area */
+      height: 100%;
+      /* Override potential fixed height */
+      min-height: 400px;
+      /* Ensure a minimum height */
+      border: none;
+      /* Remove the original border */
+      background-color: #ffffff;
+      /* White background for graph area */
       /* Add some padding *around* the graph area */
       padding: 15px;
-      position: relative; /* Needed for cytoscape rendering */
+      position: relative;
+      /* Needed for cytoscape rendering */
     }
 
 
     /* --- Material Design Inspired Input/Button Styles --- */
     input[type="text"] {
-      margin: 0 0 15px 0; /* Consistent bottom margin */
+      margin: 0 0 15px 0;
+      /* Consistent bottom margin */
       padding: 12px 8px;
       font-size: 16px;
       border: none;
-      border-bottom: 1px solid #ccc;
-      background-color: #f9f9f9; /* Slightly off-white */
-      border-radius: 4px 4px 0 0; /* Slight rounding at top */
+      /* border-bottom: 1px solid #ccc; */
+      background-color: #f9f9f9;
+      /* Slightly off-white */
+      border-radius: 4px 4px 0 0;
+      /* Slight rounding at top */
       transition: border-color 0.3s ease, background-color 0.3s ease;
-      width: 100%; /* Make inputs fill sidebar width */
+      width: 100%;
+      /* Make inputs fill sidebar width */
     }
 
     input[type="text"]:focus {
       outline: none;
-      border-bottom: 2px solid #3f51b5; /* Material Indigo focus */
+      border-bottom: 2px solid #3f51b5;
+      /* Material Indigo focus */
       background-color: #fff;
     }
 
     button {
-      margin: 5px 0 15px 0; /* Top/bottom margin */
+      margin: 5px 0 15px 0;
+      /* Top/bottom margin */
       padding: 12px 15px;
-      font-size: 14px; /* Slightly smaller button text */
-      background-color: #67b0f4; /* Material Indigo */
+      font-size: 14px;
+      /* Slightly smaller button text */
+      background-color: #67b0f4;
+      /* Material Indigo */
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      text-transform: uppercase; /* Standard for Material buttons */
+      text-transform: uppercase;
+      /* Standard for Material buttons */
       font-weight: bold;
       letter-spacing: 0.5px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
       transition: background-color 0.3s ease, box-shadow 0.2s ease;
-      width: 100%; /* Make buttons fill sidebar width */
+      width: 100%;
+      /* Make buttons fill sidebar width */
     }
 
     button:hover {
-      background-color: #303f9f; /* Darker Indigo on hover */
+      background-color: #303f9f;
+      /* Darker Indigo on hover */
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     button:active {
-      background-color: #1a237e; /* Even darker on click */
+      background-color: #1a237e;
+      /* Even darker on click */
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
     /* Style the breaks for spacing between control groups */
     #controls br {
-       display: block; /* Make <br> take space */
-       content: ""; /* Required for display: block */
-       margin-top: 10px; /* Add space after button before next input */
+      display: block;
+      /* Make <br> take space */
+      content: "";
+      /* Required for display: block */
+      margin-top: 10px;
+      /* Add space after button before next input */
     }
 
     /* --- Responsive Adjustments --- */
     @media (max-width: 768px) {
       body {
-        grid-template-columns: 1fr; /* Stack elements vertically */
-        grid-template-rows: auto 1fr; /* Controls auto height, graph takes rest */
-        height: auto; /* Allow body height to adjust */
-        min-height: 100vh; /* Still ensure full viewport minimum */
+        grid-template-columns: 1fr;
+        /* Stack elements vertically */
+        grid-template-rows: auto 1fr;
+        /* Controls auto height, graph takes rest */
+        height: auto;
+        /* Allow body height to adjust */
+        min-height: 100vh;
+        /* Still ensure full viewport minimum */
       }
 
       #controls {
-        grid-column: 1 / 2; /* Take the single column */
-        grid-row: 1 / 2; /* Take the first row */
-        border-right: none; /* Remove side border */
-        border-bottom: 1px solid #e0e0e0; /* Add bottom border */
-        max-height: 45vh; /* Limit controls height, enable scroll */
+        grid-column: 1 / 2;
+        /* Take the single column */
+        grid-row: 1 / 2;
+        /* Take the first row */
+        border-right: none;
+        /* Remove side border */
+        border-bottom: 1px solid #e0e0e0;
+        /* Add bottom border */
+        max-height: 45vh;
+        /* Limit controls height, enable scroll */
         overflow-y: auto;
-        padding: 15px; /* Adjust padding */
+        padding: 15px;
+        /* Adjust padding */
       }
 
       #cy {
-        grid-column: 1 / 2; /* Take the single column */
-        grid-row: 2 / 3; /* Take the second row */
+        grid-column: 1 / 2;
+        /* Take the single column */
+        grid-row: 2 / 3;
+        /* Take the second row */
         /* Explicit height might be needed if 1fr doesn't work perfectly */
         /* Trying to calculate remaining height minus potential safe areas and controls height */
         height: calc(100vh - 45vh - 1px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-        min-height: 250px; /* Smaller min-height on mobile */
-        padding: 10px 5px; /* Adjust padding */
+        min-height: 250px;
+        /* Smaller min-height on mobile */
+        padding: 10px 5px;
+        /* Adjust padding */
       }
 
-       input[type="text"], button {
-           font-size: 15px; /* Slightly smaller fonts on mobile */
-           padding: 10px 8px;
-       }
+      input[type="text"],
+      button {
+        font-size: 15px;
+        /* Slightly smaller fonts on mobile */
+        padding: 10px 8px;
+      }
     }
 
     /* --- Cytoscape Node/Edge Styles (Defined in JS below - Untouched CSS-wise here) --- */
     /* The styles within the <script> tag's cytoscape initialization take precedence */
-
   </style>
 </head>
 
@@ -162,12 +210,11 @@
   <div id="controls">
     <h2>Interactive GraphDB</h2>
     <input type="text" id="nodeText" placeholder="Enter node text" />
-    <button onclick="insertNode()">Insert Node</button>
+    <!-- <button onclick="insertNode()">Insert Node</button> -->
     <br>
     <input type="text" id="updateText" placeholder="New text" />
-    <button onclick="updateNode()">Update Selected Node</button>
+    <!-- <button onclick="updateNode()">Update Selected Node</button> -->
     <br>
-    <button onclick="removeNode()">Remove Selected Node</button>
   </div>
 
   <!-- Graph Display Area -->
@@ -214,7 +261,6 @@
     async function updateGraph({ id, value, edges, action }) { // Manteniendo la firma original
       try {
         console.log(action) // Manteniendo logs originales
-
         // --- Manejo de Nodos (Exactamente como en tu original) ---
         if (action === 'initial') {
           // Evitar añadir duplicados si 'initial' se llama varias veces
@@ -230,14 +276,12 @@
         }
         if (action === 'updated') {
           // Usando selectedNodeId como en tu original (aunque sea propenso a bugs)
-          const node = cy.getElementById(selectedNodeId);
-          if (node && node.length) { // Añadido .length para verificar que se encontró
-            node.data("text", value);
-          }
+          const node = cy.getElementById(id);
+          node.data("text", value);
         }
         if (action === 'removed') {
           // Usando selectedNodeId como en tu original (aunque sea propenso a bugs)
-          const node = cy.getElementById(selectedNodeId);
+          const node = cy.getElementById(id);
           if (node && node.length) { // Añadido .length para verificar que se encontró
             node.remove();
           }
@@ -255,7 +299,7 @@
         // --- Layout (Exactamente como en tu original) ---
         cy.layout({
           name: "cose",
-          animate: true,
+          animate: false,
           refresh: 20,
           maxSimulationTime: 4000,
           fit: true,
@@ -280,6 +324,7 @@
       try {
         const id = await db.put(text);
         console.log("Node inserted with ID:", id);
+        document.getElementById("nodeText").value = '' // Limpiar el input después de insertar
       } catch (error) {
         console.error("Error inserting node:", error);
       }
@@ -317,9 +362,35 @@
     window.addEventListener("keydown", (event) => { if (event.key === "Shift") isShiftPressed = true; });
     window.addEventListener("keyup", (event) => { if (event.key === "Shift") isShiftPressed = false; });
 
+    // Agregar un event listener al input de actualización para detectar la tecla "Enter"
+    document.getElementById("updateText").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // Evitar el comportamiento predeterminado del Enter
+        updateNode(); // Llamar a la función para actualizar el nodo
+      }
+    });
+
+    // Agregar un event listener al input de inserción para detectar la tecla "Enter"
+    document.getElementById("nodeText").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // Evitar el comportamiento predeterminado del Enter
+        insertNode(); // Llamar a la función para insertar el nodo
+      }
+    });
+
+    // Agregar un event listener global para detectar la tecla "Delete"
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Backspace") {
+        event.preventDefault(); // Evitar comportamiento predeterminado
+        removeNode(); // Llamar a la función para eliminar el nodo seleccionado
+      }
+    });
+
     // Handle clicks on nodes to link or select
     cy.on("tap", "node", function (event) {
       const nodeId = event.target.id();
+      const nodeData = event.target.data(); // Obtenemos los datos del nodo
+
       if (isShiftPressed) {
         handleLinkWithShift(event, nodeId); // Pasando event como en el original
       } else {
@@ -329,6 +400,9 @@
         } else {
           selectedNodeId = nodeId;
           console.log(`Node selected: ${nodeId}`);
+
+          // Mostrar el texto del nodo seleccionado en el input de actualización
+          document.getElementById("updateText").value = nodeData.text;
         }
       }
     });
