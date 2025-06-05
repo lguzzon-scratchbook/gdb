@@ -75,6 +75,7 @@
     <script type="module">
         // Wait for rbac and GraphDB to be on window (or directly use imported vars)
         // For simplicity, assuming they are loaded as the script tag is type="module" and imports are processed first.
+
         import { GraphDB } from "../dist/index.js"; // Adjust path according to your structure
         import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
 
@@ -168,8 +169,9 @@
 
                 statusBar.textContent = "Status: DB Ready. Initializing Security Context...";
 
+                await rbac.createSecurityContext(db, SUPERADMIN_ADDRESSES);
+
                 rbac.setCustomRoles(CHAT_APP_ROLES);
-                await rbac.createSecurityContext(SUPERADMIN_ADDRESSES);
                 rbac.setSecurityStateChangeCallback(updateUI);
                 
                 // Trigger initial UI update based on current state (e.g. from silent WebAuthn login)
@@ -181,6 +183,7 @@
                     hasVolatileIdentity: !!rbac.getMnemonicForDisplayAfterRegistrationOrRecovery(), // Heuristic
                     hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
                 };
+                
                 updateUI(initialState);
                 
                 // Attempt silent WebAuthn login if available
