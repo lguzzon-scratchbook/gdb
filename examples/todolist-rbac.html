@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure To-Do List (GraphDB + RBAC/WebAuthn)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background-color: #f0f2f5;
+      color: #333;
+    }
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #1a73e8;
+    }
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box; /* Important for 100% width */
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px 0;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    button.icon-button { /* Specific style for emoji buttons */
+        background: none;
+        padding: 8px;
+        font-size: 18px;
+    }
+    button.icon-button:hover {
+        transform: scale(1.1);
+    }
+    button.secondary { background-color: #6c757d; }
+    button:hover { background-color: #1558b0; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    .status, .info {
+      margin: 15px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #e9ecef;
+      word-wrap: break-word;
+    }
+    .warning { color: #d93025; font-weight: bold; background-color: #fddede; padding: 10px; border-radius: 5px; }
+    .hidden { display: none; }
+    .auth-actions, .session-actions { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+    code { background-color: #d4d4d4; padding: 2px 4px; border-radius: 3px; word-break: break-all; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { padding: 12px; border-bottom: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    li span { flex: 1; cursor: pointer; }
+    .completed { text-decoration: line-through; color: gray; }
+    .edit-mode { display: inline-block; width: 70%; }
+    .edit-buttons { display: flex; gap: 5px; }
+    .icon-container { display: flex; gap: 10px; align-items: center; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Secure To-Do List</h1>
+    <div id="statusArea" class="status">Status: Awaiting initialization...</div>
+
+    <!-- ===== AUTHENTICATION UI ===== -->
+    <div id="authSection">
+      <!-- Actions when NOT logged in -->
+      <div id="notLoggedInSection">
+        <div class="auth-actions">
+          <h3>New User?</h3>
+          <button id="btnGenerateIdentity">1. Generate New Identity</button>
+          <div id="identityDetails" class="info hidden">
+            <p><strong>New Address:</strong> <code id="ethAddress"></code></p>
+            <p><strong>Mnemonic Phrase:</strong> <code id="mnemonicPhrase"></code></p>
+            <div class="warning">⚠️ IMPORTANT: Securely save this Mnemonic Phrase!</div>
+          </div>
+          <button id="btnProtectWebAuthn" disabled>2. Protect & Login with WebAuthn</button>
+        </div>
+        <div class="auth-actions">
+          <h3>Existing User?</h3>
+          <button id="btnLoginWebAuthn" disabled>Login with WebAuthn</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ===== TO-DO LIST APPLICATION UI (Initially Hidden) ===== -->
+    <div id="toDoAppSection" class="hidden">
+      <!-- Actions when logged in -->
+      <div id="loggedInSection">
+         <div class="info">
+            <p><strong>Logged In As:</strong> <code id="loggedInUserAddress"></code></p>
+        </div>
+        <div class="session-actions">
+            <button id="btnLogout" class="secondary">Logout</button>
+        </div>
+      </div>
+      
+      <h2>My Tasks</h2>
+      <input type="text" id="taskInput" placeholder="New task...">
+      <ul id="taskList"></ul>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { GraphDB } from "../dist/index.js";
+    import * as rbac from '../dist/rbac.min.js';
+
+    // --- GLOBAL STATE ---
+    let db;
+    let taskSubscriptionUnsubscribe = null; // To hold the unsubscribe function for tasks
+    let volatileIdentity = null; // Stores temporary new identity { address, mnemonic, privateKey }
+
+    // --- DOM ELEMENT REFERENCES ---
+    // Auth Elements
+    const statusArea = document.getElementById('statusArea');
+    const authSection = document.getElementById('authSection');
+    const notLoggedInSection = document.getElementById('notLoggedInSection');
+    const btnGenerateIdentity = document.getElementById('btnGenerateIdentity');
+    const identityDetailsDiv = document.getElementById('identityDetails');
+    const ethAddressElem = document.getElementById('ethAddress');
+    const mnemonicPhraseElem = document.getElementById('mnemonicPhrase');
+    const btnProtectWebAuthn = document.getElementById('btnProtectWebAuthn');
+    const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
+    const btnLogout = document.getElementById('btnLogout');
+
+    // App Elements
+    const toDoAppSection = document.getElementById('toDoAppSection');
+    const loggedInUserAddressElem = document.getElementById('loggedInUserAddress');
+    const taskInput = document.getElementById('taskInput');
+    const taskList = document.getElementById('taskList');
+    
+    // --- UI HELPER FUNCTIONS ---
+    function updateStatus(message, isError = false) {
+      statusArea.textContent = `Status: ${message}`;
+      statusArea.style.color = isError ? '#d93025' : '#333';
+    }
+
+    // --- CORE APPLICATION LOGIC ---
+
+    /**
+     * This is the main controller for the application's UI state.
+     * It is called whenever the user's authentication state changes (login/logout).
+     */
+    async function handleSecurityChange(securityState) {
+        if (!securityState) {
+            updateStatus("Security state unavailable.", true);
+            return;
+        }
+
+        if (securityState.isActive) { // --- USER IS LOGGED IN ---
+            updateStatus(`Logged in as ${securityState.activeAddress.substring(0,10)}...`);
+            authSection.classList.add('hidden');
+            toDoAppSection.classList.remove('hidden');
+            loggedInUserAddressElem.textContent = securityState.activeAddress;
+            
+            // ** CRITICAL **: Now that we are logged in, subscribe to this user's tasks.
+            await subscribeToTasks();
+
+        } else { // --- USER IS LOGGED OUT ---
+            updateStatus(securityState.hasWebAuthnHardwareRegistration ? "Ready to login with WebAuthn." : "Ready for new user registration.");
+            authSection.classList.remove('hidden');
+            toDoAppSection.classList.add('hidden');
+            
+            btnLoginWebAuthn.disabled = !securityState.hasWebAuthnHardwareRegistration;
+
+            // Handle display for a new, unsaved identity
+             if (securityState.hasVolatileIdentity) {
+                identityDetailsDiv.classList.remove('hidden');
+                btnProtectWebAuthn.disabled = false;
+            } else {
+                identityDetailsDiv.classList.add('hidden');
+                btnProtectWebAuthn.disabled = true;
+            }
+
+            // ** CRITICAL **: Unsubscribe from any previous user's tasks and clear the UI.
+            await unsubscribeAndClearTasks();
+        }
+    }
+
+    /**
+     * Subscribes to the task list for the currently logged-in user.
+     * The `db.map` call will automatically only return data for the active user.
+     */
+    async function subscribeToTasks() {
+        if (taskSubscriptionUnsubscribe) return; // Already subscribed
+
+        updateStatus("Loading tasks...");
+        const { unsubscribe } = await db.map(({id, value, action}) => {
+            if (action === 'initial' || action === 'added') {
+                handleAddTask(id, value);
+            } else if (action === 'removed') {
+                handleDeleteTask(id);
+            } else if (action === 'updated') {
+                handleUpdateTask(id, value);
+            }
+        });
+        taskSubscriptionUnsubscribe = unsubscribe; // Store the unsubscribe function
+        updateStatus("Tasks loaded.");
+    }
+    
+    /**
+     * Clears the UI and unsubscribes from task updates.
+     * This is crucial to run on logout to prevent data leakage between sessions.
+     */
+    async function unsubscribeAndClearTasks() {
+        if (taskSubscriptionUnsubscribe) {
+            taskSubscriptionUnsubscribe();
+            taskSubscriptionUnsubscribe = null;
+        }
+        taskList.innerHTML = ''; // Clear the list from the DOM
+    }
+
+    // --- TO-DO LIST DOM MANIPULATION ---
+    // (These functions are mostly unchanged from your original To-Do list)
+    function createTaskElements(li, id, { text, completed }) {
+      // Clear previous content in case of reuse
+      li.innerHTML = ''; 
+
+      const taskTextSpan = document.createElement('span');
+      taskTextSpan.className = completed ? 'completed' : '';
+      taskTextSpan.textContent = text;
+      taskTextSpan.onclick = () => toggleTask(id);
+
+      const taskEditTextInput = document.createElement('input');
+      taskEditTextInput.type = 'text';
+      taskEditTextInput.value = text;
+      taskEditTextInput.className = 'edit-mode hidden';
+      taskEditTextInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') saveEdit(id, taskEditTextInput.value);
+      });
+
+      const iconContainer = document.createElement('div');
+      iconContainer.className = 'icon-container';
+      const editButton = document.createElement('button');
+      editButton.className = 'icon-button';
+      editButton.innerHTML = '✏️';
+      editButton.onclick = () => enableEditMode(li);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'icon-button';
+      deleteButton.innerHTML = '🗑️';
+      deleteButton.onclick = () => deleteTask(id);
+
+      const editButtonsContainer = document.createElement('div');
+      editButtonsContainer.className = 'edit-buttons hidden';
+      const saveButton = document.createElement('button');
+      saveButton.className = 'icon-button';
+      saveButton.innerHTML = '💾';
+      saveButton.onclick = () => saveEdit(id, taskEditTextInput.value);
+
+      const cancelButton = document.createElement('button');
+      cancelButton.className = 'icon-button';
+      cancelButton.innerHTML = '❌';
+      cancelButton.onclick = () => cancelEdit(li);
+
+      editButtonsContainer.append(saveButton, cancelButton);
+      iconContainer.append(editButton, editButtonsContainer, deleteButton);
+      li.append(taskTextSpan, taskEditTextInput, iconContainer);
+    }
+    
+    function handleAddTask(id, data) {
+      const li = document.createElement('li');
+      li.id = id;
+      createTaskElements(li, id, data);
+      taskList.appendChild(li);
+    }
+
+    function handleUpdateTask(id, data) {
+      const li = document.getElementById(id);
+      if (li) createTaskElements(li, id, data); // Re-render the element completely
+    }
+
+    function handleDeleteTask(id) {
+      const li = document.getElementById(id);
+      if (li) li.remove();
+    }
+
+    function enableEditMode(li) {
+      li.querySelector('span').classList.add('hidden');
+      li.querySelector('input.edit-mode').classList.remove('hidden');
+      li.querySelector('.edit-buttons').classList.remove('hidden');
+      li.querySelector('.icon-container button:first-child').style.display = 'none';
+    }
+
+    function cancelEdit(li) {
+      li.querySelector('span').classList.remove('hidden');
+      li.querySelector('input.edit-mode').classList.add('hidden');
+      li.querySelector('.edit-buttons').classList.add('hidden');
+      li.querySelector('.icon-container button:first-child').style.display = 'inline-block';
+    }
+
+    // --- TO-DO LIST DATABASE OPERATIONS ---
+    async function toggleTask(id) {
+      const li = document.getElementById(id);
+      if (!li) return;
+      const taskTextSpan = li.querySelector('span');
+      const completed = !taskTextSpan.classList.contains('completed');
+      await db.put({ text: taskTextSpan.textContent, completed }, id);
+    }
+
+    async function saveEdit(id, newText) {
+      if (!newText.trim()) return;
+      const li = document.getElementById(id);
+      if (!li) return;
+      const completed = li.querySelector('span').classList.contains('completed');
+      await db.put({ text: newText.trim(), completed }, id);
+      // The update will be handled by the db.map listener, which calls handleUpdateTask
+    }
+
+    async function deleteTask(id) {
+      await db.remove(id);
+    }
+
+    async function addTask() {
+      if (!taskInput.value.trim()) return;
+      await db.put({ text: taskInput.value.trim(), completed: false });
+      taskInput.value = '';
+    }
+
+    // --- AUTHENTICATION EVENT LISTENERS ---
+    btnGenerateIdentity.addEventListener('click', async () => {
+      try {
+        updateStatus("Generating new identity...");
+        volatileIdentity = await rbac.startNewUserRegistration();
+        if (volatileIdentity) {
+          ethAddressElem.textContent = volatileIdentity.address;
+          mnemonicPhraseElem.textContent = volatileIdentity.mnemonic;
+          updateStatus("New identity generated. SAVE YOUR MNEMONIC.");
+        }
+      } catch (error) { updateStatus(`Error: ${error.message}`, true); }
+    });
+
+    btnProtectWebAuthn.addEventListener('click', async () => {
+      if (!volatileIdentity) return;
+      try {
+        updateStatus("Starting WebAuthn registration...");
+        const protectedAddress = await rbac.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
+        if (protectedAddress) {
+          updateStatus(`Identity ${protectedAddress} protected & session started!`);
+          volatileIdentity = null;
+        } else {
+          updateStatus("WebAuthn protection cancelled or failed.", true);
+        }
+      } catch (error) { updateStatus(`WebAuthn Error: ${error.message}`, true); }
+    });
+
+    btnLoginWebAuthn.addEventListener('click', async () => {
+      try {
+        updateStatus("Attempting WebAuthn login...");
+        const loggedInAddress = await rbac.loginCurrentUserWithWebAuthn();
+        if (!loggedInAddress) {
+          updateStatus("WebAuthn login failed or was cancelled.", true);
+        }
+      } catch (error) { updateStatus(`WebAuthn Login Error: ${error.message}`, true); }
+    });
+
+    btnLogout.addEventListener('click', async () => {
+      try {
+        updateStatus("Logging out...");
+        await rbac.clearSecurity();
+        volatileIdentity = null;
+        updateStatus("Successfully logged out.");
+      } catch (error) { updateStatus(`Logout Error: ${error.message}`, true); }
+    });
+
+    // To-Do list "Add" listener
+    taskInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addTask();
+    });
+
+    // --- INITIALIZATION ---
+    async function initializeApp() {
+      try {
+        updateStatus("Initializing Database...");
+        db = new GraphDB("secureTodoAppDB_v1");
+
+        updateStatus("Initializing Security Context...");
+        await rbac.createSecurityContext(db);
+        
+        // Set the master callback that drives the entire application's state
+        rbac.setSecurityStateChangeCallback(handleSecurityChange);
+        
+        // Trigger the first state check to see if a user is already logged in
+        const initialState = {
+          isActive: rbac.isSecurityActive(),
+          activeAddress: rbac.getActiveEthAddress(),
+          hasVolatileIdentity: !!volatileIdentity,
+          hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
+        };
+        await handleSecurityChange(initialState); // Run the handler to set the initial UI
+
+      } catch (error) {
+        updateStatus(`Initialization Error: ${error.message}`, true);
+        console.error("Initialization failed:", error);
+      }
+    }
+
+    initializeApp();
+  </script>
+</body>
+</html>
