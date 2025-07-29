@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kanban / GraphDB</title>
+  <title>Kanban / GDB</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -101,9 +101,9 @@
   <h1>Kanban Board</h1>
   <div class="kanban-board" id="kanbanBoard"></div>
   <script type="module">
-    import { GraphDB } from "../dist/index.js";
+    import { GDB } from "../dist/index.js";
 
-    const db = new GraphDB("kanbanGraph");
+    const db = new GDB("kanbanGraph");
     const columns = ["To Do", "In Progress", "Done"];
     const kanbanBoard = document.getElementById("kanbanBoard");
 
