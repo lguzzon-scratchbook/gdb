@@ -171,10 +171,10 @@
     <div class="status-bar" id="statusBar">Ready</div>
   </div>
   <script type="module">
-    import { GraphDB } from "../dist/index.js";
+    import { GDB } from "../dist/index.js";
     import { withAI } from "../dist/AIQuery.min.js";
 
-    const db = new GraphDB('posts-db2');
+    const db = new GDB('posts-db2');
     withAI(db);
 
     // Función para insertar posts desde la API DummyJSON
