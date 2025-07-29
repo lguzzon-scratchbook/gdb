@@ -4,13 +4,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GraphDB Tester</title>
+  <title>GDB Tester</title>
   <script type="module">
-    // Import GraphDB as a module
-    import { GraphDB } from "../dist/index.js";
+    // Import GDB as a module
+    import { GDB } from "../dist/index.js";
 
-    // Initialize GraphDB
-    const db = new GraphDB("testGraph");
+    // Initialize GDB
+    const db = new GDB("testGraph");
 
     // Variables to store nodes and relationships
     const nodesList = document.getElementById("nodes-list");
@@ -27,7 +27,7 @@
 
       try {
         const id = await db.put(valueInput);
-        addNodeToList(id, valueInput);
+        // addNodeToList(id, valueInput);
         console.log(`Node inserted with ID: ${id}`);
       } catch (error) {
         alert("Error inserting the node.");
@@ -95,11 +95,11 @@
         // Show incoming relationships (search for nodes that point to this)
         let incomingRelations = [];
 
-        db.map(({id, value, edges}) => {
-          if (edges.includes(searchId)) {
-            incomingRelations.push(id);
-          }
-        });
+        // db.map(({id, value, edges}) => {
+        //   if (edges.includes(searchId)) {
+        //     incomingRelations.push(id);
+        //   }
+        // });
 
         if (incomingRelations.length > 0) {
           resultHTML += `<p><strong>Incoming relationships:</strong></p><ul>`;
@@ -131,16 +131,42 @@
       relationsList.appendChild(relationItem);
     }
 
-    // Load existing data when the application starts
-    (async () => {
-      await db.ready;
-      await db.map(({ id, value, edges }) => {
-        addNodeToList(id, value);
+    function updateGrpah({ id, value, edges, action }) {
+      console.log(action)
+      if (action === "initial") {
+        addNodeToList(id, value)
+
         edges.forEach((targetId) => {
           addRelationToList(id, targetId);
         });
-      });
+      }
+      if (action === "added") {
+        // Add the node to the list
+        addNodeToList(id, value);
 
+        // Add the relationships to the list
+        edges.forEach((targetId) => {
+          addRelationToList(id, targetId);
+        });
+        console.log(`Node ${id} was added to the graph.`);
+      }
+      if (action === "removed") {
+        // Remove the node from the list
+        const nodeItem = Array.from(nodesList.children).find(item => item.textContent.includes(id));
+        if (nodeItem) {
+          nodesList.removeChild(nodeItem);
+        }
+
+        // Remove the relationships from the list
+        const relationItems = Array.from(relationsList.children).filter(item => item.textContent.includes(id));
+        relationItems.forEach(item => relationsList.removeChild(item));
+        console.log(`Node ${id} was removed from the graph.`);
+      }
+    }
+
+    // Load existing data when the application starts
+    (async () => {
+      await db.map(updateGrpah)
       // Assign event listeners after loading the data
       document.getElementById("insert-node-btn").addEventListener("click", insertNode);
       document.getElementById("create-link-btn").addEventListener("click", createLink);
@@ -181,7 +207,7 @@
 </head>
 
 <body>
-  <h1>GraphDB Tester</h1>
+  <h1>GDB Tester</h1>
 
   <div id="controls">
     <h2>Insert Node</h2>
