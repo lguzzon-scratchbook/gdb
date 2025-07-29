@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GraphDB relations in realtime</title>
+  <title>GDB relations in realtime</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
   <style>
     /* --- Base Styles --- */
@@ -208,7 +208,7 @@
 <body>
   <!-- Controls Sidebar -->
   <div id="controls">
-    <h2>Interactive GraphDB</h2>
+    <h2>Interactive GDB</h2>
     <input type="text" id="nodeText" placeholder="Enter node text" />
     <!-- <button onclick="insertNode()">Insert Node</button> -->
     <br>
@@ -222,10 +222,10 @@
 
   <!-- JAVASCRIPT - ORIGINAL VERSION - COMPLETELY UNTOUCHED -->
   <script type="module">
-    // Import GraphDB
-    import { GraphDB } from "../dist/index.js";
+    // Import GDB
+    import { GDB } from "../dist/index.js";
 
-    const db = new GraphDB("testGraph");
+    const db = new GDB("testGraph");
 
     // Initialize Cytoscape with 'cose' layout settings
     let cy = cytoscape({
