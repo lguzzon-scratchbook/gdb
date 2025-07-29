@@ -86,7 +86,6 @@
     .results-panel {
       display: grid;
       border-radius: 10px;
-      padding: 20px;
       overflow-y: auto;
     }
 
@@ -244,8 +243,20 @@
 
       <!-- Ejemplo 11: $not -->
       <li class="query-item"
-        data-query='{"query": {"country": {"$not": {"$eq": "United States"}}}, "order": "asc", "field": "name"}'>
+        data-query='{"query": {"age": {"$not": {"$eq": "25"}}}, "order": "asc", "field": "name"}'>
         <strong>Country NOT "United States"</strong><br>
+        Searches for users who do NOT live in the United States.
+      </li>
+
+      <li class="query-item"
+        data-query='{"query": {"$or": [{ "country": { "$exists": false } }, { "country": { "$not": { "$eq": "United States" } } }]}, "order": "asc", "field": "name"}'>
+        <strong>Country NOT "United States2"</strong><br>
+        Searches for users who do NOT live in the United States.
+      </li>
+
+      <li class="query-item"
+        data-query='{"query": {"$or": [{ "country": { "$exists": false } }, { "country": { "$ne": "United States" } }]}, "order": "asc", "field": "name"}'>
+        <strong>Country NOT "United States3"</strong><br>
         Searches for users who do NOT live in the United States.
       </li>
 
@@ -325,8 +336,64 @@
     <div class="status-bar" id="statusBar">Ready</div>
   </div>
   <script type="module">
-    import { GraphDB } from "../dist/index.js";
-    const db = new GraphDB('search-db');
+    import { GDB } from "../dist/index.js";
+    const db = new GDB('search-db');
+
+    // Función para insertar nodos con coordenadas geográficas
+    async function populateSampleData() {
+      await db.put({
+        name: "Central Park",
+        latitude: 40.7829,
+        longitude: -73.9654
+      });
+
+      await db.put({
+        name: "Empire State Building",
+        latitude: 40.7484,
+        longitude: -73.9857
+      });
+
+      await db.put({
+        name: "Statue of Liberty",
+        latitude: 40.6892,
+        longitude: -74.0445
+      });
+
+      await db.put({
+        name: "Brooklyn Bridge",
+        latitude: 40.7061,
+        longitude: -73.9969
+      });
+
+      await db.put({
+        name: "Times Square",
+        latitude: 40.7589,
+        longitude: -73.9851
+      });
+
+      await db.put({
+        name: "Yankee Stadium",
+        latitude: 40.8296,
+        longitude: -73.9262
+      });
+
+      await db.put({
+        name: "Coney Island",
+        latitude: 40.5755,
+        longitude: -73.9813
+      });
+
+      await db.put({
+        name: "The Met Museum",
+        latitude: 40.7794,
+        longitude: -73.9632
+      });
+
+      console.log("Datos de muestra insertados correctamente.");
+    }
+
+    // Ejecutar la función para poblar la base de datos
+    populateSampleData();
 
     // Function to check if the database has data
     async function checkDatabaseStatus() {
@@ -382,6 +449,7 @@
     // Function to execute a query and display results
     async function executeQuery(obj) {
       let { results } = await db.map(obj);
+      console.log(results);
 
 
       const resultsDiv = document.getElementById('results');
