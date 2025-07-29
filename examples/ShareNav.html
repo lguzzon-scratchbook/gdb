@@ -72,8 +72,8 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script type="module">
-        import { GraphDB } from "../dist/index.js";
-        const db = new GraphDB('search-db');
+        import { GDB } from "../dist/index.js";
+        const db = new GDB('search-db');
 
         const [sendData, getData] = db.room.makeAction('nodePosition');
 
