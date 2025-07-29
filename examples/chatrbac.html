@@ -73,10 +73,10 @@
     </div>
 
     <script type="module">
-        // Wait for rbac and GraphDB to be on window (or directly use imported vars)
+        // Wait for rbac and GDB to be on window (or directly use imported vars)
         // For simplicity, assuming they are loaded as the script tag is type="module" and imports are processed first.
 
-        import { GraphDB } from "../dist/index.js"; // Adjust path according to your structure
+        import { GDB } from "../dist/index.js"; // Adjust path according to your structure
         import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
 
         // --- CONFIGURATION ---
@@ -165,7 +165,7 @@
         async function initializeApp() {
             try {
                 statusBar.textContent = "Status: Initializing DB...";
-                db = new GraphDB("rbacChatAppDB");
+                db = new GDB("rbacChatAppDB");
 
                 statusBar.textContent = "Status: DB Ready. Initializing Security Context...";
 
