@@ -70,7 +70,7 @@
     <script type="module">
         // --- IMPORTS ---
         // Ajusta estas rutas a tu estructura de proyecto
-        import { GraphDB } from "../dist/index.js";
+        import { GDB } from "../dist/index.js";
         import * as rbac from '../dist/rbac.min.js';
 
         // --- DOM ELEMENTS ---
@@ -142,7 +142,7 @@
             log(`Initializing GDB: ${dbName}...`);
 
             try {
-                let db = new GraphDB(dbName);
+                let db = new GDB(dbName);
 
                 log("GDB Ready.", 'success');
                 
