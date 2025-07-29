@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>GraphDB - RBAC + Security (WebAuthn Example)</title>
+  <title>GDB - RBAC + Security (WebAuthn Example)</title>
   <style>
     body {
       font-family: sans-serif;
@@ -109,7 +109,7 @@
 
 <body>
   <div class="container">
-    <h1>GraphDB - RBAC + Security (WebAuthn Example)</h1>
+    <h1>GDB - RBAC + Security (WebAuthn Example)</h1>
     <p>Browser console for logs. Uses WebAuthn (biometrics/key) for security.</p>
     <p class="info-box"><em>Important: WebAuthn requires HTTPS or localhost/127.0.0.1.</em></p>
 
@@ -216,7 +216,7 @@
   </div>
 
   <script type="module">
-    import { GraphDB } from "../dist/index.js"; // Adjust path according to your structure
+    import { GDB } from "../dist/index.js"; // Adjust path according to your structure
     import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
 
     const SUPERADMIN_ETH_ADDRESSES = ["0x62c48827e883f114821211673Dc309a29Aae7e6A"]; // Replace with your superadmin address(es)
@@ -349,7 +349,6 @@
       if (userRoleActiveEl) userRoleActiveEl.textContent = 'Loading role...';
 
       try {
-        await db.ready;
         const userNodeKey = `user:${currentEth}`;
         const { result, unsubscribe } = await db.get(userNodeKey, updateUserRoleInUI);
         unsubscribeUserRoleListener = unsubscribe;
@@ -605,7 +604,6 @@
 
       logToRealtimeDisplay(`Automatically subscribing to: ${NODE_ID_FOR_REALTIME_TEST}`);
       try {
-        await db.ready;
         const { result, unsubscribe } = await db.get(NODE_ID_FOR_REALTIME_TEST, (nodeData) => {
           if (nodeData) {
             const displayMessage = `Node CHANGED:\n  Value: ${JSON.stringify(nodeData.value, null, 2)}\n  TS: ${JSON.stringify(nodeData.timestamp, null, 2)}`;
@@ -793,7 +791,7 @@
       if (realtimeNodeLogDisplayEl) {
         realtimeNodeLogDisplayEl.textContent = "Initializing GDB and subscription...";
       }
-      db = new GraphDB("gdbWebAuthn_vFINAL_HTML");
+      db = new GDB("gdbWebAuthn_vFINAL_HTML");
       try {
         logAction("App: GDB ready.");
         await setupAutomaticRealtimeSubscription();
