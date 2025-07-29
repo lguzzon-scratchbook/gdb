@@ -1,8 +1,8 @@
-# GraphDB (GDB) – Decentralized P2P Graph Database
+# GenosDB (GDB) – Decentralized P2P Graph Database
 
 A lightweight, decentralized graph database designed for modern web applications, offering real-time peer-to-peer synchronization, WebAuthn-based authentication, role-based access control (RBAC), and efficient local storage utilizing OPFS.
 
-![GraphDB](https://i.imgur.com/7Xqrht1.png)
+![GenosDB](https://i.imgur.com/7Xqrht1.png)
 
 ---
 
@@ -31,14 +31,14 @@ A lightweight, decentralized graph database designed for modern web applications
 
 ## Main Features
 
-### ✅ **GraphDB Core**
+### ✅ **GenosDB Core**
 
 - Efficient storage in OPFS.
 - Real-time synchronization between tabs and devices.
 - CRUD operations for nodes and relationships.
 - Efficient serialization using MessagePack and compression with Pako.
 - Enabling reverse or Radix Tree indexing through external modules.
-- GraphDB supports external modules that extend its capabilities.
+- GenosDB supports external modules that extend its capabilities.
 
 ## Warning
 
@@ -99,14 +99,14 @@ npm install gdb-p2p
 ```
 
 ```javascript
-import { GraphDB } from "gdb-p2p"
+import { GenosDB } from "gdb-p2p"
 ```
 
 ### 2. Direct use in browser from a CDN
 
 ```html
 <script type="module">
-  import { GraphDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm"
+  import { GenosDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm"
 </script>
 ```
 
@@ -114,7 +114,7 @@ import { GraphDB } from "gdb-p2p"
 
 For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
 
-For interactive, AI-assisted GraphDB documentation, visit our [Devin Wiki](https://deepwiki.com/estebanrfp/gdb).
+For interactive, AI-assisted GenosDB documentation, visit our [Devin Wiki](https://deepwiki.com/estebanrfp/gdb).
 
 ## Examples
 
@@ -193,11 +193,11 @@ The source code of this project is licensed under the [MIT License](https://open
 
 ## Maintenance
 
-This repository provides minified builds of GraphDB (GDB), a decentralized P2P graph database designed for modern web applications. These builds are freely available for anyone to use and integrate into their projects. Please note that the source code is not publicly available at this time; only the minified versions are provided. The project is actively maintained by Esteban Fuster Pozzi ([@estebanrfp](https://github.com/estebanrfp))
+This repository provides minified builds of GenosDB (GDB), a decentralized P2P graph database designed for modern web applications. These builds are freely available for anyone to use and integrate into their projects. Please note that the source code is not publicly available at this time; only the minified versions are provided. The project is actively maintained by Esteban Fuster Pozzi ([@estebanrfp](https://github.com/estebanrfp))
 
 ## Author
 
-[Esteban Fuster Pozzi (@estebanrfp)](https://estebanrfp.com) — Full Stack JavaScript Developer and creator of [GraphDB (GDB)](https://www.npmjs.com/package/gdb-p2p), an open-source real-time graph database built entirely with modern vanilla JavaScript.
+[Esteban Fuster Pozzi (@estebanrfp)](https://estebanrfp.com) — Full Stack JavaScript Developer and creator of [GenosDB (GDB)](https://www.npmjs.com/package/gdb-p2p), an open-source real-time graph database built entirely with modern vanilla JavaScript.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_shield&issueType=security)
 
