@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real-Time Cursor Movement with GraphDB</title>
+  <title>Real-Time Cursor Movement with GenosDB</title>
 </head>
 <style>
   body {
@@ -25,11 +25,11 @@
 <body>
   <div class="cursor" id="cursor"></div>
   <script type="module">
-    // Import GraphDB library for real-time communication
-    import { GraphDB } from "../dist/index.js";
+    // Import GenosDB library for real-time communication
+    import { GDB } from "../dist/index.js";
 
-    // Initialize GraphDB instance for the "cursormove" room
-    const db = new GraphDB('cursormove');
+    // Initialize GDB instance for the "cursormove" room
+    const db = new GDB('cursormove');
 
     // Create actions for sending and receiving cursor data
     const [sendData, getData] = db.room.makeAction("cursormove");
