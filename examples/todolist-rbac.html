@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secure To-Do List (GraphDB + RBAC/WebAuthn)</title>
+  <title>Secure To-Do List (GDB + RBAC/WebAuthn)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -123,7 +123,7 @@
   </div>
 
   <script type="module">
-    import { GraphDB } from "../dist/index.js";
+    import { GDB } from "../dist/index.js";
     import * as rbac from '../dist/rbac.min.js';
 
     // --- GLOBAL STATE ---
@@ -393,7 +393,7 @@
     async function initializeApp() {
       try {
         updateStatus("Initializing Database...");
-        db = new GraphDB("secureTodoAppDB_v1");
+        db = new GDB("secureTodoAppDB_v1");
 
         updateStatus("Initializing Security Context...");
         await rbac.createSecurityContext(db);
