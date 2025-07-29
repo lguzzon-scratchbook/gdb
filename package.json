@@ -1,13 +1,13 @@
 {
   "name": "gdb-p2p",
   "version": "0.1.0",
-  "description": "Distributed graph database (GraphDB/GDB) for real-time data modeling, scalable storage, and efficient querying of complex relationships.",
+  "description": "Distributed graph database (GenosDB/GDB) for real-time data modeling, scalable storage, and efficient querying of complex relationships.",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "build": "bun esbun.js",
     "dev": "bun run --watch",
-    "start": "node GraphDBServer.js"
+    "start": "node GenosDBServer.js"
   },
   "files": [
     "dist"
