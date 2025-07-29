@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GraphDB Security Audit (v2)</title>
+    <title>GDB Security Audit (v2)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f9; color: #333; font-size: 14px; }
         .container { max-width: 900px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -28,7 +28,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>GraphDB Security Testbed (v2)</h1>
+        <h1>GDB Security Testbed (v2)</h1>
         <p>Test identity, RBAC, implicit encryption via <code>rbac.put/get</code>, and P2P security.</p>
         <p><strong>Important:</strong> Open browser console (F12) for detailed logs from GDB and RBAC.</p>
 
@@ -148,9 +148,9 @@
 
     <script type="module">
         // --- IMPORT SECTION ---
-        // Ensure GraphDB is the default export if that's how gdb.js is structured
+        // Ensure GDB is the default export if that's how gdb.js is structured
 
-        import { GraphDB } from "../dist/index.js";
+        import { GDB } from "../dist/index.js";
         import * as rbac from '../dist/rbac.min.js';
 
         // DOM Elements
@@ -193,7 +193,7 @@
         const logConsole = document.getElementById('logConsole');
 
         // App State
-        let db = null; // Renamed to avoid conflict if GraphDB is global
+        let db = null; // Renamed to avoid conflict if GDB is global
         let volatileIdentityCache = null;
 
         // --- Logging Utility ---
@@ -288,7 +288,7 @@
             initStatus.textContent = "Initializing...";
             logToUI(`Initializing GDB with name: ${dbName}...`);
             try {
-                db = new GraphDB(dbName);
+                db = new GDB(dbName);
 
                 logToUI("GDB instance ready.", "success");
 
