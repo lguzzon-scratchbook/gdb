@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GraphDB - Real-Time Example</title>
+  <title>GDB - Real-Time Example</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -38,7 +38,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>GraphDB - Real-Time Example</h1>
+    <h1>GDB - Real-Time Example</h1>
     <p>Update the record value and observe the changes in real time.</p>
 
     <!-- Text input -->
@@ -53,20 +53,24 @@
     </div>
   </div>
 
-  <!-- Import GraphDB -->
+  <!-- Import GDB -->
   <script type="module">
-    // Import the GraphDB class from your file
-    import { GraphDB } from "../dist/index.js";
+    // Import the GDB class from your file
+    import { GDB } from "../dist/index.js";
+    // import { withRadixIndex } from "../dist/radixIndex.min.js";
 
-    // Create an instance of GraphDB
-    const db = new GraphDB('test-db');
-  
+    // Create an instance of GDB
+    const db = new GDB('test-db');
+
+    // Agregar el índice Radix
+    // withRadixIndex(db);
+
     // Unique record ID
     const recordId = 'unique-record-id';
 
     // Function to load the initial value
     async function loadInitialValue() {
-      await db.get(recordId, (node)=>{
+      const { result } = await db.get(recordId, (node)=>{
         if (node) {
           document.getElementById('currentValue').textContent = node.value;
         } else {
@@ -85,7 +89,8 @@
         alert('Please, enter a value.');
         return;
       }
-
+      // const node = await db.get('562feb57-2518-4b5a-ab81-da61a3980ec5')
+      // console.log(node)
       // Update the value in the database
       await db.put(newValue, recordId);
 
