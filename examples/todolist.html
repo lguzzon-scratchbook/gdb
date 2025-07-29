@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>To-Do List / GraphDB</title>
+  <title>To-Do List / GDB</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -95,12 +95,16 @@
   <input type="text" id="taskInput" placeholder="New task">
   <ul id="taskList"></ul>
   <script type="module">
-    import { GraphDB } from "../dist/index.js";
+    import { GDB } from "../dist/index.js";
     // import { withRadixIndex } from "../dist/radixIndex.min.js";
+    // import { withCentralizedBackup } from '../dist/CentralizedBackup.min.js';
 
-    const db = new GraphDB('todoList');
+
+    const db = new GDB('todoList');
     // withRadixIndex(db);
+  //  withCentralizedBackup(db, "http://localhost:3000");
 
+    // db.clear()
     const currentNodeIds = new Set();
 
     // Crear elementos del DOM
