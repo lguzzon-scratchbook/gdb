@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GraphDB RBAC - WebAuthn Demo (Register, Login, Logout)</title>
+    <title>GDB RBAC - WebAuthn Demo (Register, Login, Logout)</title>
 
     <style>
         body { 
@@ -126,7 +126,7 @@
     </div>
 
     <script type="module">
-        import { GraphDB } from "../dist/index.js";
+        import { GDB } from "../dist/index.js";
         import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
 
         // DOM Elements
@@ -193,10 +193,10 @@
         
         async function initializeApp() {            
             try {
-                updateStatus("Initializing GraphDB...");
-                const db = new GraphDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
+                updateStatus("Initializing GDB...");
+                const db = new GDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
   
-                updateStatus("GraphDB ready. Initializing RBAC Security Context...");
+                updateStatus("GDB ready. Initializing RBAC Security Context...");
 
                 await rbac.createSecurityContext(db); 
                 
