@@ -268,10 +268,10 @@
     </div>
 
     <script type="module">
-        const { GraphDB } = await import("../dist/index.js")
+        const { GDB } = await import("../dist/index.js")
 
         const DB_NAME = 'blog-grid-persistent-db';
-        const db = new GraphDB(DB_NAME);
+        const db = new GDB(DB_NAME);
 
  
         const POSTS_PER_PAGE = 12;
