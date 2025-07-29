@@ -46,16 +46,18 @@ This project is under active development. Do not use it in production environmen
 
 ## Project Status
 
-- **Phase**: Alpha
+- **Phase**: Beta
 - **Completed Features**:
   - Basic queries.
   - Advanced queries.
   - Modules for AI queries.
   - Distributed storage.
+  - Conflict resolution module (LWW).
+  - Performance optimization.
 
 - **Pending Features**:
-  - Improve conflict resolution module.
-  - Performance optimization.
+  - Improve incremental Synchronization:
+    Currently, when a change is detected in an element, the entire graph is updated in nodes that do not have the latest version. In future versions, incremental synchronization will be implemented to propagate only the specific changes, improving efficiency and reducing latency in distributed graph updates.
 
 > ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](https://github.com/estebanrfp/gdb/wiki/CHANGELOG.md) before upgrading.
 
@@ -74,7 +76,18 @@ This project is under active development. Do not use it in production environmen
 - Secure storage of roles in internal graph
 - [Security Implementation](https://github.com/estebanrfp/gdb/wiki/RBAC-Security)
 
-> **Important Notice**: This project is currently in the research and development phase and is not yet ready for production use. Please wait until it reaches the beta or stable phase before deploying it in a live environment. Refer to the [Project Status](#project-status) section for more details.
+> **Important Notice**: This project has progressed from its active development phase and is now in the beta stage. While it is functional and stable in controlled environments, it is recommended to evaluate its suitability for production based on the specific needs of your environment. For more details, please refer to the [Project Status](#project-status)
+
+## ⚠️ Reliability Notice
+
+This is a distributed database (P2P + CRDT); therefore:  
+• In extreme conditions (network failures, partial synchronization, or unconventional usage), unexpected behavior may occur.  
+• Any reported issues will be prioritized and resolved in upcoming patch versions.
+
+The project has achieved the expected stability goals (such as conflict resolution, synchronization, and distributed storage), without intending to ignore the limitations inherent to distributed technologies (P2P + CRDT).
+
+gdb‑p2p has been rigorously tested with our common usage examples in such environments, demonstrating greater stability than many other well-known distributed databases.
+
 ---
 
 ## Installation
