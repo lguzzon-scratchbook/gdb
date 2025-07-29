@@ -126,7 +126,7 @@
 
     <script type="module">
         // Adjust paths if your 'dist' folder or file names are different.
-        import { GraphDB } from "../dist/index.js"; 
+        import { GDB } from "../dist/index.js"; 
         import * as rbac from '../dist/rbac.min.js'; 
 
         // DOM Elements
@@ -183,11 +183,11 @@
         
         async function initializeApp() {            
             try {
-                updateStatus("Initializing GraphDB...");
-                let db = new GraphDB("encryptionDemoDB"); 
-                // await db.ready; // If GraphDB constructor needs explicit ready await
+                updateStatus("Initializing GDB...");
+                let db = new GDB("encryptionDemoDB"); 
+                // await db.ready; // If GDB constructor needs explicit ready await
                 
-                updateStatus("GraphDB ready. Initializing RBAC Security Context...");
+                updateStatus("GDB ready. Initializing RBAC Security Context...");
                 await rbac.createSecurityContext(db); 
                 
                 rbac.setSecurityStateChangeCallback(updateUI);
