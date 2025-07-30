@@ -99,14 +99,14 @@ npm install gdb-p2p
 ```
 
 ```javascript
-import { GenosDB } from "gdb-p2p"
+import { GDB } from "gdb-p2p"
 ```
 
 ### 2. Direct use in browser from a CDN
 
 ```html
 <script type="module">
-  import { GenosDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm"
+  import { GDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm"
 </script>
 ```
 
