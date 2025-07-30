@@ -6,20 +6,20 @@ A lightweight, decentralized graph database designed for modern web applications
 
 ---
 
-[![NPM Version](https://img.shields.io/npm/v/gdb-p2p.svg?style=for-the-badge)](https://www.npmjs.org/package/gdb-p2p)
-[![NPM License](https://img.shields.io/npm/l/gdb-p2p.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
+[![NPM Version](https://img.shields.io/npm/v/genosdb.svg?style=for-the-badge)](https://www.npmjs.org/package/genosdb)
+[![NPM License](https://img.shields.io/npm/l/genosdb.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
 
 
-![Downloads on NPM](https://img.shields.io/npm/dw/gdb-p2p)
-[![](https://data.jsdelivr.com/v1/package/npm/gdb-p2p/badge)](https://www.jsdelivr.com/package/npm/gdb-p2p)
+![Downloads on NPM](https://img.shields.io/npm/dw/genosdb)
+[![](https://data.jsdelivr.com/v1/package/npm/genosdb/badge)](https://www.jsdelivr.com/package/npm/genosdb)
 
 ![Project Status](https://img.shields.io/badge/state-development-green)
 
 <!-- [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/estebanrfp/gdb&build=dist) -->
 
-![NPM Unpacked Size (with version)](https://img.shields.io/npm/unpacked-size/gdb-p2p/latest)
+![NPM Unpacked Size (with version)](https://img.shields.io/npm/unpacked-size/genosdb/latest)
 
-![npm package minimized gzipped size](https://img.shields.io/bundlejs/size/gdb-p2p)
+![npm package minimized gzipped size](https://img.shields.io/bundlejs/size/genosdb)
 
 [![Liberapay receiving](https://img.shields.io/liberapay/receives/estebanrfp.svg?logo=liberapay)](https://liberapay.com/estebanrfp/donate)
 
@@ -95,18 +95,18 @@ gdb‑p2p has been rigorously tested with our common usage examples in such envi
 ### 1. Via NPM
 
 ```bash
-npm install gdb-p2p
+npm install genosdb
 ```
 
 ```javascript
-import { GDB } from "gdb-p2p"
+import { GDB } from "genosdb"
 ```
 
 ### 2. Direct use in browser from a CDN
 
 ```html
 <script type="module">
-  import { GDB } from "https://cdn.jsdelivr.net/npm/gdb-p2p/+esm"
+  import { GDB } from "https://cdn.jsdelivr.net/npm/genosdb/+esm"
 </script>
 ```
 
@@ -197,7 +197,7 @@ This repository provides minified builds of GenosDB (GDB), a decentralized P2P g
 
 ## Author
 
-[Esteban Fuster Pozzi (@estebanrfp)](https://estebanrfp.com) — Full Stack JavaScript Developer and creator of [GenosDB (GDB)](https://www.npmjs.com/package/gdb-p2p), an open-source real-time graph database built entirely with modern vanilla JavaScript.
+[Esteban Fuster Pozzi (@estebanrfp)](https://estebanrfp.com) — Full Stack JavaScript Developer and creator of [GenosDB (GDB)](https://www.npmjs.com/package/genosdb), an open-source real-time graph database built entirely with modern vanilla JavaScript.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_shield&issueType=security)
 
