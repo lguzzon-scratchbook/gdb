@@ -114,7 +114,9 @@ import { GDB } from "genosdb"
 
 For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
 
-For interactive, AI-assisted GenosDB documentation, visit our [Devin Wiki](https://deepwiki.com/estebanrfp/gdb).
+For interactive, AI-assisted GenosDB documentation: 
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/estebanrfp/gdb)
 
 ## Examples
 
