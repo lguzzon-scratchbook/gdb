@@ -86,7 +86,7 @@ This is a distributed database (P2P + CRDT); therefore:
 
 The project has achieved the expected stability goals (such as conflict resolution, synchronization, and distributed storage), without intending to ignore the limitations inherent to distributed technologies (P2P + CRDT).
 
-gdb‑p2p has been rigorously tested with our common usage examples in such environments, demonstrating greater stability than many other well-known distributed databases.
+GenosDB has been rigorously tested with our common usage examples in such environments, demonstrating greater stability than many other well-known distributed databases.
 
 ---
 
