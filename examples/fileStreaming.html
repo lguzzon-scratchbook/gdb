@@ -2,13 +2,12 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>File Streaming App</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       margin: 20px;
     }
 
@@ -27,7 +26,7 @@
       border: 1px solid #ccc;
       border-radius: 5px;
       overflow: hidden;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
 
     .progress-bar-fill {
@@ -35,6 +34,12 @@
       background-color: #4caf50;
       width: 0%;
       transition: width 0.1s ease;
+    }
+
+    .file-label {
+      margin-bottom: 5px;
+      font-size: 14px;
+      text-align: left;
     }
 
     #status {
@@ -59,105 +64,108 @@
   <div id="status">Status: Idle</div>
 
   <script type="module">
-    // Import the database library
     import { GDB } from "../dist/index.js";
 
-    // Initialize the database and create a room
     const db = new GDB('file-room');
-
-    // Create an action for sending and receiving files
     const [sendFile, getFile, onFileProgress] = db.room.makeAction('file');
 
-    // Reference to the progress container
     const progressContainer = document.getElementById('progressContainer');
-
-    // Object to store progress bars for each peer
     const loadingBars = {};
 
-    // Handle incoming files
-    getFile(async (data, peerId, metadata) => {
+    getFile((data, peerId, metadata) => {
       console.log(`Received a file (${metadata.filename}) from ${peerId} with type ${metadata.type}`);
 
-      // Convert the received data into a downloadable file
       const blob = new Blob([data], { type: metadata.type });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = metadata.filename;
-      link.click();
-      URL.revokeObjectURL(url);
 
-      alert(`Received a file: ${metadata.filename} (${metadata.type})`);
+      const container = document.createElement('div');
+      // container.style.marginTop = '5px';
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = metadata.filename;
+      downloadLink.textContent = 'Download';
+      downloadLink.style.display = 'inline-block';
+      downloadLink.style.marginTop = '5px';
+
+      container.appendChild(downloadLink);
+      progressContainer.appendChild(container);
+
+      document.getElementById('status').textContent = 'Status: Idle';
     });
 
-    getFile((data, peerId, metadata) => {
-      console.log(
-        `got a file (${metadata.filename}) from ${peerId} with type ${metadata.type}`,
-        data
-      )
-    }
-    )
-
-    // Listen for progress updates as a receiver
     onFileProgress((percent, peerId, metadata) => {
-      // console.log(`${percent * 100}% done receiving ${metadata.filename} from ${peerId}`);
+      const key = `${peerId}-${metadata.filename}`;
+      let bar = loadingBars[key];
 
-      // Update the progress bar for the specific peer
-      if (loadingBars[peerId]) {
-        loadingBars[peerId].style.width = `${percent * 100}%`;
-      }
-
-      let bar = loadingBars[peerId];
       if (!bar) {
+        const container = document.createElement('div');
+
+        const label = document.createElement('div');
+        label.className = 'file-label';
+        label.textContent = metadata.filename;
+
         const progressBar = document.createElement('div');
         progressBar.className = 'progress-bar';
+
         const progressBarFill = document.createElement('div');
         progressBarFill.className = 'progress-bar-fill';
+
         progressBar.appendChild(progressBarFill);
-        progressContainer.appendChild(progressBar);
-        loadingBars[peerId] = progressBarFill;
+        container.appendChild(label);
+        container.appendChild(progressBar);
+        progressContainer.appendChild(container);
+
+        loadingBars[key] = progressBarFill;
         bar = progressBarFill;
       }
 
       bar.style.width = `${percent * 100}%`;
+
+      document.getElementById('status').textContent = 'Status: Recibing...';
     });
 
-    // Handle file selection and sending
     document.getElementById('fileInput').addEventListener('change', async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
-      // Read the file as an ArrayBuffer
       const buffer = await file.arrayBuffer();
 
-      // Send the file to all peers with metadata
       document.getElementById('status').textContent = 'Status: Sending...';
 
-      // Create progress bars for each peer
-      const peers = db.room.getPeers(); // Obtener la lista de pares
+      const peers = db.room.getPeers();
 
       for (const peerId in peers) {
+        const key = `${peerId}-${file.name}`;
+        const container = document.createElement('div');
+
+        const label = document.createElement('div');
+        label.className = 'file-label';
+        label.textContent = file.name;
+
         const progressBar = document.createElement('div');
         progressBar.className = 'progress-bar';
+
         const progressBarFill = document.createElement('div');
         progressBarFill.className = 'progress-bar-fill';
-        progressBar.appendChild(progressBarFill);
-        progressContainer.appendChild(progressBar);
 
-        // Store the progress bar for updates
-        loadingBars[peerId] = progressBarFill;
+        progressBar.appendChild(progressBarFill);
+        container.appendChild(label);
+        container.appendChild(progressBar);
+        progressContainer.appendChild(container);
+
+        loadingBars[key] = progressBarFill;
       }
 
-      // Send the file with metadata and progress updates
       try {
         await sendFile(
           buffer,
-          null, // Send to all peers
-          { filename: file.name, type: file.type }, // Metadata
+          null,
+          { filename: file.name, type: file.type },
           (percent, peerId) => {
-            // Update the progress bar for the sender
-            if (loadingBars[peerId]) {
-              loadingBars[peerId].style.width = `${percent * 100}%`;
+            const key = `${peerId}-${file.name}`;
+            if (loadingBars[key]) {
+              loadingBars[key].style.width = `${percent * 100}%`;
             }
           }
         );
