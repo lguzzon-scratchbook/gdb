@@ -4,18 +4,13 @@
   <input id='who' placeholder='name'>
   <input id='what' placeholder='say'>
   <input type='submit' value='send'>
-  <button type='submit2' value='clear'>
 </form>
 <script type="module"> import { GDB } from "../dist/index.js";
   let db = new GDB('chat9linescode'), chat = db.get("note" + location.hash.replace('#', '/')), view = document;
-  db.map(({id, value}) => {
+  db.map(({ id, value }) => {
     (view.line = view.getElementById(id) || view.createElement("li")).id = id;
     list.appendChild(view.line).innerText = value.msg
     window.scroll(0, list.offsetHeight);
-    console.log(value)
   });
   form.onsubmit = (eve) => { db.put({ msg: who.value + ': ' + what.value }), eve.preventDefault(what.value = "") }
-  // db.clear()
-  // (list.beep = new SpeechSynthesisUtterance()).text = "new";
-  // list.beep.rate = 10, list.beep.pitch = 2, window.speechSynthesis.speak(list.beep)
 </script>
