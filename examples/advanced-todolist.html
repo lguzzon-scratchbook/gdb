@@ -5,7 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GenosDB To-Do List 📝</title>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/genosdb/+esm"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -175,7 +174,7 @@
   </div>
 
   <script type="module">
-    import { GDB } from "https://cdn.jsdelivr.net/npm/genosdb/+esm"
+    import { GDB } from "../dist/index.js";
 
     const db = new GDB("my-todo-list-app")
     const taskListElement = document.getElementById("taskList")
