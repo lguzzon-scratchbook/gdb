@@ -1,36 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GDB RBAC Chat</title>
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
-        .container { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
-        h1, h2 { color: #2c3e50; text-align: center; }
-        .hidden { display: none !important; }
-        button { background-color: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; transition: background-color 0.2s ease; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        input[type="text"], input[type="password"], textarea { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
-        textarea { resize: vertical; min-height: 60px; }
-        .auth-section, .chat-section { margin-top: 20px; }
-        .status-bar { margin-top: 15px; padding: 10px; background-color: #ecf0f1; border-radius: 5px; font-size: 0.9em; color: #7f8c8d; }
-        .mnemonic-warning { background-color: #e74c3c; color: white; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; }
-        .messages { border: 1px solid #eee; padding: 10px; height: 300px; overflow-y: auto; margin-bottom: 10px; background-color: #fdfdfd; border-radius: 5px; }
-        .message { padding: 8px 12px; margin-bottom: 8px; border-radius: 15px; max-width: 75%; word-wrap: break-word; }
-        .message.own { background-color: #3498db; color: white; margin-left: auto; border-bottom-right-radius: 3px; }
-        .message.other { background-color: #ecf0f1; color: #2c3e50; margin-right: auto; border-bottom-left-radius: 3px; }
-        .message .sender { font-size: 0.75em; opacity: 0.8; display: block; margin-bottom: 3px; }
-        .message .text { font-size: 0.95em; }
-        .message .timestamp { font-size: 0.7em; opacity: 0.7; display: block; margin-top: 4px; text-align: right; }
-        .auth-options button { display: block; width: 100%; margin-bottom: 10px; }
-        .auth-options { display: flex; flex-direction: column; gap: 10px; }
-        .action-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;}
-        .action-group:last-child { border-bottom: none; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .auth-section,
+        .chat-section {
+            margin-top: 20px;
+        }
+
+        .status-bar {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .mnemonic-warning {
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .messages {
+            border: 1px solid #eee;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            background-color: #fdfdfd;
+            border-radius: 5px;
+        }
+
+        .message {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 15px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+
+        .message.own {
+            background-color: #3498db;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 3px;
+        }
+
+        .message.other {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            margin-right: auto;
+            border-bottom-left-radius: 3px;
+        }
+
+        .message .sender {
+            font-size: 0.75em;
+            opacity: 0.8;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .message .text {
+            font-size: 0.95em;
+        }
+
+        .message .timestamp {
+            font-size: 0.7em;
+            opacity: 0.7;
+            display: block;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .auth-options button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .auth-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-group {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .action-group:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🔐 GDB RBAC Chat</h1>
@@ -38,13 +181,14 @@
         <div id="authSection" class="auth-section">
             <h2>Login or Register</h2>
             <div class="auth-options">
-                 <div class="action-group">
+                <div class="action-group">
                     <h3>New User?</h3>
                     <button id="btnRegisterNew">1. Generate New Identity (Mnemonic)</button>
                     <div id="newIdentityInfo" class="hidden">
                         <p><strong>Address:</strong> <code id="newEthAddress"></code></p>
                         <p><strong>Mnemonic:</strong> <code id="newMnemonic"></code></p>
-                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this mnemonic phrase securely. It's the only way to recover your account if you lose WebAuthn access or switch devices!</div>
+                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this mnemonic phrase securely. It's the only
+                            way to recover your account if you lose WebAuthn access or switch devices!</div>
                         <button id="btnProtectWebAuthn">2. Protect with WebAuthn & Login</button>
                     </div>
                 </div>
@@ -89,17 +233,17 @@
         const authSection = document.getElementById('authSection');
         const chatSection = document.getElementById('chatSection');
         const statusBar = document.getElementById('statusBar');
-        
+
         const btnRegisterNew = document.getElementById('btnRegisterNew');
         const newIdentityInfo = document.getElementById('newIdentityInfo');
         const newEthAddressElem = document.getElementById('newEthAddress');
         const newMnemonicElem = document.getElementById('newMnemonic');
         const btnProtectWebAuthn = document.getElementById('btnProtectWebAuthn');
-        
+
         const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
         const inputMnemonic = document.getElementById('inputMnemonic');
         const btnLoginMnemonic = document.getElementById('btnLoginMnemonic');
-        
+
         const messagesContainer = document.getElementById('messagesContainer');
         const inputMessage = document.getElementById('inputMessage');
         const btnSendMessage = document.getElementById('btnSendMessage');
@@ -113,10 +257,10 @@
 
         // --- RBAC Custom Roles ---
         const CHAT_APP_ROLES = {
-          superadmin: { can: ["assignRole", "deleteAnyMessage", "write"], inherits: ["admin"] }, // Example
-          admin: { can: ["deleteMessage"], inherits: ["user"] }, // Example
-          user: { can: ["write", "readSelf"], inherits: ["guest"] }, // "write" allows sending messages
-          guest: { can: ["read", "write", "sync"] }, // Default, can read public messages
+            superadmin: { can: ["assignRole", "deleteAnyMessage", "write"], inherits: ["admin"] }, // Example
+            admin: { can: ["deleteMessage"], inherits: ["user"] }, // Example
+            user: { can: ["write", "readSelf"], inherits: ["guest"] }, // "write" allows sending messages
+            guest: { can: ["read", "write", "sync"] }, // Default, can read public messages
         };
 
         // --- UI UPDATE LOGIC ---
@@ -130,7 +274,7 @@
             }
 
             currentUserAddress = securityState.activeAddress;
-            let statusText = `Status: ${securityState.isActive ? `Logged in as ${securityState.activeAddress.substring(0,10)}...` : 'Logged out.'}`;
+            let statusText = `Status: ${securityState.isActive ? `Logged in as ${securityState.activeAddress.substring(0, 10)}...` : 'Logged out.'}`;
             statusText += ` | WebAuthn Active: ${securityState.isWebAuthnProtected}`;
             statusText += ` | WebAuthn Registered Here: ${securityState.hasWebAuthnHardwareRegistration}`;
             statusBar.textContent = statusText;
@@ -160,7 +304,30 @@
                 btnRegisterNew.disabled = false;
             }
         }
-        
+
+        async function ensureUserRole(address) {
+            try {
+                // We use db.map() to find a node that matches the query
+                const { results } = await db.map({
+                    query: { type: 'role', ethAddress: address },
+                    $limit: 1 // We only need to know if at least one exists
+                });
+
+                // If the results array is not empty, the role already exists
+                if (results.length > 0) {
+                    console.log(`User ${address} already has a role.`);
+                    return;
+                }
+
+                // If not, we assign the 'user' role
+                console.log(`Assigning 'user' role to ${address}...`);
+                await rbac.assignRole(address, 'user');
+                console.log(`Role 'user' assigned to ${address}`);
+            } catch (error) {
+                console.error("Failed during role check/assignment:", error);
+            }
+        }
+
         // --- INITIALIZATION ---
         async function initializeApp() {
             try {
@@ -173,7 +340,7 @@
 
                 rbac.setCustomRoles(CHAT_APP_ROLES);
                 rbac.setSecurityStateChangeCallback(updateUI);
-                
+
                 // Trigger initial UI update based on current state (e.g. from silent WebAuthn login)
                 // The callback itself will be called by createSecurityContext, but to be safe:
                 const initialState = {
@@ -183,9 +350,9 @@
                     hasVolatileIdentity: !!rbac.getMnemonicForDisplayAfterRegistrationOrRecovery(), // Heuristic
                     hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
                 };
-                
+
                 updateUI(initialState);
-                
+
                 // Attempt silent WebAuthn login if available
                 if (rbac.hasExistingWebAuthnRegistration() && !rbac.isSecurityActive()) {
                     console.log("Attempting silent WebAuthn login...");
@@ -261,6 +428,7 @@
                 const identity = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
                 if (identity) {
                     alert(`Logged in with mnemonic for address ${identity.address}`);
+                    await ensureUserRole(identity.address); // Ensure they have 'user' role
                     inputMnemonic.value = ''; // Clear after use
                     // User might want to protect this session with WebAuthn now
                     // For simplicity, we don't auto-prompt that here.
@@ -272,7 +440,7 @@
                 alert(`Mnemonic login error: ${error.message}`);
             }
         };
-        
+
         btnLogout.onclick = async () => {
             try {
                 await rbac.clearSecurity();
@@ -294,17 +462,17 @@
 
             let msgElement = document.getElementById(`msg-${id}`);
             if (action === 'updated' && !msgElement) return; // Should not happen if initial/added handled
-            
+
             if (!msgElement) { // 'initial' or 'added'
                 msgElement = document.createElement('div');
                 msgElement.id = `msg-${id}`;
                 msgElement.classList.add('message');
                 messagesContainer.appendChild(msgElement);
             }
-            
+
             msgElement.classList.toggle('own', value.sender === currentUserAddress);
             msgElement.classList.toggle('other', value.sender !== currentUserAddress);
-            
+
             const senderShort = value.sender ? `${value.sender.substring(0, 6)}...${value.sender.substring(value.sender.length - 4)}` : 'Unknown';
             const messageDate = value.timestamp ? new Date(value.timestamp).toLocaleString() : 'No timestamp';
 
@@ -313,10 +481,10 @@
                 <span class="text">${value.text}</span>
                 <span class="timestamp">${messageDate}</span>
             `;
-            
+
             // Scroll to bottom for new messages
             if (action === 'added' || action === 'initial') {
-                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         }
 
@@ -344,13 +512,13 @@
 
             try {
                 // Check permission to send message (defined as 'write' in custom roles)
-                const senderAddress = await rbac.executeWithPermission('write'); 
-                
+                const senderAddress = await rbac.executeWithPermission('write');
+
                 const messageData = {
                     type: 'message',
                     sender: senderAddress,
                     text: text,
-                    timestamp: Date.now() 
+                    timestamp: Date.now()
                 };
                 await db.put(messageData);
                 inputMessage.value = ''; // Clear input field
@@ -360,10 +528,11 @@
                 alert(`Failed to send message: ${error.message}. Do you have 'write' permission?`);
             }
         };
-        
+
         // Start the application
         initializeApp();
 
     </script>
 </body>
+
 </html>
