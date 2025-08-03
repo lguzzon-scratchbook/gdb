@@ -53,10 +53,8 @@
   <div id="status">Status: Idle</div>
 
   <!-- Container for video elements -->
-  <video id="selfVideo" muted playsinline></video>
-  <div id="videos">
-
-  </div>
+  <video id="selfVideo" autoplay muted playsinline></video>
+  <div id="videos"></div>
 
   <script type="module">
     // Import the database library (replace with your actual library path)
@@ -169,6 +167,15 @@
         delete peerVideos[peerId]; // Delete the reference
       }
     })
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        // selfVideo.srcObject = stream;
+        // selfVideo.play(); // opcional, en algunos navegadores es necesario
+      })
+      .catch(error => {
+        console.error('Camera error:', error);
+      });
   </script>
 </body>
 
