@@ -96,18 +96,11 @@
   <ul id="taskList"></ul>
   <script type="module">
     import { GDB } from "../dist/index.js";
-    // import { withRadixIndex } from "../dist/radixIndex.min.js";
-    // import { withCentralizedBackup } from '../dist/CentralizedBackup.min.js';
-
 
     const db = new GDB('todoList');
-    // withRadixIndex(db);
-  //  withCentralizedBackup(db, "http://localhost:3000");
-
-    // db.clear()
     const currentNodeIds = new Set();
 
-    // Crear elementos del DOM
+    // Create DOM elements for each task
     function createTaskElements(li, id, { text, completed }) {
       const taskTextSpan = document.createElement('span');
       taskTextSpan.className = completed ? 'completed' : '';
@@ -135,7 +128,7 @@
 
       const editButtonsContainer = document.createElement('div');
       editButtonsContainer.className = 'edit-buttons hidden';
-      
+
       const saveButton = document.createElement('button');
       saveButton.innerHTML = '💾';
       saveButton.onclick = () => saveEdit(id, taskEditTextInput.value);
@@ -149,7 +142,7 @@
       li.append(taskTextSpan, taskEditTextInput, iconContainer);
     }
 
-    // Manejadores de operaciones
+    // Add task handler
     function handleAddTask(id, { text, completed }) {
       const li = document.createElement('li');
       li.id = id;
@@ -158,6 +151,7 @@
       currentNodeIds.add(id);
     }
 
+    // Update task handler
     function handleUpdateTask(id, { text, completed }) {
       const li = document.getElementById(id);
       if (!li) return;
@@ -169,12 +163,13 @@
       taskTextSpan.className = completed ? 'completed' : '';
       taskEditTextInput.value = text;
 
-      // Salir del modo edición si está activo
+      // Exit edit mode if active
       if (!taskEditTextInput.classList.contains('hidden')) {
         cancelEdit(li);
       }
     }
 
+    // Delete task handler
     function handleDeleteTask(id) {
       const li = document.getElementById(id);
       if (li) {
@@ -183,22 +178,23 @@
       }
     }
 
-    // Lógica de UI
+    // UI logic: enable edit mode
     function enableEditMode(li) {
-      li.querySelector('span').classList.add('hidden'); // Ocultar el texto de la tarea
-      li.querySelector('input').classList.remove('hidden'); // Mostrar el campo de edición
-      li.querySelector('.edit-buttons').classList.remove('hidden'); // Mostrar botones de guardar/cancelar
-      li.querySelector('button:first-child').style.display = 'none'; // Ocultar el botón de editar
+      li.querySelector('span').classList.add('hidden'); // Hide task text
+      li.querySelector('input').classList.remove('hidden'); // Show input field
+      li.querySelector('.edit-buttons').classList.remove('hidden'); // Show save/cancel buttons
+      li.querySelector('button:first-child').style.display = 'none'; // Hide edit button
     }
 
+    // UI logic: cancel edit mode
     function cancelEdit(li) {
-      li.querySelector('span').classList.remove('hidden'); // Mostrar el texto de la tarea
-      li.querySelector('input').classList.add('hidden'); // Ocultar el campo de edición
-      li.querySelector('.edit-buttons').classList.add('hidden'); // Ocultar botones de guardar/cancelar
-      li.querySelector('button:first-child').style.display = 'inline-block'; // Mostrar el botón de editar
+      li.querySelector('span').classList.remove('hidden'); // Show task text
+      li.querySelector('input').classList.add('hidden'); // Hide input field
+      li.querySelector('.edit-buttons').classList.add('hidden'); // Hide save/cancel buttons
+      li.querySelector('button:first-child').style.display = 'inline-block'; // Show edit button
     }
 
-    // Operaciones de base de datos
+    // DB operation: toggle task completion
     async function toggleTask(id) {
       const li = document.getElementById(id);
       if (!li) return;
@@ -206,12 +202,13 @@
       const taskTextSpan = li.querySelector('span');
       const completed = !taskTextSpan.classList.contains('completed');
       taskTextSpan.classList.toggle('completed');
-      await db.put({ 
-        text: taskTextSpan.textContent, 
-        completed 
+      await db.put({
+        text: taskTextSpan.textContent,
+        completed
       }, id);
     }
 
+    // DB operation: save edited task
     async function saveEdit(id, newText) {
       if (!newText.trim()) return;
 
@@ -224,39 +221,31 @@
       cancelEdit(li);
     }
 
+    // DB operation: delete task
     async function deleteTask(id) {
       await db.remove(id);
     }
 
+    // DB operation: add new task
     async function addTask() {
       const input = document.getElementById('taskInput');
       if (!input.value.trim()) return;
 
-      await db.put({ 
-        text: input.value,// .trim(), 
-        completed: false 
+      await db.put({
+        text: input.value,
+        completed: false
       });
       input.value = '';
     }
 
-    // Suscripción a cambios en tiempo real
-    const { unsubscribe } = await db.map(({id, value, action}) => { 
-      if (action === 'initial') { 
-        handleAddTask(id, { text: value.text, completed: value.completed });
-      }
-      if (action === 'removed') {
-        handleDeleteTask(id);
-      } 
-      if (action === 'updated') {
-        handleUpdateTask(id,{text: value.text, completed: value.completed});
-      } 
-      if (action === 'added') {
-        handleAddTask(id, {text: value.text, completed: value.completed});
-      }
+    // Subscribe to real-time database changes
+    const { unsubscribe } = await db.map(({ id, value, action }) => {
+      if (action === "initial" || action === "added") handleAddTask(id, value);
+      if (action === "updated") handleUpdateTask(id, value);
+      if (action === "removed") handleDeleteTask(id);
     });
-    
 
-    // Event listeners
+    // Add task on Enter key press
     document.getElementById('taskInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') addTask();
     });
