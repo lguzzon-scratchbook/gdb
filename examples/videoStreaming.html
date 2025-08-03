@@ -53,8 +53,9 @@
   <div id="status">Status: Idle</div>
 
   <!-- Container for video elements -->
+  <video id="selfVideo" muted playsinline></video>
   <div id="videos">
-    <video id="selfVideo" autoplay muted playsinline></video>
+
   </div>
 
   <script type="module">
@@ -70,17 +71,23 @@
     // Reference to the video container
     const videoContainer = document.getElementById('videos');
 
+    const selfVideo = document.getElementById('selfVideo');
+
     // Variables to manage the local video stream
     let selfStream;
 
     // Start streaming video
     document.getElementById('startButton').addEventListener('click', async () => {
       try {
+
         // Get access to the user's webcam
         selfStream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: true
         });
+
+        selfVideo.srcObject = selfStream;
+        selfVideo.play();
 
         // Send the stream to peers currently in the room
         db.room.addStream(selfStream);
@@ -98,32 +105,37 @@
       }
     });
 
-    // Stop streaming video
     document.getElementById('stopButton').addEventListener('click', () => {
       if (selfStream) {
-        // Stop all tracks in the stream
+        // 1. Stop all media tracks (audio/video)
         selfStream.getTracks().forEach(track => track.stop());
 
-        // Remove the stream from the room
-        db.room.removeStream();
+        // 2. Clear the local video display
+        selfVideo.srcObject = null;
 
-        // Update UI
+        // 5. Update UI
         document.getElementById('status').textContent = 'Status: Stopped';
         document.getElementById('startButton').disabled = false;
         document.getElementById('stopButton').disabled = true;
+
+        // 6. Clear stream reference
+        selfStream = null;
+
+        sendAction({ leave: true })
       }
     });
 
     // Handle incoming video streams from other peers
     db.room.onPeerStream((stream, peerId) => {
       let video = peerVideos[peerId];
+      console.log(`Received stream from peer ${peerId}`);
 
       // If this peer hasn't sent a stream before, create a video element
       if (!video) {
         video = document.createElement('video');
         video.autoplay = true;
+        video.id = peerId
 
-        // Add video element to the DOM
         videoContainer.appendChild(video);
       }
 
@@ -148,13 +160,15 @@
       }
     });
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-      .then(stream => {
-        document.getElementById('selfVideo').srcObject = stream;
-      })
-      .catch(err => {
-        console.error('Camera error:', err);
-      });
+    const [sendAction, recibeActions] = db.room.makeAction('actions')
+
+    recibeActions((data, peerId) => {
+      // Clean up the video element for the peer who left
+      if (peerVideos[peerId]) {
+        peerVideos[peerId].remove(); // Remove the video element from the DOM
+        delete peerVideos[peerId]; // Delete the reference
+      }
+    })
   </script>
 </body>
 
