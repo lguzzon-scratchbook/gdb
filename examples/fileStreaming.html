@@ -63,7 +63,6 @@
     import { GDB } from "../dist/index.js";
 
     // Initialize the database and create a room
-    // const db = new GDB('file-room', { password: 'secure-password' });
     const db = new GDB('file-room');
 
     // Create an action for sending and receiving files
@@ -77,28 +76,50 @@
 
     // Handle incoming files
     getFile(async (data, peerId, metadata) => {
-      console.log(`Received a file (${metadata.name}) from ${peerId} with type ${metadata.type}`);
+      console.log(`Received a file (${metadata.filename}) from ${peerId} with type ${metadata.type}`);
 
       // Convert the received data into a downloadable file
       const blob = new Blob([data], { type: metadata.type });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = metadata.name;
+      link.download = metadata.filename;
       link.click();
       URL.revokeObjectURL(url);
 
-      alert(`Received a file: ${metadata.name} (${metadata.type})`);
+      alert(`Received a file: ${metadata.filename} (${metadata.type})`);
     });
+
+    getFile((data, peerId, metadata) => {
+      console.log(
+        `got a file (${metadata.filename}) from ${peerId} with type ${metadata.type}`,
+        data
+      )
+    }
+    )
 
     // Listen for progress updates as a receiver
     onFileProgress((percent, peerId, metadata) => {
-      console.log(`${percent * 100}% done receiving ${metadata.name} from ${peerId}`);
+      // console.log(`${percent * 100}% done receiving ${metadata.filename} from ${peerId}`);
 
       // Update the progress bar for the specific peer
       if (loadingBars[peerId]) {
         loadingBars[peerId].style.width = `${percent * 100}%`;
       }
+
+      let bar = loadingBars[peerId];
+      if (!bar) {
+        const progressBar = document.createElement('div');
+        progressBar.className = 'progress-bar';
+        const progressBarFill = document.createElement('div');
+        progressBarFill.className = 'progress-bar-fill';
+        progressBar.appendChild(progressBarFill);
+        progressContainer.appendChild(progressBar);
+        loadingBars[peerId] = progressBarFill;
+        bar = progressBarFill;
+      }
+
+      bar.style.width = `${percent * 100}%`;
     });
 
     // Handle file selection and sending
@@ -115,7 +136,7 @@
       // Create progress bars for each peer
       const peers = db.room.getPeers(); // Obtener la lista de pares
 
-      peers.forEach(peerId => {
+      for (const peerId in peers) {
         const progressBar = document.createElement('div');
         progressBar.className = 'progress-bar';
         const progressBarFill = document.createElement('div');
@@ -125,7 +146,7 @@
 
         // Store the progress bar for updates
         loadingBars[peerId] = progressBarFill;
-      });
+      }
 
       // Send the file with metadata and progress updates
       try {
@@ -134,7 +155,6 @@
           null, // Send to all peers
           { filename: file.name, type: file.type }, // Metadata
           (percent, peerId) => {
-            console.log(percent)
             // Update the progress bar for the sender
             if (loadingBars[peerId]) {
               loadingBars[peerId].style.width = `${percent * 100}%`;
