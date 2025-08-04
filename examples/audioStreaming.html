@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Real-Time Audio Streaming</title>
   <style>
     body {
@@ -24,6 +24,35 @@
       font-size: 18px;
       color: green;
     }
+
+    #audios {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .peer-audio-container {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #e8f5e9;
+      transition: background-color 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .peer-id {
+      font-size: 12px;
+      margin-top: 8px;
+      word-break: break-word;
+      padding: 0 8px;
+      text-align: center;
+    }
   </style>
 </head>
 
@@ -36,20 +65,19 @@
 
   <div id="status">Status: Idle</div>
 
+  <!-- Hidden local audio -->
+  <audio id="selfAudio" autoplay muted></audio>
+  <div id="audios"></div>
+
   <script type="module">
-    // Import the database library (replace with your actual library path)
     import { GDB } from "../dist/index.js";
 
-    // Initialize the database and create a room
     const db = new GDB('audio-room');
-
-    // Object to store audio instances for each peer
     const peerAudios = {};
-
-    // Variables to manage the local audio stream
+    const audioContainer = document.getElementById('audios');
+    const selfAudio = document.getElementById('selfAudio');
     let selfStream;
 
-    // Start streaming audio
     document.getElementById('startButton').addEventListener('click', async () => {
       try {
         // Get access to the user's microphone
@@ -57,6 +85,10 @@
           audio: true,
           video: false
         });
+
+        // Preview the local audio stream (muted)
+        selfAudio.srcObject = selfStream;
+        selfAudio.play();
 
         // Send the stream to peers currently in the room
         db.room.addStream(selfStream);
@@ -74,46 +106,96 @@
       }
     });
 
-    // Stop streaming audio
     document.getElementById('stopButton').addEventListener('click', () => {
       if (selfStream) {
-        // Stop all tracks in the stream
         selfStream.getTracks().forEach(track => track.stop());
+        selfAudio.srcObject = null;
+        selfStream = null;
 
-        // Remove the stream from the room
-        db.room.removeStream();
-
-        // Update UI
         document.getElementById('status').textContent = 'Status: Stopped';
         document.getElementById('startButton').disabled = false;
         document.getElementById('stopButton').disabled = true;
+
+        sendAction({ leave: true });
       }
     });
 
-    // Handle incoming audio streams from other peers
     db.room.onPeerStream((stream, peerId) => {
-      // Create an audio element for the incoming stream
-      const audio = new Audio();
-      audio.srcObject = stream;
-      audio.autoplay = true;
+      let container = peerAudios[peerId];
+      console.log(`Received stream from peer ${peerId}`);
 
-      // Store the audio instance for later use (e.g., adjusting volume)
-      peerAudios[peerId] = audio;
+      if (!container) {
+        // Create container with visual indicator
+        container = document.createElement('div');
+        container.className = 'peer-audio-container';
+        container.id = peerId;
+
+        // Create audio element
+        const audio = document.createElement('audio');
+        audio.autoplay = true;
+        audio.controls = false;
+        audio.style.display = 'none'; // Hide audio UI
+        container.appendChild(audio);
+
+        // Add peer ID label
+        const peerLabel = document.createElement('div');
+        peerLabel.className = 'peer-id';
+        peerLabel.textContent = peerId;
+        container.appendChild(peerLabel);
+
+        audioContainer.appendChild(container);
+      }
+
+      const audioElement = container.querySelector('audio');
+      audioElement.srcObject = stream;
+
+      // Detect voice activity using Web Audio API
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      const dataArray = new Uint8Array(analyser.fftSize);
+      source.connect(analyser);
+
+      function detectVolume() {
+        analyser.getByteTimeDomainData(dataArray);
+        const volume = Math.max(...dataArray) - 128;
+
+        // Change background color based on volume threshold
+        container.style.backgroundColor = volume > 10 ? "#a5d6a7" : "#e8f5e9";
+
+        requestAnimationFrame(detectVolume);
+      }
+
+      detectVolume();
+
+      peerAudios[peerId] = container;
 
       console.log(`Received audio stream from peer ${peerId}`);
     });
 
-    // Log when peers join or leave the room
     db.room.onPeerJoin(peerId => console.log(`${peerId} joined the room`));
+
     db.room.onPeerLeave(peerId => {
       console.log(`${peerId} left the room`);
-
-      // Clean up the audio instance for the peer who left
       if (peerAudios[peerId]) {
-        peerAudios[peerId].pause();
+        peerAudios[peerId].remove();
         delete peerAudios[peerId];
       }
     });
+
+    const [sendAction, recibeActions] = db.room.makeAction('actions');
+
+    recibeActions((data, peerId) => {
+      if (peerAudios[peerId]) {
+        peerAudios[peerId].remove();
+        delete peerAudios[peerId];
+      }
+    });
+
+    // Request microphone access silently on page load
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .catch(error => console.error('Microphone error:', error));
   </script>
 </body>
 
