@@ -200,6 +200,30 @@
       }
     }
 
+    #instructions {
+      background: #e9f0fe;
+      border: 1px solid #67b0f4;
+      border-radius: 6px;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #2c3e50;
+    }
+
+    #instructions h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #345eaa;
+      font-size: 16px;
+    }
+
+    #instructions ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style-type: disc;
+    }
+
     /* --- Cytoscape Node/Edge Styles (Defined in JS below - Untouched CSS-wise here) --- */
     /* The styles within the <script> tag's cytoscape initialization take precedence */
   </style>
@@ -209,6 +233,19 @@
   <!-- Controls Sidebar -->
   <div id="controls">
     <h2>Interactive GDB</h2>
+
+    <div id="instructions">
+      <h3>Instructions</h3>
+      <ul>
+        <li><strong>Create node:</strong> Type text in the first input and press <kbd>Enter</kbd>.</li>
+        <li><strong>Edit node:</strong> Select a node by clicking it, edit the text in the second input, then press
+          <kbd>Enter</kbd>.</li>
+        <li><strong>Connect nodes:</strong> Click a node to select it, then hold <kbd>Shift</kbd> and click another
+          node.</li>
+        <li><strong>Delete node:</strong> Double-click a node and confirm.</li>
+      </ul>
+    </div>
+
     <input type="text" id="nodeText" placeholder="Enter node text" />
     <!-- <button onclick="insertNode()">Insert Node</button> -->
     <br>
@@ -378,11 +415,25 @@
       }
     });
 
-    // Agregar un event listener global para detectar la tecla "Delete"
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Backspace") {
-        event.preventDefault(); // Evitar comportamiento predeterminado
-        removeNode(); // Llamar a la función para eliminar el nodo seleccionado
+    // // Agregar un event listener global para detectar la tecla "Delete"
+    // document.addEventListener("keydown", function (event) {
+    //   if (event.key === "Backspace") {
+    //     event.preventDefault(); // Evitar comportamiento predeterminado
+    //     removeNode(); // Llamar a la función para eliminar el nodo seleccionado
+    //   }
+    // });
+
+    // Eliminar nodo con doble clic
+    cy.on("dblclick", "node", async function (event) {
+      const nodeId = event.target.id();
+      const confirmDelete = confirm(`Do you want to delete node "${nodeId}"?`);
+      if (!confirmDelete) return;
+
+      try {
+        await db.remove(nodeId);
+        console.log("Node removed via double-click:", nodeId);
+      } catch (error) {
+        console.error("Error removing node:", error);
       }
     });
 
