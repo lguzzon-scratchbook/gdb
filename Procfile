@@ -1,1 +1,1 @@
-web:node --inspect node GraphDBServer.js
+web:node --inspect node GDBServer.js
