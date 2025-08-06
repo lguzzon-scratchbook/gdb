@@ -354,35 +354,25 @@
                 newIdentityInfo.classList.add('hidden');
             }
 
-            // if (securityState.isActive && securityState.activeAddress && db) {
-            //     try {
-            //         const userNodeKey = `user:${securityState.activeAddress}`;
-            //         // Use db.get because rbac.get would try to decrypt, which might not be desired for a user node
-            //         const userNodeQuery = await db.get(userNodeKey); 
-            //         const userNode = userNodeQuery.result;
-            //         let role = 'N/A (Node not found/synced)';
-            //         if (userNode && userNode.value) {
-            //              // Handle if user node value itself was a wrapper from a previous (non-RBAC put) version
-            //             const actualValue = userNode.value._actualValue !== undefined ? userNode.value._actualValue : userNode.value;
-            //             role = actualValue.role || role;
-            //         }
-            //         statusCurrentRole.textContent = role;
-            //     } catch (e) {
-            //         statusCurrentRole.textContent = 'Error fetching role';
-            //         logToUI(`Error fetching role: ${e.message}`, 'error');
-            //     }
-            // } else {
-            //     statusCurrentRole.textContent = 'N/A';
-            // }
-
+        
             if (securityState.isActive && securityState.activeAddress && db) {
                 const userNodeKey = `user:${securityState.activeAddress}`;
 
                 // Usamos la versión de `get` con callback para la reactividad.
                 db.get(userNodeKey, (userNode) => {
-                    // Este callback se ejecutará ahora y cada vez que el nodo cambie.
-                    let role = 'user'; // Valor por defecto si no se encuentra el nodo.
+                    // Este callback se ejecutará para el estado inicial y para cada cambio.
+                    const currentEth = rbac.getActiveEthAddress(); // Obtenemos la dirección activa
 
+                    // Primero, necesitamos la lista. La obtenemos del input.
+                    const superAdminsList = superAdminInput.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+                    if (currentEth && superAdminsList.includes(currentEth.toLowerCase())) {
+                        statusCurrentRole.textContent = 'superadmin (from config)';
+                        return; // Si es superadmin, no sigas. Muestra el rol y termina el callback.
+                    }
+
+                    // El resto de la lógica (para usuarios normales) se ejecuta si no es superadmin.
+                    let role = 'guest'; // Cambiemos el rol por defecto a 'guest' para consistencia.
                     if (userNode && userNode.value) {
                         const value = userNode.value;
                         role = value.role || role;
@@ -390,7 +380,6 @@
                     } else {
                         logToUI(`Role listener update. User node not found, defaulting to '${role}'.`, 'warn');
                     }
-
                     statusCurrentRole.textContent = role;
 
                 }).then(({ unsubscribe }) => {

@@ -219,7 +219,7 @@
     import { GDB } from "../dist/index.js"; // Adjust path according to your structure
     import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
 
-    const SUPERADMIN_ETH_ADDRESSES = ["0x62c48827e883f114821211673Dc309a29Aae7e6A"]; // Replace with your superadmin address(es)
+    const SUPERADMIN_ETH_ADDRESSES = ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"]; // Replace with your superadmin address(es)
 
     let db;
     let uiLog = "";
@@ -316,11 +316,18 @@
       console.log("REALTIME_CALLBACK_CONSOLE_LOG:", formattedMessage);
     }
 
-
     function updateUserRoleInUI(userNodeData) {
       const currentEth = rbac.getActiveEthAddress();
       if (!userRoleActiveEl) return;
       if (!currentEth) { userRoleActiveEl.textContent = 'N/A'; return; }
+
+      // Comprueba si la dirección actual está en la lista de superadmins.
+      // .toLowerCase() hace la comparación insensible a mayúsculas/minúsculas.
+      const isSuperAdmin = SUPERADMIN_ETH_ADDRESSES.some(adminAddr => adminAddr.toLowerCase() === currentEth.toLowerCase());
+      if (isSuperAdmin) {
+        userRoleActiveEl.textContent = 'superadmin (from config)';
+        return; // Si es superadmin, no sigas. Muestra el rol y termina.
+      }
 
       if (userNodeData && userNodeData.value && userNodeData.value.role) {
         let roleText = userNodeData.value.role;
@@ -331,7 +338,8 @@
       } else if (userNodeData === null) {
         userRoleActiveEl.textContent = 'Not assigned (or node deleted)';
       } else {
-        userRoleActiveEl.textContent = 'Loading... (or no role)';
+        // Cambiamos este texto para que el rol por defecto sea 'guest'
+        userRoleActiveEl.textContent = 'guest';
       }
     }
 
@@ -484,7 +492,7 @@
     });
 
 
-    
+
     putDataBtnEl.addEventListener('click', async () => {
       const nodeId = dataNodeIdWriteInput.value.trim() || undefined;
       let nodeValue;
@@ -498,7 +506,7 @@
         const userEthAddress = await rbac.executeWithPermission('write');
         const idResultado = await db.put(nodeValue, nodeId);
 
-        logAction(`Write: Success. ID: ${idResultado}. User: ${userEthAddress.substring(0,10)}...`); // Opcional
+        logAction(`Write: Success. ID: ${idResultado}. User: ${userEthAddress.substring(0, 10)}...`); // Opcional
       } catch (error) { logAction(`Write: Error: ${error.message}`); alert(`Error: ${error.message}`); }
       finally { updateUIState(false); }
     });
@@ -554,7 +562,7 @@
         const userEthAddress = await rbac.executeWithPermission('assignRole');
         await rbac.assignRole(targetEth, role);
         logAction(`Role: Assignment completed (sent to GDB).`);
-        
+
         alert("Role assignment request sent.");
       } catch (error) { logAction(`Role: Error: ${error.message}`); alert(`Error: ${error.message}`); }
       finally { updateUIState(false); }
