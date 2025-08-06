@@ -1,31 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GDB Security Audit (v2)</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f9; color: #333; font-size: 14px; }
-        .container { max-width: 900px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1, h2, h3 { color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .section { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #ddd; }
-        .section:last-child { border-bottom: none; padding-bottom: 0; }
-        button { background-color: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; margin: 5px 2px; transition: background-color 0.2s; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        input[type="text"], input[type="password"], textarea { width: calc(100% - 22px); padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
-        textarea { min-height: 60px; resize: vertical; }
-        .info-box { background-color: #e9f7ef; border: 1px solid #a7d7c5; padding: 10px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; word-break: break-all; }
-        .log-console { background-color: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; height: 200px; overflow-y: auto; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; }
-        .log-console .log-error { color: #e74c3c; }
-        .log-console .log-warn { color: #f39c12; }
-        .log-console .log-info { color: #3498db; }
-        .log-console .log-success { color: #2ecc71; }
-        .flex-group { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-        .flex-group > div { flex-grow: 1; min-width: 200px;}
-        .hidden { display: none; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f9;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ddd;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px 2px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: calc(100% - 22px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .info-box {
+            background-color: #e9f7ef;
+            border: 1px solid #a7d7c5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .log-console {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+
+        .log-console .log-error {
+            color: #e74c3c;
+        }
+
+        .log-console .log-warn {
+            color: #f39c12;
+        }
+
+        .log-console .log-info {
+            color: #3498db;
+        }
+
+        .log-console .log-success {
+            color: #2ecc71;
+        }
+
+        .flex-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .flex-group>div {
+            flex-grow: 1;
+            min-width: 200px;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>GDB Security Testbed (v2)</h1>
@@ -42,13 +153,14 @@
                 </div>
                 <div>
                     <label for="superAdminInput">Super Admin ETH Address (optional, comma-separated):</label>
-                    <input type="text" id="superAdminInput" placeholder="0xYourAddress1,0xYourAddress2">
+                    <input type="text" id="superAdminInput" value="0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"
+                        placeholder="0xYourAddress1,0xYourAddress2">
                 </div>
             </div>
-             <button id="btnInitializeDB">Initialize DB & RBAC</button>
-             <span id="initStatus" style="margin-left: 10px; font-style: italic;"></span>
+            <button id="btnInitializeDB">Initialize DB & RBAC</button>
+            <span id="initStatus" style="margin-left: 10px; font-style: italic;"></span>
         </div>
-        
+
         <!-- Identity Management -->
         <div class="section">
             <h2>Identity Management</h2>
@@ -61,7 +173,7 @@
             <hr>
             <button id="btnLoginWebAuthn" disabled>Login with WebAuthn</button>
             <div class="flex-group">
-                 <div>
+                <div>
                     <label for="mnemonicLoginInput">Mnemonic to Login:</label>
                     <textarea id="mnemonicLoginInput" rows="2" placeholder="Enter 12-word phrase..."></textarea>
                 </div>
@@ -80,20 +192,22 @@
                 <p><strong>Current Role:</strong> <span id="statusCurrentRole">N/A</span></p>
                 <p><strong>Session WebAuthn Protected:</strong> <span id="statusWebAuthnProtected">false</span></p>
                 <p><strong>Volatile Identity Present:</strong> <span id="statusVolatileIdentity">false</span></p>
-                <p><strong>WebAuthn Hardware Registered on this site:</strong> <span id="statusWebAuthnRegistered">false</span></p>
+                <p><strong>WebAuthn Hardware Registered on this site:</strong> <span
+                        id="statusWebAuthnRegistered">false</span></p>
             </div>
         </div>
 
         <!-- Secure Data (Implicit Encryption via rbac.put/get) -->
         <div class="section">
             <h2>Secure Data Storage (Implicit Encryption)</h2>
-            <p>Uses <code>rbac.put()</code> for automatic encryption and <code>rbac.get()</code> for automatic decryption.</p>
+            <p>Uses <code>rbac.put()</code> for automatic encryption and <code>rbac.get()</code> for automatic
+                decryption.</p>
             <div class="flex-group">
                 <div>
                     <label for="secureNoteIdInput">Note ID (leave blank to generate new):</label>
                     <input type="text" id="secureNoteIdInput" placeholder="e.g., mySecretNote123">
                 </div>
-                 <div>
+                <div>
                     <label for="secureNoteContentInput">Note Content:</label>
                     <textarea id="secureNoteContentInput" rows="2">This is a super secret note!</textarea>
                 </div>
@@ -101,14 +215,15 @@
             </div>
             <hr>
             <div class="flex-group">
-                 <div>
+                <div>
                     <label for="loadSecureNoteIdInput">Note ID to Load:</label>
                     <input type="text" id="loadSecureNoteIdInput" placeholder="Enter ID of saved note">
                 </div>
                 <button id="btnLoadSecureNote" disabled>Load & Decrypt Note (rbac.get)</button>
             </div>
             <div class="info-box">
-                <strong>Loaded Note Content:</strong> <pre id="loadedSecureNoteContent" style="white-space: pre-wrap;"></pre>
+                <strong>Loaded Note Content:</strong>
+                <pre id="loadedSecureNoteContent" style="white-space: pre-wrap;"></pre>
             </div>
         </div>
 
@@ -138,7 +253,7 @@
                 <button id="btnAssignRole" disabled>Assign Role (needs 'assignRole' perm)</button>
             </div>
         </div>
-        
+
         <!-- Console Log -->
         <div class="section">
             <h2>Testbed Console</h2>
@@ -182,7 +297,7 @@
         const loadSecureNoteIdInput = document.getElementById('loadSecureNoteIdInput');
         const btnLoadSecureNote = document.getElementById('btnLoadSecureNote');
         const loadedSecureNoteContent = document.getElementById('loadedSecureNoteContent');
-        
+
         const publicDataNodeIdInput = document.getElementById('publicDataNodeIdInput');
         const publicDataValueInput = document.getElementById('publicDataValueInput');
         const btnWritePublicData = document.getElementById('btnWritePublicData');
@@ -195,12 +310,13 @@
         // App State
         let db = null; // Renamed to avoid conflict if GDB is global
         let volatileIdentityCache = null;
+        let roleListenerUnsubscribe = null; // <--- AÑADE ESTA LÍNEA AQUÍ
 
         // --- Logging Utility ---
         function logToUI(message, type = 'log') {
             const entry = document.createElement('div');
             entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            const typeToClass = { error: 'log-error', warn: 'log-warn', info: 'log-info', success: 'log-success'};
+            const typeToClass = { error: 'log-error', warn: 'log-warn', info: 'log-info', success: 'log-success' };
             if (typeToClass[type]) entry.classList.add(typeToClass[type]);
             logConsole.appendChild(entry);
             logConsole.scrollTop = logConsole.scrollHeight;
@@ -209,8 +325,8 @@
 
         // --- RBAC State Change Handler ---
         async function handleSecurityStateChange(securityState) {
-            logToUI(`RBAC State: Active=${securityState.isActive}, Addr=${securityState.activeAddress?.substring(0,10) || 'N/A'}..., WebAuthn=${securityState.isWebAuthnProtected}`, 'info');
-            
+            logToUI(`RBAC State: Active=${securityState.isActive}, Addr=${securityState.activeAddress?.substring(0, 10) || 'N/A'}..., WebAuthn=${securityState.isWebAuthnProtected}`, 'info');
+
             statusRbacActive.textContent = securityState.isActive;
             statusActiveAddress.textContent = securityState.activeAddress || 'N/A';
             statusWebAuthnProtected.textContent = securityState.isWebAuthnProtected;
@@ -223,7 +339,7 @@
             btnLoginWebAuthn.disabled = !securityState.hasWebAuthnHardwareRegistration || securityState.isActive;
             btnLoginMnemonic.disabled = securityState.isActive;
             btnLogout.disabled = !securityState.isActive;
-            
+
             // Action buttons
             btnSaveSecureNote.disabled = !securityState.isActive;
             btnLoadSecureNote.disabled = !securityState.isActive;
@@ -238,23 +354,53 @@
                 newIdentityInfo.classList.add('hidden');
             }
 
+            // if (securityState.isActive && securityState.activeAddress && db) {
+            //     try {
+            //         const userNodeKey = `user:${securityState.activeAddress}`;
+            //         // Use db.get because rbac.get would try to decrypt, which might not be desired for a user node
+            //         const userNodeQuery = await db.get(userNodeKey); 
+            //         const userNode = userNodeQuery.result;
+            //         let role = 'N/A (Node not found/synced)';
+            //         if (userNode && userNode.value) {
+            //              // Handle if user node value itself was a wrapper from a previous (non-RBAC put) version
+            //             const actualValue = userNode.value._actualValue !== undefined ? userNode.value._actualValue : userNode.value;
+            //             role = actualValue.role || role;
+            //         }
+            //         statusCurrentRole.textContent = role;
+            //     } catch (e) {
+            //         statusCurrentRole.textContent = 'Error fetching role';
+            //         logToUI(`Error fetching role: ${e.message}`, 'error');
+            //     }
+            // } else {
+            //     statusCurrentRole.textContent = 'N/A';
+            // }
+
             if (securityState.isActive && securityState.activeAddress && db) {
-                try {
-                    const userNodeKey = `user:${securityState.activeAddress}`;
-                    // Use db.get because rbac.get would try to decrypt, which might not be desired for a user node
-                    const userNodeQuery = await db.get(userNodeKey); 
-                    const userNode = userNodeQuery.result;
-                    let role = 'N/A (Node not found/synced)';
+                const userNodeKey = `user:${securityState.activeAddress}`;
+
+                // Usamos la versión de `get` con callback para la reactividad.
+                db.get(userNodeKey, (userNode) => {
+                    // Este callback se ejecutará ahora y cada vez que el nodo cambie.
+                    let role = 'user'; // Valor por defecto si no se encuentra el nodo.
+
                     if (userNode && userNode.value) {
-                         // Handle if user node value itself was a wrapper from a previous (non-RBAC put) version
-                        const actualValue = userNode.value._actualValue !== undefined ? userNode.value._actualValue : userNode.value;
-                        role = actualValue.role || role;
+                        const value = userNode.value;
+                        role = value.role || role;
+                        logToUI(`Role listener update. Detected role: ${role}`, 'info');
+                    } else {
+                        logToUI(`Role listener update. User node not found, defaulting to '${role}'.`, 'warn');
                     }
+
                     statusCurrentRole.textContent = role;
-                } catch (e) {
-                    statusCurrentRole.textContent = 'Error fetching role';
-                    logToUI(`Error fetching role: ${e.message}`, 'error');
-                }
+
+                }).then(({ unsubscribe }) => {
+                    // Guardamos la función de desuscripción para usarla después (Paso 2).
+                    roleListenerUnsubscribe = unsubscribe;
+                }).catch(e => {
+                    statusCurrentRole.textContent = 'Error subscribing to role';
+                    logToUI(`Error setting up role subscription: ${e.message}`, 'error');
+                });
+
             } else {
                 statusCurrentRole.textContent = 'N/A';
             }
@@ -273,7 +419,7 @@
                 initStatus.textContent = "Ready to initialize.";
             }
         }
-        
+
         async function initializeDBAndRBAC() {
             if (db) {
                 logToUI("DB already initialized.", "warn");
@@ -296,7 +442,7 @@
                 await rbac.createSecurityContext(db, superAdmins);
                 rbac.setSecurityStateChangeCallback(handleSecurityStateChange);
                 logToUI("RBAC Security Context initialized. Attempting to restore session...", "success");
-                
+
                 // createSecurityContext might trigger a silent login, which calls handleSecurityStateChange.
                 // If not, ensure UI reflects the initial state after createSecurityContext.
                 const initialState = { /* fetch current rbac state */
@@ -306,7 +452,7 @@
                     hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
                 };
                 handleSecurityStateChange(initialState); // Ensure UI update if silent login didn't trigger it.
-                
+
                 localStorage.setItem('gdb_testbed_last_db_name', dbName); // Persist DB name
                 btnInitializeDB.disabled = true;
                 dbNameInput.disabled = true;
@@ -320,7 +466,7 @@
             }
         }
         btnInitializeDB.addEventListener('click', initializeDBAndRBAC);
-        
+
         // --- Identity Actions ---
         btnRegisterNewUser.addEventListener('click', async () => {
             if (!db) { logToUI("Initialize DB first!", "error"); return; }
@@ -330,7 +476,7 @@
                 if (identity) {
                     volatileIdentityCache = identity;
                     // handleSecurityStateChange will update the UI with mnemonic etc.
-                    logToUI(`New volatile ID: ${identity.address.substring(0,10)}... SAVE MNEMONIC!`, "success");
+                    logToUI(`New volatile ID: ${identity.address.substring(0, 10)}... SAVE MNEMONIC!`, "success");
                 } else { logToUI("Failed to generate new identity.", "error"); }
             } catch (e) { logToUI(`Registration error: ${e.message}`, "error"); }
         });
@@ -338,32 +484,32 @@
         btnProtectWebAuthn.addEventListener('click', async () => {
             if (!db) { logToUI("Initialize DB first!", "error"); return; }
             if (!volatileIdentityCache || !volatileIdentityCache.privateKey) {
-                 logToUI("No volatile identity to protect. Generate one first.", "error"); return;
+                logToUI("No volatile identity to protect. Generate one first.", "error"); return;
             }
             logToUI("Protecting with WebAuthn...", "info");
             try {
                 const address = await rbac.protectCurrentIdentityWithWebAuthn(volatileIdentityCache.privateKey);
                 if (address) {
-                    logToUI(`Identity ${address.substring(0,10)}... protected with WebAuthn & logged in.`, "success");
+                    logToUI(`Identity ${address.substring(0, 10)}... protected with WebAuthn & logged in.`, "success");
                     volatileIdentityCache = null;
                 } else { logToUI("WebAuthn protection failed.", "error"); }
             } catch (e) { logToUI(`WebAuthn protection error: ${e.message}`, "error"); }
         });
 
-        btnLoginWebAuthn.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */ 
+        btnLoginWebAuthn.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */
             if (!db) { logToUI("Initialize DB first!", "error"); return; }
             logToUI("Attempting WebAuthn login...", "info");
             try {
                 const address = await rbac.loginCurrentUserWithWebAuthn();
                 if (address) {
-                    logToUI(`Logged in with WebAuthn as ${address.substring(0,10)}...`, "success");
+                    logToUI(`Logged in with WebAuthn as ${address.substring(0, 10)}...`, "success");
                 } else {
                     logToUI("WebAuthn login failed.", "error");
                 }
             } catch (e) { logToUI(`WebAuthn login error: ${e.message}`, "error"); }
         });
-        
-        btnLoginMnemonic.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */ 
+
+        btnLoginMnemonic.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */
             if (!db) { logToUI("Initialize DB first!", "error"); return; }
             const mnemonic = mnemonicLoginInput.value.trim();
             if (!mnemonic) { logToUI("Please enter mnemonic.", "error"); return; }
@@ -371,8 +517,8 @@
             try {
                 const identity = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
                 if (identity) {
-                    logToUI(`Logged in with mnemonic for ${identity.address.substring(0,10)}...`, "success");
-                    volatileIdentityCache = identity; 
+                    logToUI(`Logged in with mnemonic for ${identity.address.substring(0, 10)}...`, "success");
+                    volatileIdentityCache = identity;
                     mnemonicLoginInput.value = '';
                 } else {
                     logToUI("Mnemonic login failed.", "error");
@@ -380,7 +526,7 @@
             } catch (e) { logToUI(`Mnemonic login error: ${e.message}`, "error"); }
         });
 
-        btnLogout.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */ 
+        btnLogout.addEventListener('click', async () => { /* ... (เหมือนเดิม) ... */
             if (!db) { logToUI("Initialize DB first!", "error"); return; }
             logToUI("Logging out...", "info");
             try {
@@ -411,11 +557,11 @@
         });
 
         btnLoadSecureNote.addEventListener('click', async () => {
-            if (!rbac.isSecurityActive() && !localStorage.getItem('gdb_rbac_last_session_was_webauthn') && !mnemonicLoginInput.value) { 
+            if (!rbac.isSecurityActive() && !localStorage.getItem('gdb_rbac_last_session_was_webauthn') && !mnemonicLoginInput.value) {
                 // A bit more lenient: allow load attempt if a session *might* be restorable,
                 // rbac.get will handle actual decryption failure.
-                 logToUI("Login or a restorable session (e.g. WebAuthn) is typically needed to decrypt.", "warn");
-                 // Do not return yet, let rbac.get try
+                logToUI("Login or a restorable session (e.g. WebAuthn) is typically needed to decrypt.", "warn");
+                // Do not return yet, let rbac.get try
             }
             const noteIdToLoad = loadSecureNoteIdInput.value.trim();
             if (!noteIdToLoad) { logToUI("Enter Note ID to load.", "warn"); return; }
@@ -432,11 +578,11 @@
                     } else if (node.value && node.value._gdb_decryption_unavailable) {
                         logToUI(`Cannot decrypt note '${noteIdToLoad}': ${node.value.note}`, "warn");
                         loadedSecureNoteContent.textContent = `CANNOT DECRYPT: ${node.value.note}`;
-                    } else if (node.value && node.value._gdb_decryption_error_meta){
-                         logToUI(`Cannot decrypt note '${noteIdToLoad}': ${node.value.note}`, "error");
+                    } else if (node.value && node.value._gdb_decryption_error_meta) {
+                        logToUI(`Cannot decrypt note '${noteIdToLoad}': ${node.value.note}`, "error");
                         loadedSecureNoteContent.textContent = `DECRYPTION METADATA ERROR: ${node.value.note}`;
                     }
-                     else {
+                    else {
                         logToUI(`Secure note '${noteIdToLoad}' loaded and decrypted.`, "success");
                         loadedSecureNoteContent.textContent = JSON.stringify(node.value, null, 2);
                         // Also copy to the 'save' input for easy re-saving/editing
@@ -446,7 +592,7 @@
                         }
                     }
                     console.log(node)
-                  
+
                 } else {
                     logToUI(`Secure note ID '${noteIdToLoad}' not found.`, "warn");
                     loadedSecureNoteContent.textContent = 'Note not found.';
@@ -464,11 +610,11 @@
             const dataValue = publicDataValueInput.value.trim();
             let nodeId = publicDataNodeIdInput.value.trim();
             if (!dataValue) { logToUI("No data to write.", "warn"); return; }
-            
+
             logToUI("Attempting to write public data (via db.put, permission 'write')...", "info");
             try {
                 const currentUserAddress = await rbac.executeWithPermission('write'); // Removed db param
-                logToUI(`User ${currentUserAddress.substring(0,10)}... has 'write' permission. Proceeding...`, "info");
+                logToUI(`User ${currentUserAddress.substring(0, 10)}... has 'write' permission. Proceeding...`, "info");
 
                 nodeId = nodeId || ("publicData:" + Date.now());
                 // Using db.put directly as this is 'public' (not using rbac.put for encryption)
@@ -494,11 +640,11 @@
             logToUI(`Attempting to assign role '${roleToAssign}' to ${targetUser} (permission 'assignRole')...`, "info");
             try {
                 const assignerAddress = await rbac.executeWithPermission('assignRole'); // No db param
-                logToUI(`User ${assignerAddress.substring(0,10)}... has 'assignRole' permission. Proceeding...`, "info");
-                
+                logToUI(`User ${assignerAddress.substring(0, 10)}... has 'assignRole' permission. Proceeding...`, "info");
+
                 await rbac.assignRole(targetUser, roleToAssign); // No db param
                 logToUI(`Role '${roleToAssign}' assignment for ${targetUser} sent.`, "success");
-                
+
                 if (targetUser.toLowerCase() === assignerAddress.toLowerCase()) {
                     const s = { /* fetch rbac state */
                         isActive: rbac.isSecurityActive(), activeAddress: rbac.getActiveEthAddress(),
@@ -512,7 +658,7 @@
                 logToUI(`Assign role failed: ${error.message}`, "error");
             }
         });
-        
+
         // --- Initial UI State & Auto-Init ---
         logToUI("Testbed loaded. Attempting auto-initialization if DB name persisted...");
         handleSecurityStateChange({ isActive: false, activeAddress: null, isWebAuthnProtected: false, hasVolatileIdentity: false, hasWebAuthnHardwareRegistration: false });
@@ -520,4 +666,5 @@
 
     </script>
 </body>
+
 </html>
