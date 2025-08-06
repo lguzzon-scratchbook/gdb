@@ -54,10 +54,10 @@ This project is under active development. Do not use it in production environmen
   - Distributed storage.
   - Conflict resolution module (LWW).
   - Performance optimization.
+  - Intelligent Hybrid Synchronization: GenosDB overcomes the limitations of naive P2P sync with an intelligent, dual-mode engine. It automatically exchanges tiny, compressed Deltas between active peers using a sliding-window Oplog for blazing-fast, low-latency updates. For peers that are too far out of sync, it seamlessly switches to a robust Full-State Fallback, guaranteeing absolute data consistency for everyone, no matter how long they've been offline.
 
 - **Pending Features**:
-  - Improve incremental Synchronization:
-    Currently, when a change is detected in an element, the entire graph is updated in nodes that do not have the latest version. In future versions, incremental synchronization will be implemented to propagate only the specific changes, improving efficiency and reducing latency in distributed graph updates.
+  - No major features are currently pending. The project has entered a hardening phase with a focus on rigorous testing and stability improvements.
 
 > ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](https://github.com/estebanrfp/gdb/wiki/CHANGELOG.md) before upgrading.
 
