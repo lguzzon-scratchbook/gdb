@@ -293,7 +293,7 @@
                 logToUI("GDB instance ready.", "success");
 
                 const superAdmins = superAdminInput.value.split(',').map(s => s.trim()).filter(Boolean);
-                await rbac.createSecurityContext(superAdmins);
+                await rbac.createSecurityContext(db, superAdmins);
                 rbac.setSecurityStateChangeCallback(handleSecurityStateChange);
                 logToUI("RBAC Security Context initialized. Attempting to restore session...", "success");
                 
