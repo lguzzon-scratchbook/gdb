@@ -354,9 +354,9 @@
                 newIdentityInfo.classList.add('hidden');
             }
 
-        
             if (securityState.isActive && securityState.activeAddress && db) {
                 const userNodeKey = `user:${securityState.activeAddress}`;
+
 
                 // Usamos la versión de `get` con callback para la reactividad.
                 db.get(userNodeKey, (userNode) => {
@@ -461,13 +461,25 @@
             if (!db) { logToUI("Initialize DB first!", "error"); return; }
             logToUI("Registering new user (Mnemonic)...", "info");
             try {
+                // Llama a rbac y espera la nueva identidad
                 const identity = await rbac.startNewUserRegistration();
+
+                // Si la identidad se creó, la guardamos Y actualizamos la UI directamente
                 if (identity) {
                     volatileIdentityCache = identity;
-                    // handleSecurityStateChange will update the UI with mnemonic etc.
+
+                    // Actualiza los elementos del cuadro de información aquí mismo.
+                    newMnemonicElem.textContent = identity.mnemonic;
+                    newEthAddressElem.textContent = identity.address;
+                    newIdentityInfo.classList.remove('hidden'); // Muestra el cuadro
+
                     logToUI(`New volatile ID: ${identity.address.substring(0, 10)}... SAVE MNEMONIC!`, "success");
-                } else { logToUI("Failed to generate new identity.", "error"); }
-            } catch (e) { logToUI(`Registration error: ${e.message}`, "error"); }
+                } else {
+                    logToUI("Failed to generate new identity.", "error");
+                }
+            } catch (e) {
+                logToUI(`Registration error: ${e.message}`, "error");
+            }
         });
 
         btnProtectWebAuthn.addEventListener('click', async () => {
