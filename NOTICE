@@ -1,18 +1,22 @@
-This project includes the following third-party dependencies:
+This software, GenosRTC, incorporates code from the following open-source projects.
+For full license details, please see the corresponding files in the 'licenses' directory.
 
-1. @msgpack/msgpack
+1. @noble/curves
+   - License: MIT
+   - Source: https://github.com/paulmillr/noble-curves
+   - Full license text: licenses/noble-curves-license.txt
+
+2. @msgpack/msgpack
    - License: BSD 3-Clause
    - Source: https://github.com/msgpack/msgpack-javascript
    - Full license text: licenses/msgpack-license.txt
 
-2. pako
+3. pako
    - License: MIT
    - Source: https://github.com/nodeca/pako
    - Full license text: licenses/pako-license.txt
 
-3. trystero
+4. ethers
    - License: MIT
-   - Source: https://github.com/trystero/trystero
-   - Full license text: licenses/trystero-license.txt
-
-   
+   - Source: https://github.com/ethers-io/ethers.js
+   - Full license text: licenses/ethers-license.txt
