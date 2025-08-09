@@ -132,7 +132,7 @@ Below is a list of internal dependencies and their purposes within the project:
 | ------------------ | ---------------------------------------------------------------------------------------|
 | `@msgpack/msgpack` | Data serialization/deserialization in MessagePack format.                              |
 | `pako`             | Data compression/decompression using gzip.                                            |
-| `trystero`         | P2P synchronization for sharing changes in real-time between tabs/devices.            |
+| `genosrtc`         | New Internal Module for P2P synchronization for sharing changes in real-time between tabs/devices.            |
 | `BroadcastChannel` | Communication between browser tabs to notify local changes.                           |
 
 #### Additional Information
@@ -143,9 +143,9 @@ Below is a list of internal dependencies and their purposes within the project:
 - **`pako`**:  
   Provides gzip compression to optimize data storage and network communication.
 
-- **`trystero`**:  
+- **`GenosRTC`**:  
   Enables peer-to-peer synchronization, ensuring real-time updates across multiple instances of the application.  
-  > **Note**: Among the available networks supported by Trystero, this project specifically uses the **Nostr** protocol for decentralized communication.  
+  > **Note**: Among the available networks supported by GenosRTC, this project specifically uses the **Nostr** protocol for decentralized communication.  
   >
   > **What is Nostr?**  
   > Nostr (Notes and Other Stuff Transmitted by Relays) is a decentralized protocol designed for censorship-resistant global communication. It operates without relying on centralized servers, instead using a network of relays to transmit signed messages between peers. Nostr is particularly well-suited for applications requiring secure, private, and scalable peer-to-peer interactions, such as social networks, messaging systems, or collaborative tools.
