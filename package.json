@@ -45,8 +45,7 @@
   "dependencies": {
     "@msgpack/msgpack": "3.1.2",
     "ethers": "6.15.0",
-    "pako": "2.1.0",
-    "trystero": "^0.21.6"
+    "pako": "2.1.0"
   },
   "devDependencies": {
     "eslint": "9.32.0",
