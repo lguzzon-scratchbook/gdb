@@ -143,7 +143,7 @@ Below is a list of internal dependencies and their purposes within the project:
 - **`pako`**:  
   Provides gzip compression to optimize data storage and network communication.
 
-- **`GenosRTC` (Internal Module for GenosDB) **:  
+- **`GenosRTC`** (Internal Module for GenosDB) :  
   GenosRTC is the real-time communication module for GenosDB, implementing peer-to-peer connections via WebRTC with signaling over the Nostr protocol.
 
   This module was developed internally for the specific needs of GenosDB and leverages state-of-the-art cryptographic dependencies, such as `@noble/curves`, to ensure maximum security and performance.
