@@ -50,11 +50,14 @@ This project is under active development. Do not use it in production environmen
 - **Completed Features**:
   - Basic queries.
   - Advanced queries.
+  - **Recursive Graph Traversal Queries:**
+    Execute complex, multi-hop graph traversals using the recursive $edge operator. This enables filtering nodes based on the properties of other nodes, regardless of their relational distance. The entire traversal logic is resolved within a single, declarative query, eliminating the need for manual, multi-step lookups in the application code. The query engine is designed to handle deeply nested relational structures efficiently.
   - Modules for AI queries.
   - Distributed storage.
   - Conflict resolution module (LWW).
   - Performance optimization.
-  - Intelligent Hybrid Synchronization: GenosDB overcomes the limitations of naive P2P sync with an intelligent, dual-mode engine. It automatically exchanges tiny, compressed Deltas between active peers using a sliding-window Oplog for blazing-fast, low-latency updates. For peers that are too far out of sync, it seamlessly switches to a robust Full-State Fallback, guaranteeing absolute data consistency for everyone, no matter how long they've been offline.
+  - **Intelligent Hybrid Synchronization:**
+    GenosDB overcomes the limitations of naive P2P sync with an intelligent, dual-mode engine. It automatically exchanges tiny, compressed Deltas between active peers using a sliding-window Oplog for blazing-fast, low-latency updates. For peers that are too far out of sync, it seamlessly switches to a robust Full-State Fallback, guaranteeing absolute data consistency for everyone, no matter how long they've been offline.
 
 - **Pending Features**:
   - No major features are currently pending. The project has entered a hardening phase with a focus on rigorous testing and stability improvements.
