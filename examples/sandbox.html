@@ -1,511 +1,217 @@
 <!DOCTYPE html>
 <html>
-
 <head>
+  <title>GenosDB - Ultimate Sandbox</title>
   <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      display: grid;
-      height: 100vh;
-      grid-template-rows: 1fr auto;
-      /* Ajuste para incluir la barra de estado */
-      grid-template-columns: 350px 1fr;
-    }
-
-    .sidebar {
-      background: white;
-      border-right: .5rem solid #ddd;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .query-list {
-      list-style-type: none;
-      padding: 0;
-    }
-
-    .query-item {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-start;
-      background: #f8f9fa;
-      color: #444;
-      border-radius: 5px;
-      padding: 10px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-    }
-
-    .query-item:hover {
-      background: #e9ecef;
-    }
-
-    .query-item.active {
-      background: #007bff;
-      color: white;
-    }
-
-    .query-item strong {
-      pointer-events: none;
-    }
-
-    .query-item br {
-      display: none;
-    }
-
-    .main-content {
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      /* Añadimos espacio para la barra de estado */
-      gap: 20px;
-      padding: 20px;
-      overflow: hidden;
-    }
-
-    .query-display {
-      border: 0;
-      border-radius: 8px;
-      font-family: 'Consolas', monospace;
-      padding: 1rem;
-      resize: none;
-      outline: none;
-      height: 250px;
-      background: #f8f9fa;
-      color: #444;
-      white-space: pre-wrap;
-    }
-
-    .results-panel {
-      display: grid;
-      border-radius: 10px;
-      overflow-y: auto;
-    }
-
-    .results-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
-    }
-
-    .result-item {
-      background: #027bff;
-      color: white;
-      border-radius: 5px;
-      padding: 10px;
-      text-align: center;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .result-item:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .result-item img {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      margin: 0 auto 10px;
-      object-fit: cover;
-    }
-
-    input,
-    button,
-    select {
-      padding: 10px;
-      margin: 5px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-    }
-
-    button {
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s ease-in-out;
-      position: relative;
-      overflow: hidden;
-    }
-
-    button:hover {
-      background: #0056b3;
-    }
-
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    button.loading {
-      background: cyan;
-      animation: blink 1s infinite alternate ease-in-out;
-    }
-
-    @keyframes blink {
-      0% {
-        background: cyan;
-      }
-
-      100% {
-        background: #00ffff80;
-      }
-    }
-
-    .status-bar {
-      border-top: 1px solid #ddd;
-      padding: 10px;
-      text-align: center;
-      font-size: 14px;
-      color: #444;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; display: grid; height: 100vh; grid-template-rows: 1fr auto; grid-template-columns: 350px 1fr; }
+    .sidebar { background: white; border-right: .5rem solid #ddd; padding: 20px; overflow-y: auto; }
+    .query-list { list-style-type: none; padding: 0; }
+    .query-item { display: flex; flex-direction: column; background: #f8f9fa; color: #444; border-radius: 5px; padding: 10px; margin-bottom: 10px; cursor: pointer; transition: background 0.3s ease; user-select: none; }
+    .query-item:hover { background: #e9ecef; }
+    .query-item.active { background: #007bff; color: white; }
+    .query-item strong { pointer-events: none; font-size: 0.9em; }
+    .query-item small { pointer-events: none; font-size: 0.8em; opacity: 0.7; margin-top: 4px; display: block; }
+    .main-content { display: grid; grid-template-rows: auto 1fr auto; gap: 20px; padding: 20px; overflow: hidden; }
+    .query-display { border: 0; border-radius: 8px; font-family: 'Consolas', monospace; padding: 1rem; resize: none; outline: none; height: 250px; background: #f8f9fa; color: #444; white-space: pre-wrap; }
+    .results-panel { display: grid; border-radius: 10px; overflow-y: auto; }
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; padding: 5px; }
+    .result-item { background: white; color: #333; border-radius: 5px; padding: 15px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); border-left: 4px solid #007bff; }
+    .result-item strong { color: #0056b3; display: block; margin-bottom: 5px; }
+    .result-item pre { background-color: #eef2f5; padding: 10px; border-radius: 3px; font-size: 0.8em; margin-top: 10px; max-height: 150px; overflow-y: auto; }
+    .controls button { background: #dc3545; color: white; cursor: pointer; transition: background 0.3s; padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 5px; }
+    .controls button:hover { background: #c82333; }
+    .status-bar { border-top: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px; color: #444; }
+    h3 { margin: 20px 0 10px; color: #6c757d; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; }
   </style>
 </head>
-
 <body>
 
   <div class="sidebar">
     <ul class="query-list" id="queryList">
-      <!-- Ejemplo 1: Name Equals "John Doe" -->
-      <li class="query-item" data-query='{"query": {"name": {"$eq": "John Doe"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Equals "John Doe"</strong><br>
-        Searches for users with the exact name "John Doe".
+      <h3>Graph Traversal ($edge)</h3>
+      <li class="query-item" data-query='{"query": {"type":"Company", "name":"Innovate Inc.", "$edge": {"type":"Employee"}}}'>
+        <strong>All Employees of a Company</strong>
+        <small>Uses $edge to find Innovate Inc. and return all its Employee descendants.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"type":"Company", "$edge": {"role":"Developer", "isActive":true}}}'>
+        <strong>All Active Developers</strong>
+        <small>Uses $edge to find all active developers across all companies.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"type":"Company", "name":"Data Corp", "$edge": {"age":{"$gte":38}}}}'>
+        <strong>Employees >= 38 in Data Corp</strong>
+        <small>Uses $edge to find employees in Data Corp who are 38 or older.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"type":"Company", "$edge": {"tags":{"$in":["JavaScript"]}}}}'>
+        <strong>Employees with 'JavaScript' tag</strong>
+        <small>Uses $edge to find all employees who have "JavaScript" in their tags array.</small>
       </li>
 
-      <!-- Ejemplo 2: Age Between 20 and 30 -->
-      <li class="query-item" data-query='{"query": {"age": {"$between": [20, 30]}}, "order": "asc", "field": "name"}'>
-        <strong>Age Between 20 and 30</strong><br>
-        Searches for users whose age is between 20 and 30 years.
+      <h3>Conditional Operators</h3>
+      <li class="query-item" data-query='{"query": {"name": {"$eq": "Alice"}}}'>
+        <strong>$eq: Name is "Alice"</strong>
+        <small>Finds the employee with the exact name "Alice".</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"age": {"$gte": 35}}}'>
+        <strong>$gte: Age >= 35</strong>
+        <small>Finds all employees aged 35 or older.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"age": {"$between": [30, 40]}}}'>
+        <strong>$between: Age between 30 and 40</strong>
+        <small>Finds employees whose age is between 30 and 40.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"level": {"$in": ["Senior", "Lead"]}}}'>
+        <strong>$in: Level is 'Senior' or 'Lead'</strong>
+        <small>Finds employees who are either 'Senior' or 'Lead'.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"email": {"$exists": true}}}'>
+        <strong>$exists: Has an email address</strong>
+        <small>Finds all employees who have an email property.</small>
       </li>
 
-      <!-- Ejemplo 3: Country Equals "Spain" -->
-      <li class="query-item" data-query='{"query": {"country": {"$eq": "Spain"}}, "order": "asc", "field": "name"}'>
-        <strong>Country Equals "Spain"</strong><br>
-        Searches for users living in Spain.
+      <h3>Logical Operators</h3>
+      <li class="query-item" data-query='{"query": {"$and": [{"role": "Developer"}, {"country": "USA"}]}}'>
+        <strong>$and: Is a Developer AND from the USA</strong>
+        <small>Finds employees who are both developers and from the USA.</small>
       </li>
-
-      <!-- Ejemplo 4: Gender Equals "Male" -->
-      <li class="query-item" data-query='{"query": {"gender": {"$eq": "male"}}, "order": "asc", "field": "name"}'>
-        <strong>Gender Equals "Male"</strong><br>
-        Searches for male users.
+       <li class="query-item" data-query='{"query": {"$or": [{"isActive": false}, {"age": {"$gt": 40}}]}}'>
+        <strong>$or: Is Inactive OR older than 40</strong>
+        <small>Finds employees who are inactive OR are older than 40.</small>
       </li>
-
-      <!-- Ejemplo 5: Date of Birth After 1990 -->
-      <li class="query-item"
-        data-query='{"query": {"dob": {"$gte": "1990-01-01T00:00:00Z"}}, "order": "asc", "field": "name"}'>
-        <strong>Date of Birth After 1990</strong><br>
-        Searches for users born after January 1, 1990.
+       <li class="query-item" data-query='{"query": {"country": {"$not": {"$eq": "USA"}}}}'>
+        <strong>$not: Country is NOT USA</strong>
+        <small>Finds all employees who are not from the USA.</small>
       </li>
-
-      <!-- Ejemplo 6: Age >= 40 AND Country = "US" -->
-      <li class="query-item"
-        data-query='{"query": {"age": {"$gte": 40}, "country": {"$eq": "United States"}}, "order": "asc", "field": "name"}'>
-        <strong>Age >= 40 AND Country = "US"</strong><br>
-        Searches for users older than 40 years living in the USA.
+      
+      <h3>Text Search Operators</h3>
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "^B"}}}'>
+        <strong>$regex: Name starts with "B"</strong>
+        <small>Uses a regular expression to find names starting with 'B'.</small>
       </li>
-
-      <!-- Ejemplo 7: Users from Spain, Ordered by Age (ASC), Limited to 5 Results -->
-      <li class="query-item"
-        data-query='{"query": {"country": {"$eq": "Spain"}}, "order": "asc", "field": "age", "$limit": 5}'>
-        <strong>Users from Spain, Ordered by Age (ASC), Limited to 5 Results</strong><br>
-        Searches for users living in Spain, orders them by age in ascending order, and limits the results to the first 5
-        users.
-      </li>
-
-      <!-- Ejemplo 8: $and -->
-      <li class="query-item"
-        data-query='{"query": {"$and": [{"age": {"$gte": 25}}, {"country": {"$eq": "Spain"}}]}, "order": "asc", "field": "name"}'>
-        <strong>Age >= 25 AND Country = "Spain"</strong><br>
-        Searches for users who are at least 25 years old and live in Spain.
-      </li>
-
-      <!-- Ejemplo 9: $or -->
-      <li class="query-item"
-        data-query='{"query": {"$or": [{"gender": {"$eq": "male"}}, {"age": {"$lt": 30}}]}, "order": "asc", "field": "name"}'>
-        <strong>Gender = Male OR Age < 30</strong><br>
-            Searches for users who are either male or younger than 30 years old.
-      </li>
-
-      <!-- Ejemplo 10: $between -->
-      <li class="query-item" data-query='{"query": {"age": {"$between": [25, 40]}}, "order": "asc", "field": "name"}'>
-        <strong>Age Between 25 and 40</strong><br>
-        Searches for users whose age is between 25 and 40 (inclusive).
-      </li>
-
-      <!-- Ejemplo 11: $not -->
-      <li class="query-item"
-        data-query='{"query": {"age": {"$not": {"$eq": "25"}}}, "order": "asc", "field": "name"}'>
-        <strong>Country NOT "United States"</strong><br>
-        Searches for users who do NOT live in the United States.
-      </li>
-
-      <li class="query-item"
-        data-query='{"query": {"$or": [{ "country": { "$exists": false } }, { "country": { "$not": { "$eq": "United States" } } }]}, "order": "asc", "field": "name"}'>
-        <strong>Country NOT "United States2"</strong><br>
-        Searches for users who do NOT live in the United States.
-      </li>
-
-      <li class="query-item"
-        data-query='{"query": {"$or": [{ "country": { "$exists": false } }, { "country": { "$ne": "United States" } }]}, "order": "asc", "field": "name"}'>
-        <strong>Country NOT "United States3"</strong><br>
-        Searches for users who do NOT live in the United States.
-      </li>
-
-      <!-- Ejemplo 12: $exists -->
-      <li class="query-item" data-query='{"query": {"email": {"$exists": true}}, "order": "asc", "field": "name"}'>
-        <strong>Email Exists</strong><br>
-        Searches for users who have an email address field defined.
-      </li>
-
-      <!-- Ejemplo 13: $in -->
-      <li class="query-item"
-        data-query='{"query": {"country": {"$in": ["Spain", "France", "Italy"]}}, "order": "asc", "field": "name"}'>
-        <strong>Country IN ["Spain", "France", "Italy"]</strong><br>
-        Searches for users who live in Spain, France, or Italy.
-      </li>
-
-      <!-- Ejemplo 14: Name Contains "jo" (Regex) -->
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "jo"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Contains "jo"</strong><br>
-        Searches for users whose name contains the substring "jo" (e.g., "john", "jonathan", "joseph").
-      </li>
-
-      <!-- Ejemplo 15: Name Starts With "j" (Regex) -->
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "^j"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Starts With "j"</strong><br>
-        Searches for users whose name starts with the letter "j" (e.g., "john", "james", "julia").
-      </li>
-
-      <!-- Ejemplo 16: Name Ends With "n" (Regex) -->
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "n$"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Ends With "n"</strong><br>
-        Searches for users whose name ends with the letter "n" (e.g., "john", "brian", "leon").
-      </li>
-
-      <!-- Ejemplo 17: Name with Exactly 5 Letters (Regex) -->
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "^.{12}$"}}, "order": "asc", "field": "name"}'>
-        <strong>Name with Exactly 5 Letters</strong><br>
-        Searches for users whose name has exactly 5 characters (e.g., "alice", "peter").
-      </li>
-
-      <!-- Ejemplo 18: Name Contains a Digit (Regex) -->
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "\\d"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Contains a Digit</strong><br>
-        Searches for users whose name contains at least one digit (e.g., "john123", "a4lice").
-      </li>
-
-      <!-- Ejemplo 19: Name Contains Only Letters (Regex) -->
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "^[a-z]+$"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Contains Only Letters</strong><br>
-        Searches for users whose name consists only of letters (e.g., "john", "alice", "zoe").
-      </li>
-
-      <!-- Ejemplo 20: Name Contains a Hyphen (-) (Regex) -->
-      <li class="query-item" data-query='{"query": {"name": {"$regex": "-"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Contains a Hyphen (-)</strong><br>
-        Searches for users whose name contains a hyphen (e.g., "mary-jane", "jean-luc").
-      </li>
-
-      <!-- Ejemplo 21: Name Contains Consecutive Vowels (Regex) -->
-      <li class="query-item"
-        data-query='{"query": {"name": {"$regex": "[aeiou]{2}"}}, "order": "asc", "field": "name"}'>
-        <strong>Name Contains Consecutive Vowels</strong><br>
-        Searches for users whose name contains two consecutive vowels (e.g., "aaron", "eleanor").
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "an"}}}'>
+        <strong>$regex: Name contains "an"</strong>
+        <small>Finds names containing the substring "an".</small>
       </li>
     </ul>
   </div>
+
   <div class="main-content">
-    <div class="panel">
-      <button id="insertButton" onclick="insertRandomUsers()">Insert Random Users (50)</button>
-      <button onclick="resetDatabase()">Reset Database</button>
+    <div class="controls">
+      <button id="resetButton">Reset & Re-seed Database</button>
     </div>
-    <textarea class="query-display" id="queryDisplay"
-      placeholder="Edit the query here and press Enter to execute..."></textarea>
+    <textarea class="query-display" id="queryDisplay" placeholder="Select a query from the left, or edit your own and press Enter..."></textarea>
     <div class="results-panel">
       <div class="results-grid" id="results"></div>
     </div>
     <div class="status-bar" id="statusBar">Ready</div>
   </div>
+
   <script type="module">
     import { GDB } from "../dist/index.js";
-    const db = new GDB('search-db');
+    const db = new GDB('ultimate-sandbox-db-v2');
 
-    // Función para insertar nodos con coordenadas geográficas
-    async function populateSampleData() {
-      await db.put({
-        name: "Central Park",
-        latitude: 40.7829,
-        longitude: -73.9654
-      });
+    const resetButton = document.getElementById('resetButton');
+    const queryDisplay = document.getElementById('queryDisplay');
+    const resultsDiv = document.getElementById('results');
+    const statusBar = document.getElementById('statusBar');
 
-      await db.put({
-        name: "Empire State Building",
-        latitude: 40.7484,
-        longitude: -73.9857
-      });
+    async function seedData() {
+      statusBar.textContent = 'Seeding data...';
+      await db.clear();
 
-      await db.put({
-        name: "Statue of Liberty",
-        latitude: 40.6892,
-        longitude: -74.0445
-      });
+      // Create Companies
+      const company1Id = await db.put({ type: 'Company', name: 'Innovate Inc.', country: 'USA' });
+      const company2Id = await db.put({ type: 'Company', name: 'Data Corp', country: 'Canada' });
 
-      await db.put({
-        name: "Brooklyn Bridge",
-        latitude: 40.7061,
-        longitude: -73.9969
-      });
+      // Create Employees
+      const emp1Id = await db.put({ type: 'Employee', name: 'Alice', role: 'Developer', level: 'Senior', age: 32, country: 'USA', isActive: true, hireDate: '2020-01-15T00:00:00Z', tags: ['JavaScript', 'React', 'CSS'] });
+      const emp2Id = await db.put({ type: 'Employee', name: 'Bob', role: 'Developer', level: 'Mid', age: 28, country: 'USA', isActive: true, hireDate: '2021-06-20T00:00:00Z', tags: ['JavaScript', 'Node.js'] });
+      const emp3Id = await db.put({ type: 'Employee', name: 'Charlie', role: 'Designer', level: 'Senior', age: 35, country: 'Canada', isActive: false, hireDate: '2019-03-10T00:00:00Z', tags: ['Figma', 'UX'] });
+      const emp4Id = await db.put({ type: 'Employee', name: 'Diana', role: 'Developer', level: 'Senior', age: 41, country: 'USA', isActive: true, hireDate: '2018-11-01T00:00:00Z', tags: ['Java', 'Spring'], email: 'diana@example.com' });
+      const emp5Id = await db.put({ type: 'Employee', name: 'Frank', role: 'Data Scientist', level: 'Lead', age: 38, country: 'Canada', isActive: true, hireDate: '2019-08-22T00:00:00Z', tags: ['Python', 'AI'], email: 'frank@example.com' });
+      
 
-      await db.put({
-        name: "Times Square",
-        latitude: 40.7589,
-        longitude: -73.9851
-      });
-
-      await db.put({
-        name: "Yankee Stadium",
-        latitude: 40.8296,
-        longitude: -73.9262
-      });
-
-      await db.put({
-        name: "Coney Island",
-        latitude: 40.5755,
-        longitude: -73.9813
-      });
-
-      await db.put({
-        name: "The Met Museum",
-        latitude: 40.7794,
-        longitude: -73.9632
-      });
-
-      console.log("Datos de muestra insertados correctamente.");
+      // Link Employees to Companies
+      await db.link(company1Id, emp1Id);
+      await db.link(company1Id, emp2Id);
+      await db.link(company1Id, emp4Id);
+      await db.link(company2Id, emp3Id);
+      await db.link(company2Id, emp5Id);
+      
+      statusBar.textContent = 'Data seeded successfully.';
+      console.log('Sample data seeded.');
     }
 
-    // Ejecutar la función para poblar la base de datos
-    populateSampleData();
-
-    // Function to check if the database has data
-    async function checkDatabaseStatus() {
-      const { results } = await db.map({});
-      const insertButton = document.getElementById('insertButton');
-      insertButton.disabled = results.length > 0; // Disable if there are records
-    }
-
-    // Function to fetch random users from the API and insert them into the database
-    window.insertRandomUsers = async () => {
-      const insertButton = document.getElementById('insertButton');
-      insertButton.classList.add('loading');
-      insertButton.disabled = true;
+    async function executeQuery(queryObj) {
+      statusBar.textContent = 'Executing query...';
       try {
-        const response = await fetch('https://randomuser.me/api/?nat=es,us,mx&results=50');
-        const data = await response.json();
-        const users = data.results;
-        for (const user of users) {
-          const name = `${user.name.first} ${user.name.last}`;
-          const age = user.dob.age;
-          const country = user.location.country;
-          const person = {
-            name,
-            age,
-            country,
-            dob: user.dob.date,
-            picture: user.picture.large,
-            gender: user.gender
-          };
-          await db.put(person);
+        const { results } = await db.map(queryObj);
+        resultsDiv.innerHTML = '';
+
+        if (results.length > 0) {
+          results.forEach(result => {
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            const valueContent = JSON.stringify(result.value, null, 2);
+            
+            item.innerHTML = `
+              <strong>${result.value.name || `ID: ${result.id.slice(0,8)}...`}</strong>
+              <small>Type: ${result.value.type}</small>
+              <pre>${valueContent}</pre>
+            `;
+            resultsDiv.appendChild(item);
+          });
+          statusBar.textContent = `Query completed: ${results.length} results found`;
+        } else {
+          statusBar.textContent = 'No results found';
         }
-        checkDatabaseStatus();
+        console.log("Query results:", results);
       } catch (error) {
-        console.error('Error fetching random users:', error);
-        alert('Failed to fetch and insert random users.');
-      } finally {
-        insertButton.classList.remove('loading');
-        insertButton.disabled = false;
-      }
-    };
-
-    // Function to reset the database
-    window.resetDatabase = async () => {
-      try {
-        await db.clear();
-        checkDatabaseStatus();
-      } catch (error) {
-        console.error('Error resetting database:', error);
-        alert('Failed to reset the database.');
-      }
-    };
-
-    // Function to execute a query and display results
-    async function executeQuery(obj) {
-      let { results } = await db.map(obj);
-      console.log(results);
-
-
-      const resultsDiv = document.getElementById('results');
-      const statusBar = document.getElementById('statusBar');
-      resultsDiv.innerHTML = '';
-      if (results.length > 0) {
-        results.forEach(result => {
-          const item = document.createElement('div');
-          item.className = 'result-item';
-          item.innerHTML = `
-            <img src="${result.value.picture}" alt="User Image">
-            <div>
-              <strong>${result.value.name}</strong><br>
-              Age: ${result.value.age}<br>
-              Gender: ${result.value.gender}<br>
-              Country: ${result.value.country}<br>
-              DOB: ${new Date(result.value.dob).toLocaleDateString()}
-            </div>
-          `;
-          resultsDiv.appendChild(item);
-        });
-        statusBar.textContent = `Query completed: ${results.length} results found`;
-      } else {
-        statusBar.textContent = 'No results found';
+        statusBar.textContent = `Error executing query: ${error.message}`;
+        console.error("Query Error:", error);
       }
     }
 
-    // Event listener for query list items
+    // Event Listeners
+    resetButton.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear and re-seed the database?')) {
+            seedData();
+        }
+    });
+
     document.getElementById('queryList').addEventListener('click', async (event) => {
-      if (event.target.classList.contains('query-item')) {
+      const queryItem = event.target.closest('.query-item');
+      if (queryItem) {
         document.querySelectorAll('.query-item').forEach(item => item.classList.remove('active'));
-        event.target.classList.add('active');
-        const query = JSON.parse(event.target.getAttribute('data-query'));
-        const queryDisplay = document.getElementById('queryDisplay');
-        queryDisplay.value = JSON.stringify(query, null, 2);
-        await executeQuery(query);
+        queryItem.classList.add('active');
+        const queryStr = queryItem.getAttribute('data-query');
+        queryDisplay.value = JSON.stringify(JSON.parse(queryStr), null, 2);
+        await executeQuery(JSON.parse(queryStr));
       }
     });
 
-    // Event listener for editing the query
-    document.getElementById('queryDisplay').addEventListener('keydown', async (event) => {
+    queryDisplay.addEventListener('keydown', async (event) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
-        const queryDisplay = document.getElementById('queryDisplay');
         try {
           const query = JSON.parse(queryDisplay.value);
           await executeQuery(query);
         } catch (error) {
+          statusBar.textContent = 'Invalid JSON format.';
           alert('Invalid JSON format. Please correct the query.');
         }
       }
     });
 
-    // Initial check of database status on page load
-    checkDatabaseStatus();
+    // Initial load: seed data only if DB is empty
+    (async () => {
+        statusBar.textContent = 'Checking database status...';
+        const { results } = await db.map({$limit: 1});
+        if (results.length === 0) {
+            await seedData();
+        } else {
+            statusBar.textContent = 'Existing data found. Ready to query.';
+        }
+    })();
   </script>
 </body>
-
 </html>
