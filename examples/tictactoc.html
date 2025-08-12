@@ -60,7 +60,7 @@
     import { GDB } from "../dist/index.js";
     
     const db = new GDB('tic-tac-toe');
-    const [sendData, getData] = db.room.makeAction("syncGame");
+    const gameChannel = db.room.channel("gamesync");
     const boardElement = document.getElementById('board');
     const statusElement = document.getElementById('status');
     const roleSelection = document.getElementById('role-selection');
@@ -91,7 +91,7 @@
       sendData({ role: player }); // Notify other players about the selected role
     }
 
-    db.room.onPeerJoin(peerId => {
+    db.room.on('peer:join', peerId => {
       const peers = db.room.getPeers();
       const count = Object.keys(peers).length;
 
@@ -100,7 +100,7 @@
       }
     });
 
-    db.room.onPeerLeave(peerId => {
+    db.room.on('peer:leave', peerId => {
       resetGame();
     });
 
@@ -147,14 +147,14 @@
       // Notify other players about the move
       const winner = checkWinner();
       if (winner) {
-        sendData({ board: JSON.stringify(boardState), winner });
+        gameChannel.send({ board: JSON.stringify(boardState), winner });
       } else {
-        sendData({ board: JSON.stringify(boardState), turn: currentPlayer });
+        gameChannel.send({ board: JSON.stringify(boardState), turn: currentPlayer });
       }
     }
 
-    getData(data => {
-      if (data.role) {
+    gameChannel.on('message', data =>{
+  if (data.role) {
         const peers = db.room.getPeers();
         const count = Object.keys(peers).length;
 
@@ -174,7 +174,7 @@
         createBoard();
         statusElement.textContent = `Turn: ${currentPlayer}`;
       }
-    });
+    })
 
     function showRestartButton() {
       const restartButton = document.createElement('button');
