@@ -4,62 +4,130 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real-Time Cursor Movement with GenosDB</title>
-</head>
-<style>
-  body {
-    cursor: none;
-  }
+  <title>Real-Time Cursors with GDB & GenosRTC</title>
+  <style>
+    body, html {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background-color: #1e1e1e;
+      cursor: none; /* Ocultamos el cursor del sistema */
+    }
 
-  .cursor {
-    width: 20px;
-    height: 20px;
-    background-color: red;
-    border-radius: 50%;
-    position: absolute;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-  }
-</style>
+    .cursor {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      transition: transform 0.05s ease-out; /* Movimiento súper suave */
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: white;
+      font-family: monospace;
+    }
+  </style>
+</head>
 
 <body>
-  <div class="cursor" id="cursor"></div>
+  <!-- Contenedor para los cursores de otros participantes -->
+  <div id="remote-cursors-container"></div>
+  
+  <!-- Tu propio cursor, que gestionamos por separado -->
+  <div class="cursor" id="local-cursor" style="background-color: rgba(255, 255, 255, 0.5);"></div>
+
   <script type="module">
-    // Import GenosDB library for real-time communication
+    // Importa tu librería GDB
     import { GDB } from "../dist/index.js";
 
-    // Initialize GDB instance for the "cursormove" room
-    const db = new GDB('cursormove');
+    // Un objeto para llevar un registro de los cursores de los demás
+    const remoteCursors = {};
 
-    // Create actions for sending and receiving cursor data
-    const [sendData, getData] = db.room.makeAction("cursormove");
+    // --- FUNCIÓN PRINCIPAL ASÍNCRONA ---
+    // Envolvemos todo en una función async para manejar la inicialización
+    async function main() {
+      try {
+        // 1. INICIALIZACIÓN
+        // GDB realiza operaciones asíncronas, así que lo tratamos como tal.
+        const db = new GDB('cursormove');
 
-    const cursor = document.getElementById('cursor');
+        console.log("GDB y GenosRTC inicializados. ¡Listo para la acción!");
 
-    // Log when a peer joins the room
-    db.room.onPeerJoin(peerId => console.log(`${peerId} joined`));
+        // 2. CORRECCIÓN DE LA API `channel`
+        // Obtenemos el objeto del canal, no desestructuramos un array.
+        // Usamos el `db.room` público para la aplicación.
+        const cursorChannel = db.room.channel("cursor");
+        
+        // --- GESTIÓN DE PARTICIPANTES Y CURSORES ---
 
-    // Log when a peer leaves the room
-    db.room.onPeerLeave(peerId => console.log(`${peerId} left`));
+        // Cuando un nuevo participante se une
+        db.room.on('peer:join', peerId => {
+          console.log(`✅ Peer se ha unido: ${peerId.slice(0, 8)}...`);
+          
+          // Creamos un nuevo div para su cursor
+          const newCursor = document.createElement('div');
+          newCursor.className = 'cursor';
+          newCursor.style.backgroundColor = getRandomColor();
+          newCursor.textContent = peerId.slice(0, 4); // Mostramos parte de su ID
+          document.getElementById('remote-cursors-container').appendChild(newCursor);
+          
+          // Guardamos la referencia al cursor de este peer
+          remoteCursors[peerId] = newCursor;
+        });
 
-    // Periodically log the list of connected peers
-    setInterval(() => { console.log(db.room.getPeers()) }, 5000);
+        // Cuando un participante se va
+        db.room.on('peer:leave', peerId => {
+          console.log(`❌ Peer se ha ido: ${peerId.slice(0, 8)}...`);
+          
+          // Buscamos su cursor, lo eliminamos del DOM y de nuestro registro
+          if (remoteCursors[peerId]) {
+            remoteCursors[peerId].remove();
+            delete remoteCursors[peerId];
+          }
+        });
+        
+        // --- LÓGICA DE LA APLICACIÓN ---
 
+        const localCursor = document.getElementById('local-cursor');
 
-    window.addEventListener('mousemove', e => {
-      cursor.style.left = e.clientX + 'px';
-      cursor.style.top = e.clientY + 'px';
+        // Mueve tu propio cursor y envía la posición a los demás
+        window.addEventListener('mousemove', e => {
+          localCursor.style.left = e.clientX + 'px';
+          localCursor.style.top = e.clientY + 'px';
 
-      // Send the cursor's position to other peers in the room
-      sendData([e.clientX, e.clientY]);
-    });
+          // Usamos el método .send() del objeto del canal
+          cursorChannel.send({ x: e.clientX, y: e.clientY });
+        });
 
-    // Handle incoming cursor data from other peers
-    getData(([x, y], peerId) => {
-      cursor.style.left = x + 'px';
-      cursor.style.top = y + 'px';
-      cursor.style.background = 'lightgreen';
-    });
+        // Recibe datos del canal y mueve el cursor del participante CORRECTO
+        cursorChannel.on('message', (data, fromPeerId) => {
+          const peerCursor = remoteCursors[fromPeerId];
+          
+          // Si el cursor de ese peer existe, actualiza su posición
+          if (peerCursor) {
+            peerCursor.style.left = data.x + 'px';
+            peerCursor.style.top = data.y + 'px';
+          }
+        });
+
+      } catch (error) {
+        console.error("Error fatal al inicializar la aplicación:", error);
+      }
+    }
+
+    // --- FUNCIONES AUXILIARES ---
+    function getRandomColor() {
+      const h = Math.floor(Math.random() * 360);
+      return `hsla(${h}, 90%, 70%, 0.8)`;
+    }
+
+    // Inicia la aplicación
+    main();
   </script>
 </body>
 
