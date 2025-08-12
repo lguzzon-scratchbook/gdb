@@ -67,12 +67,12 @@
     import { GDB } from "../dist/index.js";
 
     const db = new GDB('file-room');
-    const [sendFile, getFile, onFileProgress] = db.room.makeAction('file');
+    const fileChannel = db.room.channel('file');
 
     const progressContainer = document.getElementById('progressContainer');
     const loadingBars = {};
 
-    getFile((data, peerId, metadata) => {
+    fileChannel.on('message', (data, peerId, metadata) => {
       console.log(`Received a file (${metadata.filename}) from ${peerId} with type ${metadata.type}`);
 
       const blob = new Blob([data], { type: metadata.type });
@@ -94,7 +94,7 @@
       document.getElementById('status').textContent = 'Status: Idle';
     });
 
-    onFileProgress((percent, peerId, metadata) => {
+    fileChannel.on('progress', (percent, peerId, metadata) => {
       const key = `${peerId}-${metadata.filename}`;
       let bar = loadingBars[key];
 
@@ -158,7 +158,7 @@
       }
 
       try {
-        await sendFile(
+        await fileChannel.send(
           buffer,
           null,
           { filename: file.name, type: file.type },
