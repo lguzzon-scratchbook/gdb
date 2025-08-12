@@ -73,6 +73,8 @@
     import { GDB } from "../dist/index.js";
 
     const db = new GDB('audio-room');
+    const audioControlChannel = db.room.channel("audiocontrol");
+
     const peerAudios = {};
     const audioContainer = document.getElementById('audios');
     const selfAudio = document.getElementById('selfAudio');
@@ -80,23 +82,16 @@
 
     document.getElementById('startButton').addEventListener('click', async () => {
       try {
-        // Get access to the user's microphone
         selfStream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: false
         });
 
-        // Preview the local audio stream (muted)
         selfAudio.srcObject = selfStream;
         selfAudio.play();
 
-        // Send the stream to peers currently in the room
         db.room.addStream(selfStream);
 
-        // Send the stream to peers who join later
-        db.room.onPeerJoin(peerId => db.room.addStream(selfStream, peerId));
-
-        // Update UI
         document.getElementById('status').textContent = 'Status: Streaming';
         document.getElementById('startButton').disabled = true;
         document.getElementById('stopButton').disabled = false;
@@ -108,36 +103,38 @@
 
     document.getElementById('stopButton').addEventListener('click', () => {
       if (selfStream) {
+        // First, stop the local tracks to make the stream inactive.
         selfStream.getTracks().forEach(track => track.stop());
         selfAudio.srcObject = null;
+
+        // Then, tell the room to remove the inactive stream and notify peers.
+        db.room.removeStream(selfStream);
+        audioControlChannel.send({ action: 'stop_stream' });
+
+        // Finally, nullify the local stream variable and update the UI.
         selfStream = null;
 
         document.getElementById('status').textContent = 'Status: Stopped';
         document.getElementById('startButton').disabled = false;
         document.getElementById('stopButton').disabled = true;
-
-        sendAction({ leave: true });
       }
     });
 
-    db.room.onPeerStream((stream, peerId) => {
+    db.room.on('stream:add', (stream, peerId) => {
       let container = peerAudios[peerId];
       console.log(`Received stream from peer ${peerId}`);
 
       if (!container) {
-        // Create container with visual indicator
         container = document.createElement('div');
         container.className = 'peer-audio-container';
         container.id = peerId;
 
-        // Create audio element
         const audio = document.createElement('audio');
         audio.autoplay = true;
         audio.controls = false;
-        audio.style.display = 'none'; // Hide audio UI
+        audio.style.display = 'none';
         container.appendChild(audio);
 
-        // Add peer ID label
         const peerLabel = document.createElement('div');
         peerLabel.className = 'peer-id';
         peerLabel.textContent = peerId;
@@ -149,7 +146,6 @@
       const audioElement = container.querySelector('audio');
       audioElement.srcObject = stream;
 
-      // Detect voice activity using Web Audio API
       const audioCtx = new AudioContext();
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
@@ -160,23 +156,22 @@
       function detectVolume() {
         analyser.getByteTimeDomainData(dataArray);
         const volume = Math.max(...dataArray) - 128;
-
-        // Change background color based on volume threshold
         container.style.backgroundColor = volume > 10 ? "#a5d6a7" : "#e8f5e9";
-
         requestAnimationFrame(detectVolume);
       }
 
       detectVolume();
-
       peerAudios[peerId] = container;
-
-      console.log(`Received audio stream from peer ${peerId}`);
     });
 
-    db.room.onPeerJoin(peerId => console.log(`${peerId} joined the room`));
+    db.room.on('peer:join', peerId => {
+        console.log(`${peerId} joined the room`);
+        if (selfStream) {
+            db.room.addStream(selfStream, peerId);
+        }
+    });
 
-    db.room.onPeerLeave(peerId => {
+    db.room.on('peer:leave', peerId => {
       console.log(`${peerId} left the room`);
       if (peerAudios[peerId]) {
         peerAudios[peerId].remove();
@@ -184,12 +179,11 @@
       }
     });
 
-    const [sendAction, recibeActions] = db.room.makeAction('actions');
-
-    recibeActions((data, peerId) => {
-      if (peerAudios[peerId]) {
+    audioControlChannel.on('complete', (data, peerId) => {
+      if (data.action === 'stop_stream' && peerAudios[peerId]) {
+        console.log(`Peer ${peerId} stopped streaming. Cleaning up.`);
         peerAudios[peerId].remove();
-        delete peerAudios[peerId];
+        // delete peerAudios[peerId];
       }
     });
 
