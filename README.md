@@ -62,7 +62,7 @@ This project is under active development. Do not use it in production environmen
 - **Pending Features**:
   - No major features are currently pending. The project has entered a hardening phase with a focus on rigorous testing and stability improvements.
 
-> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](https://github.com/estebanrfp/gdb/wiki/CHANGELOG.md) before upgrading.
+> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](CHANGELOG.md) before upgrading.
 
 ### ✅ **Role Based Access Control (RBAC)**
 
