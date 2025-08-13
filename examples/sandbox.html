@@ -253,14 +253,14 @@
     import { GDB } from "../dist/index.js";
     import { withAI } from "../dist/AIQuery.min.js";
 
-    const db = new GDB('ultimate-sandbox-db-v3'); // Incrementé la versión para asegurar un nuevo inicio
+    const db = new GDB('ultimate-sandbox-db-v3');
     withAI(db);
 
     const resetButton = document.getElementById('resetButton');
     const queryDisplay = document.getElementById('queryDisplay');
     const resultsDiv = document.getElementById('results');
     const statusBar = document.getElementById('statusBar');
-    const resultsPanel = document.querySelector('.results-panel'); // Panel para el scroll
+    const resultsPanel = document.querySelector('.results-panel');
 
     async function seedData() {
       statusBar.textContent = 'Seeding data...';
@@ -299,13 +299,12 @@
     }
 
     async function executeQuery(queryObj) {
+      resultsDiv.innerHTML = '';
       statusBar.textContent = 'Executing query...';
       try {
         const { results } = await db.map(queryObj);
 
-        // Posicionar la lista de resultados al principio
         resultsPanel.scrollTop = 0;
-        resultsDiv.innerHTML = '';
 
         if (results.length > 0) {
           results.forEach(result => {
@@ -321,7 +320,6 @@
           });
           statusBar.textContent = `Query completed: ${results.length} results found`;
 
-          // Hacer scroll animado al último elemento
           const lastElement = resultsDiv.lastElementChild;
           if (lastElement) {
             lastElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -338,7 +336,6 @@
       }
     }
 
-    // Event Listeners
     resetButton.addEventListener('click', () => {
       if (confirm('Are you sure you want to clear and re-seed the database?')) {
         seedData();
