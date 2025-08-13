@@ -121,7 +121,19 @@
     function addNodeToList(id, value) {
       const nodeItem = document.createElement("li");
       nodeItem.textContent = `ID: ${id}, Value: ${value}`;
+      nodeItem.id = `node-${id}`;
       nodesList.appendChild(nodeItem);
+    }
+
+    // Function to update a node in the list
+    function updateNodeToList(id, value) {
+      const nodeItem = document.getElementById(`node-${id}`);
+      if (nodeItem) {
+        nodeItem.textContent = `ID: ${id}, Value: ${value}`;
+      } else {
+        // If the node doesn't exist, add it (e.g., if it was an initial sync)
+        addNodeToList(id, value);
+      }
     }
 
     // Function to add a relationship to the list
@@ -150,6 +162,15 @@
         });
         console.log(`Node ${id} was added to the graph.`);
       }
+
+      if (action === 'updated') {
+        // Usando selectedNodeId como en tu original (aunque sea propenso a bugs)
+        updateNodeToList(id, value);
+        edges.forEach((targetId) => {
+          addRelationToList(id, targetId);
+        });
+      }
+
       if (action === "removed") {
         // Remove the node from the list
         const nodeItem = Array.from(nodesList.children).find(item => item.textContent.includes(id));
