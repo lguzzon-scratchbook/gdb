@@ -161,7 +161,8 @@
       <li class="query-item"
         data-query='{"query": {"type":"Company", "$edge": {"role":"Developer", "$edge": {"name":"Bob"}}}}'>
         <strong>Find by Hierarchy (Nested)</strong>
-        <small>Finds a Company, then finds a Developer descendant, then finds that Developer's descendant named "Bob".</small>
+        <small>Finds a Company, then finds a Developer descendant, then finds that Developer's descendant named
+          "Bob".</small>
       </li>
       <li class="query-item"
         data-query='{"query": {"type":"Company", "name":"Data Corp", "$edge": {"age":{"$gte":38}}}}'>
@@ -218,6 +219,21 @@
         <strong>$regex: Name contains "an"</strong>
         <small>Finds names containing the substring "an".</small>
       </li>
+      <h3>Search using (IA Prompt)</h3>
+      <li class="query-item"
+        data-query='{"prompt": "Finds a Company, then finds a Developer descendant, then finds that Developers descendant named Bob."}'>
+        <strong>Find by Hierarchy (IA Prompt)</strong>
+        <small>Finds a Company, then finds a Developer descendant, then finds that Developer's descendant named
+          "Bob".</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Finds all Companies"}'>
+        <strong>Finds all Companies (IA Prompt)</strong>
+        <small>Finds all Companies.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Search all employees"}'>
+        <strong>Search all employees (IA Prompt)</strong>
+        <small>Search all employees.</small>
+      </li>
     </ul>
   </div>
 
@@ -235,7 +251,10 @@
 
   <script type="module">
     import { GDB } from "../dist/index.js";
+    import { withAI } from "../dist/AIQuery.min.js";
+
     const db = new GDB('ultimate-sandbox-db-v3'); // Incrementé la versión para asegurar un nuevo inicio
+    withAI(db);
 
     const resetButton = document.getElementById('resetButton');
     const queryDisplay = document.getElementById('queryDisplay');
@@ -274,7 +293,7 @@
       await db.link(company1Id, emp7Id);
 
       await db.link(emp1Id, emp2Id);
-      
+
       statusBar.textContent = 'Data seeded successfully.';
       console.log('Sample data seeded.');
     }
@@ -283,7 +302,7 @@
       statusBar.textContent = 'Executing query...';
       try {
         const { results } = await db.map(queryObj);
-        
+
         // Posicionar la lista de resultados al principio
         resultsPanel.scrollTop = 0;
         resultsDiv.innerHTML = '';
@@ -305,7 +324,7 @@
           // Hacer scroll animado al último elemento
           const lastElement = resultsDiv.lastElementChild;
           if (lastElement) {
-              lastElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            lastElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
           }
 
         } else {
