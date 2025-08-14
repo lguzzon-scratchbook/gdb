@@ -174,7 +174,7 @@ This graphical view is especially useful for new contributors or anyone looking 
 
 ## Contributing
 
-We welcome contributions to improve this project! Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/wiki/Contributing) for details on how to get started.
+We welcome contributions to improve this project! Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md) for details on how to get started.
 
 
 ## Community
@@ -192,7 +192,7 @@ We value community contributions and discussions! Here's how you can get involve
 
 Feel free to ask questions, share ideas, or just say hello! 👋
 
-For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/wiki/Contributing).
+For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md).
 
 ## Licenses
 
