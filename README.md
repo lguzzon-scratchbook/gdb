@@ -62,7 +62,7 @@ This project is under active development. Do not use it in production environmen
 - **Pending Features**:
   - No major features are currently pending. The project has entered a hardening phase with a focus on rigorous testing and stability improvements.
 
-> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) before upgrading.
+> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](CHANGELOG.md) before upgrading.
 
 ### ✅ **Role Based Access Control (RBAC)**
 
@@ -174,7 +174,7 @@ This graphical view is especially useful for new contributors or anyone looking 
 
 ## Contributing
 
-We welcome contributions to improve this project! Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md) for details on how to get started.
+We welcome contributions to improve this project! Please read our [Contribution Guidelines](CONTRIBUTING.md) for details on how to get started.
 
 
 ## Community
@@ -192,11 +192,11 @@ We value community contributions and discussions! Here's how you can get involve
 
 Feel free to ask questions, share ideas, or just say hello! 👋
 
-For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md).
+For more details on contributing, check out our [Contributing Guidelines](CONTRIBUTING.md).
 
 ## Licenses
 
-This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](https://github.com/estebanrfp/gdb/wiki/Licenses/) in the Wiki.
+This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](THIRD_PARTY_LICENSES.md).
 
 The source code of this project is licensed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](LICENSE) file.
 
