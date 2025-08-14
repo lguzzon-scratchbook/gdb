@@ -109,7 +109,7 @@ import { GDB } from "genosdb"
 
 ```html
 <script type="module">
-  import { GDB } from "https://cdn.jsdelivr.net/npm/genosdb/+esm"
+  import { GDB } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js"
 </script>
 ```
 
