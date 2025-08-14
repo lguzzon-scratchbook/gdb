@@ -299,8 +299,10 @@
     }
 
     async function executeQuery(queryObj) {
+      console.log(queryObj)
       resultsDiv.innerHTML = '';
       statusBar.textContent = 'Executing query...';
+      
       try {
         const { results } = await db.map(queryObj);
 
@@ -330,6 +332,7 @@
           statusBar.textContent = 'No results found';
         }
         console.log("Query results:", results);
+        
       } catch (error) {
         statusBar.textContent = `Error executing query: ${error.message}`;
         console.error("Query Error:", error);
