@@ -221,9 +221,7 @@
         // For simplicity, assuming they are loaded as the script tag is type="module" and imports are processed first.
 
         import { GDB } from "../dist/index.js"; // Adjust path according to your structure
-
-        const db = new GDB("rbacChatAppDB", { rbac : true });
-        const rbac = await db.rbac
+        import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
 
         // --- CONFIGURATION ---
         // IMPORTANT: For a user to be superadmin on first registration,
@@ -252,7 +250,7 @@
         const btnLogout = document.getElementById('btnLogout');
 
         // --- APP STATE ---
-        // let db;
+        let db;
         let volatileIdentity = null; // To store { address, mnemonic, privateKey } temporarily
         let unsubscribeMessages = null;
         let currentUserAddress = null;
@@ -334,6 +332,7 @@
         async function initializeApp() {
             try {
                 statusBar.textContent = "Status: Initializing DB...";
+                db = new GDB("rbacChatAppDB");
 
                 statusBar.textContent = "Status: DB Ready. Initializing Security Context...";
 
