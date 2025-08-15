@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +18,7 @@
             padding: 20px;
             box-sizing: border-box;
         }
+
         .container {
             background-color: #fff;
             padding: 25px;
@@ -25,8 +27,17 @@
             width: 100%;
             max-width: 600px;
         }
-        h1, h2 { color: #2c3e50; text-align: center; }
-        .hidden { display: none !important; }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         button {
             background-color: #3498db;
             color: white;
@@ -38,9 +49,19 @@
             margin: 5px 0;
             transition: background-color 0.2s ease;
         }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        input[type="text"], input[type="password"], textarea {
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea {
             width: calc(100% - 22px);
             padding: 10px;
             margin-bottom: 10px;
@@ -48,8 +69,17 @@
             border-radius: 5px;
             font-size: 16px;
         }
-        textarea { resize: vertical; min-height: 60px; }
-        .auth-section, .chat-section { margin-top: 20px; }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .auth-section,
+        .chat-section {
+            margin-top: 20px;
+        }
+
         .status-bar {
             margin-top: 15px;
             padding: 10px;
@@ -58,6 +88,7 @@
             font-size: 0.9em;
             color: #7f8c8d;
         }
+
         .mnemonic-warning {
             background-color: #e74c3c;
             color: white;
@@ -66,6 +97,7 @@
             margin-top: 10px;
             text-align: center;
         }
+
         .messages {
             border: 1px solid #eee;
             padding: 10px;
@@ -75,6 +107,7 @@
             background-color: #fdfdfd;
             border-radius: 5px;
         }
+
         .message {
             padding: 8px 12px;
             margin-bottom: 8px;
@@ -83,25 +116,32 @@
             word-wrap: break-word;
             position: relative;
         }
+
         .message.own {
             background-color: #3498db;
             color: white;
             margin-left: auto;
             border-bottom-right-radius: 3px;
         }
+
         .message.other {
             background-color: #ecf0f1;
             color: #2c3e50;
             margin-right: auto;
             border-bottom-left-radius: 3px;
         }
+
         .message .sender {
             font-size: 0.75em;
             opacity: 0.8;
             display: block;
             margin-bottom: 3px;
         }
-        .message .text { font-size: 0.95em; }
+
+        .message .text {
+            font-size: 0.95em;
+        }
+
         .message .timestamp {
             font-size: 0.7em;
             opacity: 0.7;
@@ -109,11 +149,13 @@
             margin-top: 4px;
             text-align: right;
         }
+
         .message .role {
             font-size: 0.7em;
             color: #8e44ad;
             margin-left: 5px;
         }
+
         .message .delete-btn {
             position: absolute;
             top: 5px;
@@ -124,16 +166,39 @@
             font-size: 1.1em;
             cursor: pointer;
         }
-        .auth-options button { display: block; width: 100%; margin-bottom: 10px; }
-        .auth-options { display: flex; flex-direction: column; gap: 10px; }
-        .action-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
-        .action-group:last-child { border-bottom: none; }
-        .show-mnemonic-btn { background-color: #8e44ad; margin-top: 5px; }
+
+        .auth-options button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .auth-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-group {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .action-group:last-child {
+            border-bottom: none;
+        }
+
+        .show-mnemonic-btn {
+            background-color: #8e44ad;
+            margin-top: 5px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
-    <h1>🔐 GDB RBAC Chat Enhanced</h1>
+        <h1>🔐 GDB RBAC Chat Enhanced</h1>
         <div id="authSection" class="auth-section">
             <h2>Login or Register</h2>
             <div class="auth-options">
@@ -145,9 +210,11 @@
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <strong>Mnemonic:</strong>
                             <code id="newMnemonic"></code>
-                            <button id="btnCopyMnemonic" class="show-mnemonic-btn" style="padding: 6px 10px; font-size: 0.95em;">Copy</button>
+                            <button id="btnCopyMnemonic" class="show-mnemonic-btn"
+                                style="padding: 6px 10px; font-size: 0.95em;">Copy</button>
                         </div>
-                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this recovery phrase in a safe place. It's the only way to recover your account if you lose access to WebAuthn or change devices.</div>
+                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this recovery phrase in a safe place. It's the
+                            only way to recover your account if you lose access to WebAuthn or change devices.</div>
                         <button id="btnProtectWebAuthn">2. Protect with WebAuthn & Login</button>
                     </div>
                 </div>
@@ -170,12 +237,15 @@
             <button id="btnSendMessage">Send message</button>
             <button id="btnLogout">Logout</button>
         </div>
-    <div class="status-bar" id="statusBar">Status: Not initialized.</div>
+        <div class="status-bar" id="statusBar">Status: Not initialized.</div>
     </div>
     <script type="module">
         import { GDB } from "../dist/index.js";
         import * as rbac from '../dist/rbac.min.js';
         const SUPERADMIN_ADDRESSES = ["0x62c48827e883f114821211673Dc309a29Aae7e6A"];
+        // Normalize superadmin addresses to be case-insensitive
+        const SUPERADMIN_SET = new Set(SUPERADMIN_ADDRESSES.map(a => a.toLowerCase()));
+        const isSuperadminAddress = (addr) => !!addr && SUPERADMIN_SET.has(addr.toLowerCase());
         const authSection = document.getElementById('authSection');
         const chatSection = document.getElementById('chatSection');
         const statusBar = document.getElementById('statusBar');
@@ -188,7 +258,7 @@
         const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
         const inputMnemonic = document.getElementById('inputMnemonic');
         const btnLoginMnemonic = document.getElementById('btnLoginMnemonic');
-    const btnRegisterWebAuthn = document.getElementById('btnRegisterWebAuthn');
+        const btnRegisterWebAuthn = document.getElementById('btnRegisterWebAuthn');
         const messagesContainer = document.getElementById('messagesContainer');
         const inputMessage = document.getElementById('inputMessage');
         const btnSendMessage = document.getElementById('btnSendMessage');
@@ -198,17 +268,18 @@
         let unsubscribeMessages = null;
         let currentUserAddress = null;
         let currentUserRole = null;
+        // Align permissions with RBAC API docs: use 'delete' (no custom 'deleteAny')
         const CHAT_APP_ROLES = {
-            superadmin: { can: ["assignRole", "deleteAnyMessage", "write"], inherits: ["admin"] },
-            admin: { can: ["deleteMessage"], inherits: ["user"] },
-            user: { can: ["write", "readSelf"], inherits: ["guest"] },
+            superadmin: { can: ["assignRole", "delete", "write"], inherits: ["admin"] },
+            admin: { can: ["delete"], inherits: ["user"] },
+            user: { can: ["write"], inherits: ["guest"] },
             guest: { can: ["read", "write", "sync"] },
         };
-    /**
-     * Updates the UI according to the current RBAC security state.
-     * @param {{isActive:boolean, activeAddress:(string|null), isWebAuthnProtected:boolean, hasVolatileIdentity:boolean, hasWebAuthnHardwareRegistration:boolean}} securityState
-     */
-    const updateUI = securityState => {
+        /**
+         * Updates the UI according to the current RBAC security state.
+         * @param {{isActive:boolean, activeAddress:(string|null), isWebAuthnProtected:boolean, hasVolatileIdentity:boolean, hasWebAuthnHardwareRegistration:boolean}} securityState
+         */
+        const updateUI = async securityState => {
             if (!securityState) {
                 statusBar.textContent = "Estado: Contexto de seguridad no activo.";
                 authSection.classList.remove('hidden');
@@ -218,6 +289,16 @@
                 return;
             }
             currentUserAddress = securityState.activeAddress;
+            // Determine role early: superadmin by address, otherwise ensure DB role
+            if (securityState.isActive) {
+                if (isSuperadminAddress(currentUserAddress)) {
+                    currentUserRole = 'superadmin';
+                } else {
+                    try { await ensureUserRole(currentUserAddress); } catch { }
+                }
+            } else {
+                currentUserRole = null;
+            }
             let statusText = `Estado: ${securityState.isActive ? `Sesión iniciada como ${securityState.activeAddress.substring(0, 10)}...` : 'Sesión cerrada.'}`;
             statusText += ` | WebAuthn activo: ${securityState.isWebAuthnProtected}`;
             statusText += ` | WebAuthn registrado aquí: ${securityState.hasWebAuthnHardwareRegistration}`;
@@ -244,19 +325,22 @@
                 btnRegisterNew.disabled = false;
             }
         };
-    /**
-     * Ensures the user has a role; assigns 'user' if none exists.
-     * @param {string} address Ethereum address
-     * @returns {Promise<void>}
-     */
-    const ensureUserRole = async address => {
+        /**
+         * Ensures the user has a role; assigns 'user' if none exists.
+         * @param {string} address Ethereum address
+         * @returns {Promise<void>}
+         */
+        const ensureUserRole = async address => {
             try {
+                // Preferred: user:<address> node, as in the RBAC example app
+                const { result: userNode } = await db.get(`user:${address}`);
+                if (userNode?.value?.role) { currentUserRole = userNode.value.role; return; }
+                // Fallback: legacy role storage
                 const { results } = await db.map({ query: { type: 'role', ethAddress: address }, $limit: 1 });
-                if (results.length) return currentUserRole = results[0].value?.role ?? null;
-                await rbac.assignRole(address, 'user');
-                currentUserRole = 'user';
+                currentUserRole = results[0]?.value?.role ?? 'guest';
             } catch (error) {
-                console.error("Error ensuring/assigning role:", error);
+                console.error("Error ensuring role:", error);
+                currentUserRole = 'guest';
             }
         };
         /**
@@ -269,7 +353,7 @@
                 db = new GDB("rbacChatAppDB");
                 statusBar.textContent = "Estado: DB lista. Inicializando contexto de seguridad...";
                 await rbac.createSecurityContext(db, SUPERADMIN_ADDRESSES);
-                rbac.setCustomRoles(CHAT_APP_ROLES);
+                // rbac.setCustomRoles(CHAT_APP_ROLES);
                 rbac.setSecurityStateChangeCallback(updateUI);
                 const initialState = {
                     isActive: rbac.isSecurityActive(),
@@ -391,10 +475,15 @@
             let identity;
             try {
                 identity = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
-            } catch {}
+            } catch { }
             if (!identity) return;
             console.log(`Session started with mnemonic for address ${identity.address}`);
-            await ensureUserRole(identity.address);
+            // If it's not a superadmin address, ensure it has at least 'user' role
+            if (!isSuperadminAddress(identity.address)) {
+                await ensureUserRole(identity.address);
+            } else {
+                currentUserRole = 'superadmin';
+            }
             inputMnemonic.value = '';
             // After login, if device lacks WebAuthn registration, suggest registering
             try {
@@ -414,7 +503,7 @@
                 } else {
                     btnRegisterWebAuthn.style.display = 'none';
                 }
-            } catch {}
+            } catch { }
         };
         btnLogout.onclick = async () => {
             try {
@@ -442,32 +531,46 @@
             const senderShort = value.sender ? `${value.sender.substring(0, 6)}...${value.sender.slice(-4)}` : 'Desconocido';
             const messageDate = value.timestamp ? new Date(value.timestamp).toLocaleString() : 'Sin fecha';
             const role = value.role || (value.sender === currentUserAddress ? currentUserRole : '');
+            const canDelete = (value.sender === currentUserAddress)
+                || ['admin', 'superadmin'].includes(currentUserRole)
+                || isSuperadminAddress(currentUserAddress);
             msgElement.innerHTML = `
                 <span class="sender">${value.sender === currentUserAddress ? 'Tú' : senderShort}<span class="role">${role ? ' (' + role + ')' : ''}</span></span>
                 <span class="text">${value.text}</span>
                 <span class="timestamp">${messageDate}</span>
-                ${['admin','superadmin'].includes(currentUserRole) || value.sender === currentUserAddress ? `<button class="delete-btn" title="Eliminar" onclick="window.deleteMessage && window.deleteMessage('${id}')">🗑️</button>` : ''}
+                ${canDelete ? `<button class="delete-btn" title="Eliminar" onclick="window.deleteMessage && window.deleteMessage('${id}')">🗑️</button>` : ''}
             `;
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         };
-    /**
-     * Deletes a message if permitted by current user's role.
-     * @param {string} id Node ID to delete
-     */
-    window.deleteMessage = async (id) => {
+        /**
+         * Deletes a message if permitted by current user's role.
+         * @param {string} id Node ID to delete
+         */
+        window.deleteMessage = async (id) => {
             if (!confirm("Delete this message?")) return;
-            try {
-                await rbac.executeWithPermission(currentUserRole === 'superadmin' ? 'deleteAnyMessage' : 'deleteMessage');
+            // try {
+                // If active address is in the superadmin list, bypass the explicit permission call.
+                // The SecurityManager will still validate server-side according to createSecurityContext.
+                const active = rbac.getActiveEthAddress();
+                if (isSuperadminAddress(active)) {
+                    await db.remove(id);
+                    return;
+                }
+                // Otherwise require 'delete' permission explicitly
+                await rbac.executeWithPermission('delete');
                 await db.remove(id);
-            } catch (error) {
-                alert("You do not have permission to delete this message.");
-            }
+            // } catch (error) {
+            //     alert("You do not have permission to delete this message.");
+            // }
+            // Validate single permission as per RBAC API
+            await rbac.executeWithPermission('delete');
+            await db.remove(id);
         };
-    /**
-     * Subscribes and renders chat messages in chronological order.
-     * @returns {Promise<void>}
-     */
-    async function loadMessages() {
+        /**
+         * Subscribes and renders chat messages in chronological order.
+         * @returns {Promise<void>}
+         */
+        async function loadMessages() {
             if (unsubscribeMessages) unsubscribeMessages();
             messagesContainer.innerHTML = '';
             try {
@@ -485,7 +588,11 @@
             const text = inputMessage.value.trim();
             if (!text) return;
             try {
-                const senderAddress = await rbac.executeWithPermission('write');
+                const senderAddress = rbac.getActiveEthAddress();
+                if (!rbac.isSecurityActive() || !senderAddress) {
+                    alert('Login required to send messages.');
+                    return;
+                }
                 const messageData = {
                     type: 'message',
                     sender: senderAddress,
@@ -493,15 +600,16 @@
                     timestamp: Date.now(),
                     role: currentUserRole
                 };
+                // Store message normally; open chat allows writing without a stored role
                 await db.put(messageData);
                 inputMessage.value = '';
             } catch (error) {
                 console.error("Error sending message:", error);
-                alert(`Error sending message: ${error.message}. Do you have 'write' permission?`);
+                alert(`Error sending message: ${error.message}`);
             }
         };
-    // Send message on Enter (without Shift)
-    inputMessage.addEventListener('keydown', (e) => {
+        // Send message on Enter (without Shift)
+        inputMessage.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 btnSendMessage.click();
@@ -510,4 +618,5 @@
         initializeApp();
     </script>
 </body>
+
 </html>

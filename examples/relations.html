@@ -264,6 +264,8 @@
 
     const db = new GDB("testGraph");
 
+    // db.clear()
+
     // Initialize Cytoscape with 'cose' layout settings
     let cy = cytoscape({
       container: document.getElementById("cy"),
@@ -297,7 +299,8 @@
     // Function to load all nodes and edges from the DB
     async function updateGraph({ id, value, edges, action }) { // Manteniendo la firma original
       try {
-        console.log(action) // Manteniendo logs originales
+        console.log('>', action)
+        
         // --- Manejo de Nodos (Exactamente como en tu original) ---
         if (action === 'initial') {
           // Evitar añadir duplicados si 'initial' se llama varias veces
@@ -325,6 +328,7 @@
           // Clear selection after removing (como en tu original)
           selectedNodeId = null;
         }
+
 
         // --- Manejo de Aristas ---
         const edges2 = await edges.map(edgeId => ({ source: id, target: edgeId })); // Mapeo original
