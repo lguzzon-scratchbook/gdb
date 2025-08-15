@@ -338,11 +338,10 @@
         btnLoginWebAuthn.onclick = async () => {
             try {
                 const loggedInAddress = await rbac.loginCurrentUserWithWebAuthn();
-                if (loggedInAddress) {
-                    alert(`Sesión iniciada con WebAuthn como ${loggedInAddress}`);
-                } else {
+                if (!loggedInAddress) {
                     alert("Login WebAuthn fallido. ¿Registraste WebAuthn en este sitio?");
                 }
+                // En caso de éxito, no mostramos alert: la UI se actualizará vía el callback de estado.
             } catch (error) {
                 console.error("WebAuthn login error:", error);
                 alert(`Error login WebAuthn: ${error.message}`);
