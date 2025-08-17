@@ -50,9 +50,10 @@
   <div id="videos"></div>
 
   <script type="module">
-    import { GDB } from "../dist/index.js";
+  import { gdb } from "../dist/index.js";
 
-    const db = new GDB('video-room');
+  // Initialize GenosDB using async factory
+  const db = await gdb('video-room');
     // CORRECCIÓN 1: Usar un canal dedicado para mensajes de control
     const videoControlChannel = db.room.channel("videocontrol");
 
