@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GDB Tester</title>
   <script type="module">
-    // Import GDB as a module
-    import { GDB } from "../dist/index.js";
+  // Import GenosDB async factory
+  import { gdb } from "../dist/index.js";
 
-    // Initialize GDB
-    const db = new GDB("testGraph");
+  // Initialize GenosDB
+  const db = await gdb("testGraph");
 
     // Variables to store nodes and relationships
     const nodesList = document.getElementById("nodes-list");
