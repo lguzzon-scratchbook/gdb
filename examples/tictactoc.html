@@ -57,10 +57,11 @@
   <p id="status">Waiting for players...</p>
   <button id="reset-button">Reset</button>
   <script type="module">
-    import { GDB } from "../dist/index.js";
-    
-    const db = new GDB('tic-tac-toe');
-    const gameChannel = db.room.channel("gamesync");
+  import { gdb } from "../dist/index.js";
+
+  // Initialize GenosDB using async factory
+  const db = await gdb('tic-tac-toe');
+  const gameChannel = db.room.channel("gamesync");
     const boardElement = document.getElementById('board');
     const statusElement = document.getElementById('status');
     const roleSelection = document.getElementById('role-selection');
