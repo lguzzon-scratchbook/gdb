@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-08-18
+
+### ⚠️ Breaking Change
+- Migrated GenosDB to an async factory function. You must now initialize the database using `const db = await gdb(...)` instead of `new GDB(...)`. This change enables asynchronous setup, better error handling, and future extensibility for remote and dynamic backends.
+
+### Improved
+- All database initialization is now promise-based, allowing for more robust startup flows and integration with async application logic.
+- Updated documentation and examples to reflect the new async initialization pattern.
+
+### Migration Guide
+- Replace all instances of `new GDB(...)` with `await gdb(...)`.
+- Ensure your application entry points and database-dependent logic are inside an `async` function or properly handle promises.
+
+### Why?
+- This change prepares GenosDB for advanced features such as remote initialization, dynamic configuration, and improved error reporting. It also aligns with modern JavaScript best practices for resource-heavy or network-dependent modules.
+
 ## [0.6.3] - 2025-08-13
 
 ### Improved
@@ -121,11 +137,11 @@ As a result of the above fix, the visual "flickering" effect in client applicati
   ```js
   // Before
   import { GraphDB } from "gdb-p2p"
-  const db = new GraphDB("todoList")
+  const db = new GraphDB "todoList"
 
   // Now
   import { GDB } from "gdb-p2p"
-  const db = new GDB("todoList")
+  const db = new GDB "todoList"
   ```
 ## [0.0.31] - 2025-03-15
 
