@@ -5,8 +5,8 @@
   <input id='what' placeholder='say'>
   <input type='submit' value='send'>
 </form>
-<script type="module"> import { GDB } from "../dist/index.js";
-  let db = new GDB('chat9linescode'), chat = db.get("note" + location.hash.replace('#', '/')), view = document;
+<script type="module"> import { gdb } from "../dist/index.js";
+  let db = await gdb('chat9linescode'), chat = db.get("note" + location.hash.replace('#', '/')), view = document;
   db.map(({ id, value }) => {
     (view.line = view.getElementById(id) || view.createElement("li")).id = id;
     list.appendChild(view.line).innerText = value.msg
