@@ -23,6 +23,8 @@ A lightweight, decentralized graph database designed for modern web applications
 
 [![Liberapay receiving](https://img.shields.io/liberapay/receives/estebanrfp.svg?logo=liberapay)](https://liberapay.com/estebanrfp/donate)
 
+> ⚠️ Migration Guide: The class-based API `new GDB()` has been removed. Please migrate to the async factory function. See the guide: [MIGRATION.md](./MIGRATION.md)
+
 <!-- ### Nostr.band Followers
 
 ![Nostr.band Followers](https://img.shields.io/nostr-band/followers/npub18c556t7n8xa3df2q82rwxejfglw5przds7sqvefylzjh8tjne28qld0we7) -->
