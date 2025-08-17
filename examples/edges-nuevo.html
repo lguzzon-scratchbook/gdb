@@ -56,83 +56,73 @@
     </div>
 
     <script type="module">
-        import { GDB } from "../dist/index.js";
-        const db = new GDB('final-edge-test-db-v3');
+        import { gdb } from "../dist/index.js";
+        const db = await gdb('final-edge-test-db-v3');
 
         const logEl = document.getElementById('log');
-        function logMessage(message) {
+        const logMessage = (message) => {
             logEl.innerHTML += `> ${message}\n`;
             logEl.scrollTop = logEl.scrollHeight;
-        }
+        };
 
-        async function runTest(testName, query) {
+        const runTest = async (testName, query) => {
             console.clear();
             console.log(`%c--- RUNNING: ${testName} ---`, 'color: blue; font-size: 1.2em; font-weight: bold;');
             console.log("Query Object:", query);
-
             logMessage(`Running: ${testName}...`);
             const startTime = performance.now();
             const { results } = await db.map({ query });
             const endTime = performance.now();
             const duration = (endTime - startTime).toFixed(2);
-            
             console.log(`%c--- RESULTS ---`, 'color: green; font-size: 1.2em; font-weight: bold;');
             console.log(`Execution Time: ${duration} ms`);
             console.log(`Found ${results.length} item(s).`);
             console.log(results);
             logMessage(`Finished: ${testName}. Found ${results.length} items. Check console.`);
-        }
+        };
 
-        async function setupScenario() {
+        const setupScenario = async () => {
             await db.clear();
-            logMessage("Database cleared.");
-            
+            logMessage(`Database cleared.`);
             // Create Nodes
             const familyId = await db.put({ type: 'Family', name: 'Perez' });
             const juanId = await db.put({ type: 'Person', name: 'Juan', age: 40 });
             const mariaId = await db.put({ type: 'Person', name: 'Maria', age: 38 });
             const pedroId = await db.put({ type: 'Person', name: 'Pedro', age: 15 });
             const anaId = await db.put({ type: 'Person', name: 'Ana', age: 12 });
-            logMessage("Nodes created: Perez Family, Juan, Maria, Pedro, Ana.");
-
+            logMessage(`Nodes created: Perez Family, Juan, Maria, Pedro, Ana.`);
             // Create Links
             await db.link(familyId, juanId);
             await db.link(familyId, mariaId);
-            await db.link(juanId, pedroId); // Juan is Pedro's parent
-            await db.link(mariaId, anaId);   // Maria is Ana's parent
-            logMessage("Family tree links created.");
-            logMessage("Scenario ready. Click a test to run.");
-        }
+            await db.link(juanId, pedroId); // Juan → Pedro
+            await db.link(mariaId, anaId);   // Maria → Ana
+            logMessage(`Family tree links created.`);
+            logMessage(`Scenario ready. Click a test to run.`);
+        };
 
-        async function init() {
+        const init = async () => {
             await setupScenario();
-
             document.getElementById('test1').addEventListener('click', () => runTest(
                 "Get ALL Person Descendants",
                 { type: 'Family', name: 'Perez', $edge: { type: 'Person' } }
             ));
-
             document.getElementById('test2').addEventListener('click', () => runTest(
                 "Get ADULT Descendants",
                 { type: 'Family', name: 'Perez', $edge: { type: 'Person', age: { $gt: 18 } } }
             ));
-
             document.getElementById('test3').addEventListener('click', () => runTest(
                 "Get Descendants with OR",
                 { type: 'Family', name: 'Perez', $edge: { $or: [{ name: 'Pedro' }, { name: 'Ana' }] } }
             ));
-
             document.getElementById('test4').addEventListener('click', () => runTest(
                 "Get Descendants of a specific child (Juan)",
                 { type: 'Person', name: 'Juan', $edge: { type: 'Person' } }
             ));
-
             document.getElementById('test5').addEventListener('click', () => runTest(
                 "No Matching Descendants",
                 { type: 'Family', name: 'Perez', $edge: { type: 'Pet' } }
             ));
-        }
-        
+        };
         init();
 
     </script>
