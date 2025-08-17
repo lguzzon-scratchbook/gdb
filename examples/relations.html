@@ -260,9 +260,9 @@
   <!-- JAVASCRIPT - ORIGINAL VERSION - COMPLETELY UNTOUCHED -->
   <script type="module">
     // Import GDB
-    import { GDB } from "../dist/index.js";
+  import { gdb } from "../dist/index.js";
 
-    const db = new GDB("testGraph");
+  const db = await gdb("testGraph");
 
     // db.clear()
 
@@ -403,19 +403,19 @@
     window.addEventListener("keydown", (event) => { if (event.key === "Shift") isShiftPressed = true; });
     window.addEventListener("keyup", (event) => { if (event.key === "Shift") isShiftPressed = false; });
 
-    // Agregar un event listener al input de actualización para detectar la tecla "Enter"
+    // Add event listener to update input for Enter key
     document.getElementById("updateText").addEventListener("keydown", function (event) {
       if (event.key === "Enter") {
-        event.preventDefault(); // Evitar el comportamiento predeterminado del Enter
-        updateNode(); // Llamar a la función para actualizar el nodo
+        event.preventDefault();
+        updateNode();
       }
     });
 
-    // Agregar un event listener al input de inserción para detectar la tecla "Enter"
+    // Add event listener to insert input for Enter key
     document.getElementById("nodeText").addEventListener("keydown", function (event) {
       if (event.key === "Enter") {
-        event.preventDefault(); // Evitar el comportamiento predeterminado del Enter
-        insertNode(); // Llamar a la función para insertar el nodo
+        event.preventDefault();
+        insertNode();
       }
     });
 
@@ -473,21 +473,21 @@
       if (selectedNodeId === targetNodeId) { alert("You cannot link a node to itself."); return; }
 
 
-      // Manteniendo la lógica original exacta
+      // Keep original logic
       const sourceId = selectedNodeId;
       try {
         await db.link(sourceId, targetNodeId);
         console.log(`Link created between ${sourceId} and ${targetNodeId}`);
-        cy.add({ group: "edges", data: { id: `${sourceId}-${targetNodeId}`, source: sourceId, target: targetNodeId } });
-        selectedNodeId = null; // Limpieza original
-        cy.$id(sourceId).unselect(); // Asegurar deselección visual
+  cy.add({ group: "edges", data: { id: `${sourceId}-${targetNodeId}`, source: sourceId, target: targetNodeId } });
+        selectedNodeId = null;
+        cy.$id(sourceId).unselect();
       } catch (error) {
         console.error("Error creating link:", error);
       }
     }
 
-    // Initial load, real-time updates (Llamada original)
-    await db.map(updateGraph);
+  // Initial load, real-time updates
+  await db.map(updateGraph);
 
   </script>
 </body>
