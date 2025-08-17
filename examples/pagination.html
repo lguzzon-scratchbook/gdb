@@ -268,10 +268,10 @@
     </div>
 
     <script type="module">
-        const { GDB } = await import("../dist/index.js")
+    import { gdb } from "../dist/index.js";
 
-        const DB_NAME = 'blog-grid-persistent-db';
-        const db = new GDB(DB_NAME);
+    const DB_NAME = 'blog-grid-persistent-db';
+    const db = await gdb(DB_NAME);
 
  
         const POSTS_PER_PAGE = 12;
@@ -280,7 +280,7 @@
         const DB_ORDER_DIRECTION = "desc";
         const LOCAL_STORAGE_KEY = `${DB_NAME}_paginationState`;
 
-        // --- Estado de la Aplicación ---
+    // --- Application State ---
         let currentPage = 1;
         let maxKnownPage = 1;
         let isLoading = false;
@@ -289,7 +289,7 @@
         let postsCurrentlyInView = new Set();
         let lastBatchResultCount = 0;
 
-        // --- Elementos del DOM ---
+    // --- DOM Elements ---
         const elements = {
             postsContainer: document.getElementById("posts-container"),
             loadingIndicator: document.getElementById("loading"),
@@ -307,7 +307,7 @@
             loadApiButton: document.getElementById("load-api-posts")
         };
 
-        // --- Persistencia de Estado ---
+    // --- State Persistence ---
         function savePaginationState() {
             const state = {
                 currentPage,
@@ -339,7 +339,7 @@
             return 0;
         }
 
-        // --- Lógica Principal de Carga ---
+    // --- Main Loading Logic ---
         async function loadPosts({ pageToLoad, append = false, restoreScrollTop = 0 }) {
             if (isLoading) return;
             isLoading = true;
@@ -422,7 +422,7 @@
             }
         }
 
-        // --- Creación de Elementos y UI (Grid) ---
+    // --- Element and UI Creation (Grid) ---
         function createPostElement(id, value) {
             const element = document.createElement("div");
             element.className = "post";
@@ -472,7 +472,7 @@
             elements.lastPageButton.disabled = currentPage === maxKnownPage && (noMorePostsToLoadForScroll || lastBatchResultCount < POSTS_PER_PAGE);
         }
 
-        // --- Manejadores de Eventos ---
+    // --- Event Handlers ---
         async function handleScroll() {
             const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
             if (scrollTop + clientHeight >= scrollHeight - 300 && !isLoading && !noMorePostsToLoadForScroll) {
@@ -516,7 +516,7 @@
             }
         });
 
-        // --- Modal ---
+    // --- Modal ---
         function showPostModal(postValue) {
             elements.modalTitle.textContent = postValue.title || 'Sin título';
             elements.modalImage.src = postValue.image || `https://picsum.photos/seed/${postValue.id || Date.now()}/600/400`;
@@ -548,7 +548,7 @@
             }
         });
 
-        // --- Carga de Datos de API (Ejemplo) ---
+    // --- API Data Loading (Example) ---
         async function loadNewPostsFromApi() {
             elements.loadApiButton.disabled = true;
             elements.loadApiButton.textContent = 'Cargando desde API...';
@@ -623,7 +623,7 @@
             return Array.from(selectedTags);
         }
 
-        // --- Inicialización de la Aplicación ---
+    // --- Application Initialization ---
         async function initializeApp() {
             const restoredScrollTop = loadPaginationState();
 
