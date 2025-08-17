@@ -12,7 +12,7 @@
       margin: 0;
       overflow: hidden;
       background-color: #1e1e1e;
-      cursor: none; /* Ocultamos el cursor del sistema */
+  cursor: none; /* Hide system cursor */
     }
 
     .cursor {
@@ -35,98 +35,95 @@
 </head>
 
 <body>
-  <!-- Contenedor para los cursores de otros participantes -->
+  <!-- Container for other participants' cursors -->
   <div id="remote-cursors-container"></div>
   
-  <!-- Tu propio cursor, que gestionamos por separado -->
+  <!-- Your own cursor, managed separately -->
   <div class="cursor" id="local-cursor" style="background-color: rgba(255, 255, 255, 0.5);"></div>
 
   <script type="module">
-    // Importa tu librería GDB
-    import { GDB } from "../dist/index.js";
+    // Import GDB library
+    import { gdb } from "../dist/index.js";
 
-    // Un objeto para llevar un registro de los cursores de los demás
+    // Object to keep track of other participants' cursors
     const remoteCursors = {};
 
-    // --- FUNCIÓN PRINCIPAL ASÍNCRONA ---
-    // Envolvemos todo en una función async para manejar la inicialización
+    // --- MAIN ASYNC FUNCTION ---
+    // Wrap everything in an async function for initialization
     async function main() {
       try {
-        // 1. INICIALIZACIÓN
-        // GDB realiza operaciones asíncronas, así que lo tratamos como tal.
-        const db = new GDB('cursormove');
+        // 1. INITIALIZATION
+        // Use async factory for GDB
+        const db = await gdb('cursormove');
 
-        console.log("GDB y GenosRTC inicializados. ¡Listo para la acción!");
-
-        // 2. CORRECCIÓN DE LA API `channel`
-        // Obtenemos el objeto del canal, no desestructuramos un array.
-        // Usamos el `db.room` público para la aplicación.
+        // 2. CHANNEL API
+        // Get the channel object, use db.room for the app
         const cursorChannel = db.room.channel("cursor");
-        
-        // --- GESTIÓN DE PARTICIPANTES Y CURSORES ---
 
-        // Cuando un nuevo participante se une
+        // --- PARTICIPANT AND CURSOR MANAGEMENT ---
+
+        // When a new participant joins
         db.room.on('peer:join', peerId => {
-          console.log(`✅ Peer se ha unido: ${peerId.slice(0, 8)}...`);
-          
-          // Creamos un nuevo div para su cursor
+          console.log(`✅ Peer joined: ${peerId.slice(0, 8)}...`);
+
+          // Create a new div for their cursor
           const newCursor = document.createElement('div');
           newCursor.className = 'cursor';
           newCursor.style.backgroundColor = getRandomColor();
-          newCursor.textContent = peerId.slice(0, 4); // Mostramos parte de su ID
+          newCursor.textContent = peerId.slice(0, 4); // Show part of their ID
           document.getElementById('remote-cursors-container').appendChild(newCursor);
-          
-          // Guardamos la referencia al cursor de este peer
+
+          // Save reference to this peer's cursor
           remoteCursors[peerId] = newCursor;
         });
 
-        // Cuando un participante se va
+        // When a participant leaves
         db.room.on('peer:leave', peerId => {
-          console.log(`❌ Peer se ha ido: ${peerId.slice(0, 8)}...`);
-          
-          // Buscamos su cursor, lo eliminamos del DOM y de nuestro registro
+          console.log(`❌ Peer left: ${peerId.slice(0, 8)}...`);
+
+          // Remove their cursor from DOM and our registry
           if (remoteCursors[peerId]) {
             remoteCursors[peerId].remove();
             delete remoteCursors[peerId];
           }
         });
-        
-        // --- LÓGICA DE LA APLICACIÓN ---
+
+        // --- APP LOGIC ---
 
         const localCursor = document.getElementById('local-cursor');
 
-        // Mueve tu propio cursor y envía la posición a los demás
+        // Move your own cursor and send position to others
         window.addEventListener('mousemove', e => {
-          localCursor.style.left = e.clientX + 'px';
-          localCursor.style.top = e.clientY + 'px';
+          localCursor.style.left = `${e.clientX}px`;
+          localCursor.style.top = `${e.clientY}px`;
 
-          // Usamos el método .send() del objeto del canal
+          // Use .send() method of channel object
           cursorChannel.send({ x: e.clientX, y: e.clientY });
         });
 
-        // Recibe datos del canal y mueve el cursor del participante CORRECTO
+        // Receive data from channel and move the correct participant's cursor
         cursorChannel.on('message', (data, fromPeerId) => {
           const peerCursor = remoteCursors[fromPeerId];
-          
-          // Si el cursor de ese peer existe, actualiza su posición
+
+          // If that peer's cursor exists, update its position
           if (peerCursor) {
-            peerCursor.style.left = data.x + 'px';
-            peerCursor.style.top = data.y + 'px';
+            peerCursor.style.left = `${data.x}px`;
+            peerCursor.style.top = `${data.y}px`;
           }
         });
 
       } catch (error) {
-        console.error("Error fatal al inicializar la aplicación:", error);
+        console.error("Fatal error initializing the app:", error);
       }
     }
 
-    // --- FUNCIONES AUXILIARES ---
+    // --- HELPER FUNCTIONS ---
     function getRandomColor() {
       const h = Math.floor(Math.random() * 360);
       return `hsla(${h}, 90%, 70%, 0.8)`;
     }
 
-    // Inicia la aplicación
+    // Start the app
     main();
   </script>
 </body>
