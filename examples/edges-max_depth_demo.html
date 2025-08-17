@@ -106,21 +106,21 @@
     </div>
 
     <script type="module">
-        // 1. Import GDB from your local build file.
-        import { GDB } from "../dist/index.js";
+    // 1. Import gdb from your local build file.
+    import { gdb } from "../dist/index.js";
 
-        // 2. Initialize the database
-        const db = new GDB('new-edge-test-db');
+    // 2. Initialize the database
+    const db = await gdb('new-edge-test-db');
 
         // DOM Elements
         const logEl = document.getElementById('log');
         const queryDisplayEl = document.getElementById('query-display');
         const runBtn = document.getElementById('run-query');
 
-        function logMessage(message) {
+        const logMessage = (message) => {
             const time = new Date().toLocaleTimeString();
             logEl.innerHTML = `[${time}] ${message}\n` + logEl.innerHTML;
-        }
+        };
 
         // 3. Define the new, simpler query using the powerful $edge
         const deepQuery = {
@@ -137,11 +137,10 @@
         queryDisplayEl.textContent = JSON.stringify(deepQuery, null, 2);
 
         // 4. Seeding function to create the deep hierarchy
-        async function setupScenario(depth) {
+        const setupScenario = async (depth) => {
             await db.clear();
-            logMessage("Database cleared. Setting up deep hierarchy...");
-
-            async function createChain(chainName) {
+            logMessage(`Database cleared. Setting up deep hierarchy...`);
+            const createChain = async (chainName) => {
                 const nodeIds = [];
                 // Create all nodes for the chain
                 for (let i = 0; i <= depth; i++) {
@@ -155,19 +154,16 @@
                     const id = await db.put(nodeData);
                     nodeIds.push(id);
                 }
-
                 // Link them up sequentially
                 for (let i = 0; i < depth; i++) {
                     await db.link(nodeIds[i], nodeIds[i + 1]);
                 }
                 logMessage(`Created ${depth}-link chain for '${chainName}'.`);
-            }
-
+            };
             await createChain("SuccessChain");
             await createChain("FailureChain"); // This one won't be used as a starting point
-
-            logMessage("Scenario setup complete. Ready to run the new $edge query.");
-        }
+            logMessage(`Scenario setup complete. Ready to run the new $edge query.`);
+        };
 
         // 5. Run query logic with performance measurement
         runBtn.addEventListener('click', async () => {
