@@ -70,9 +70,9 @@
   <div id="audios"></div>
 
   <script type="module">
-    import { GDB } from "../dist/index.js";
+  import { gdb } from "../dist/index.js";
 
-    const db = new GDB('audio-room');
+  const db = await gdb('audio-room');
     const audioControlChannel = db.room.channel("audiocontrol");
 
     const peerAudios = {};
