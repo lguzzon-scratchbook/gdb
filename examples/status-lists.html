@@ -58,9 +58,11 @@
     </div>
 
     <script type="module">
-        import { GDB } from "../dist/index.js";
 
-        const db = new GDB("my-tasks-db-v2"); // Same DB name, or clear if you prefer
+    import { gdb } from "../dist/index.js";
+
+    // Initialize GenosDB using async factory
+    const db = await gdb("my-tasks-db-v2");
 
         const activeItemsListElement = document.getElementById('activeItemsList');
         const inactiveItemsListElement = document.getElementById('inactiveItemsList');
