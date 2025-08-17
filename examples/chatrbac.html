@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -213,8 +213,7 @@
                             <button id="btnCopyMnemonic" class="show-mnemonic-btn"
                                 style="padding: 6px 10px; font-size: 0.95em;">Copy</button>
                         </div>
-                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this recovery phrase in a safe place. It's the
-                            only way to recover your account if you lose access to WebAuthn or change devices.</div>
+                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this recovery phrase in a safe place. It is the only way to recover your account if you lose access to WebAuthn or change devices.</div>
                         <button id="btnProtectWebAuthn">2. Protect with WebAuthn & Login</button>
                     </div>
                 </div>
@@ -240,8 +239,8 @@
         <div class="status-bar" id="statusBar">Status: Not initialized.</div>
     </div>
     <script type="module">
-        import { GDB } from "../dist/index.js";
-        import * as rbac from '../dist/rbac.min.js';
+        import { gdb } from "../dist/index.js";
+
         const SUPERADMIN_ADDRESSES = ["0x62c48827e883f114821211673Dc309a29Aae7e6A"];
         // Normalize superadmin addresses to be case-insensitive
         const SUPERADMIN_SET = new Set(SUPERADMIN_ADDRESSES.map(a => a.toLowerCase()));
@@ -264,6 +263,7 @@
         const btnSendMessage = document.getElementById('btnSendMessage');
         const btnLogout = document.getElementById('btnLogout');
         let db;
+        let sm;
         let volatileIdentity = null;
         let unsubscribeMessages = null;
         let currentUserAddress = null;
@@ -281,7 +281,7 @@
          */
         const updateUI = async securityState => {
             if (!securityState) {
-                statusBar.textContent = "Estado: Contexto de seguridad no activo.";
+                statusBar.textContent = "Status: Security context not active.";
                 authSection.classList.remove('hidden');
                 chatSection.classList.add('hidden');
                 currentUserAddress = null;
@@ -299,10 +299,10 @@
             } else {
                 currentUserRole = null;
             }
-            let statusText = `Estado: ${securityState.isActive ? `Sesión iniciada como ${securityState.activeAddress.substring(0, 10)}...` : 'Sesión cerrada.'}`;
-            statusText += ` | WebAuthn activo: ${securityState.isWebAuthnProtected}`;
-            statusText += ` | WebAuthn registrado aquí: ${securityState.hasWebAuthnHardwareRegistration}`;
-            if (currentUserRole) statusText += ` | Rol: ${currentUserRole}`;
+            let statusText = `Status: ${securityState.isActive ? `Session started as ${securityState.activeAddress.substring(0, 10)}...` : 'Session closed.'}`;
+            statusText += ` | WebAuthn active: ${securityState.isWebAuthnProtected}`;
+            statusText += ` | WebAuthn registered here: ${securityState.hasWebAuthnHardwareRegistration}`;
+            if (currentUserRole) statusText += ` | Role: ${currentUserRole}`;
             statusBar.textContent = statusText;
             btnLoginWebAuthn.disabled = !securityState.hasWebAuthnHardwareRegistration;
             if (securityState.isActive) {
@@ -349,41 +349,43 @@
          */
         async function initializeApp() {
             try {
-                statusBar.textContent = "Estado: Inicializando DB...";
-                db = new GDB("rbacChatAppDB");
-                statusBar.textContent = "Estado: DB lista. Inicializando contexto de seguridad...";
-                await rbac.createSecurityContext(db, SUPERADMIN_ADDRESSES);
-                // rbac.setCustomRoles(CHAT_APP_ROLES);
-                rbac.setSecurityStateChangeCallback(updateUI);
+                statusBar.textContent = "Status: Initializing DB...";
+                db = await gdb("rbacChatAppDB", { sm : true });
+                sm = db.sm
+
+                statusBar.textContent = "Status: DB ready. Initializing security context...";
+                await sm.createSecurityContext(db, SUPERADMIN_ADDRESSES);
+                // sm.setCustomRoles(CHAT_APP_ROLES);
+                sm.setSecurityStateChangeCallback(updateUI);
                 const initialState = {
-                    isActive: rbac.isSecurityActive(),
-                    activeAddress: rbac.getActiveEthAddress(),
-                    isWebAuthnProtected: rbac.isCurrentSessionProtectedByWebAuthn(),
-                    hasVolatileIdentity: !!rbac.getMnemonicForDisplayAfterRegistrationOrRecovery(),
-                    hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
+                    isActive: sm.isSecurityActive(),
+                    activeAddress: sm.getActiveEthAddress(),
+                    isWebAuthnProtected: sm.isCurrentSessionProtectedByWebAuthn(),
+                    hasVolatileIdentity: !!sm.getMnemonicForDisplayAfterRegistrationOrRecovery(),
+                    hasWebAuthnHardwareRegistration: sm.hasExistingWebAuthnRegistration()
                 };
                 updateUI(initialState);
-                if (rbac.hasExistingWebAuthnRegistration() && !rbac.isSecurityActive()) {
-                    await rbac.loginCurrentUserWithWebAuthn().catch(err => console.warn("Silent WebAuthn login failed or no registration:", err.message));
+                if (sm.hasExistingWebAuthnRegistration() && !sm.isSecurityActive()) {
+                    await sm.loginCurrentUserWithWebAuthn().catch(err => console.warn("Silent WebAuthn login failed or no registration:", err.message));
                 }
             } catch (error) {
                 console.error("Initialization failure:", error);
                 statusBar.textContent = `Error: ${error.message}`;
-                alert(`Error de inicialización: ${error.message}`);
+                alert(`Initialization error: ${error.message}`);
             }
         }
         btnRegisterNew.onclick = async () => {
             try {
-                volatileIdentity = await rbac.startNewUserRegistration();
+                volatileIdentity = await sm.startNewUserRegistration();
                 if (volatileIdentity) {
                     newEthAddressElem.textContent = volatileIdentity.address;
                     newMnemonicElem.textContent = volatileIdentity.mnemonic;
                 } else {
-                    alert("No se pudo generar nueva identidad.");
+                    alert("Could not generate new identity.");
                 }
             } catch (error) {
                 console.error("Registration error:", error);
-                alert(`Error de registro: ${error.message}`);
+                alert(`Registration error: ${error.message}`);
             }
         };
         // Copy mnemonic to clipboard and reflect short visual feedback
@@ -402,33 +404,32 @@
         };
         btnProtectWebAuthn.onclick = async () => {
             if (!volatileIdentity || !volatileIdentity.privateKey) {
-                alert("No hay identidad generada para proteger. Genera una primero.");
+                alert("No identity generated to protect. Generate one first.");
                 return;
             }
-            if (!confirm("¿Seguro que quieres proteger esta identidad con WebAuthn?")) return;
             try {
-                const protectedAddress = await rbac.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
+                const protectedAddress = await sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
                 if (protectedAddress) {
-                    alert(`Identidad ${protectedAddress} protegida con WebAuthn. ¡Sesión iniciada!`);
+                    alert(`Identity ${protectedAddress} protected with WebAuthn. Session started!`);
                     volatileIdentity = null;
                 } else {
-                    alert("Protección WebAuthn fallida. Verifica soporte y conexión segura.");
+                    alert("WebAuthn protection failed. Check support and secure connection.");
                 }
             } catch (error) {
                 console.error("WebAuthn error:", error);
-                alert(`Error WebAuthn: ${error.message}`);
+                alert(`WebAuthn error: ${error.message}`);
             }
         };
         btnLoginWebAuthn.onclick = async () => {
             try {
-                const loggedInAddress = await rbac.loginCurrentUserWithWebAuthn();
+                const loggedInAddress = await sm.loginCurrentUserWithWebAuthn();
                 if (!loggedInAddress) {
-                    alert("Login WebAuthn fallido. ¿Registraste WebAuthn en este sitio?");
+                    alert("WebAuthn login failed. Did you register WebAuthn on this site?");
                 }
-                // En caso de éxito, no mostramos alert: la UI se actualizará vía el callback de estado.
+                // On success, no alert: UI will update via state callback.
             } catch (error) {
                 console.error("WebAuthn login error:", error);
-                alert(`Error login WebAuthn: ${error.message}`);
+                alert(`WebAuthn login error: ${error.message}`);
             }
         };
         // On paste/type mnemonic, do NOT login automatically. Validate shape and suggest WebAuthn.
@@ -445,7 +446,7 @@
             // Enable login but do not start session automatically
             btnLoginMnemonic.disabled = false;
             try {
-                const hasReg = rbac.hasExistingWebAuthnRegistration();
+                const hasReg = sm.hasExistingWebAuthnRegistration();
                 // If device has no WebAuthn registration, offer to register
                 btnRegisterWebAuthn.style.display = hasReg ? 'none' : '';
                 btnRegisterWebAuthn.disabled = !!hasReg;
@@ -454,13 +455,13 @@
                 btnRegisterWebAuthn.onclick = async () => {
                     // To register, we need the private key; prompt a quick, temporary login then protect.
                     try {
-                        const identity = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
+                        const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
                         if (!identity) return;
-                        await rbac.protectCurrentIdentityWithWebAuthn(identity.privateKey);
-                        alert('WebAuthn registrado correctamente.');
+                        await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                        alert('WebAuthn registered successfully.');
                         btnRegisterWebAuthn.style.display = 'none';
                     } catch (error) {
-                        alert('Error al registrar WebAuthn: ' + error.message);
+                        alert('Error registering WebAuthn: ' + error.message);
                     }
                 };
             } catch (err) {
@@ -474,7 +475,7 @@
             if (!mnemonic) return;
             let identity;
             try {
-                identity = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
+                identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
             } catch { }
             if (!identity) return;
             console.log(`Session started with mnemonic for address ${identity.address}`);
@@ -485,19 +486,18 @@
                 currentUserRole = 'superadmin';
             }
             inputMnemonic.value = '';
-            // After login, if device lacks WebAuthn registration, suggest registering
             try {
-                const hasReg = rbac.hasExistingWebAuthnRegistration();
+                const hasReg = sm.hasExistingWebAuthnRegistration();
                 if (!hasReg) {
                     btnRegisterWebAuthn.style.display = '';
                     btnRegisterWebAuthn.disabled = false;
                     btnRegisterWebAuthn.onclick = async () => {
                         try {
-                            await rbac.protectCurrentIdentityWithWebAuthn(identity.privateKey);
-                            alert('WebAuthn registrado correctamente.');
+                            await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                            alert('WebAuthn registered successfully.');
                             btnRegisterWebAuthn.style.display = 'none';
                         } catch (error) {
-                            alert('Error al registrar WebAuthn: ' + error.message);
+                            alert('Error registering WebAuthn: ' + error.message);
                         }
                     };
                 } else {
@@ -507,7 +507,7 @@
         };
         btnLogout.onclick = async () => {
             try {
-                await rbac.clearSecurity();
+                await sm.clearSecurity();
             } catch (error) {
                 console.error("Logout error:", error);
                 alert(`Error logout: ${error.message}`);
@@ -528,17 +528,17 @@
                 messagesContainer.appendChild(msgElement);
             }
             msgElement.className = value.sender === currentUserAddress ? 'message own' : 'message other';
-            const senderShort = value.sender ? `${value.sender.substring(0, 6)}...${value.sender.slice(-4)}` : 'Desconocido';
-            const messageDate = value.timestamp ? new Date(value.timestamp).toLocaleString() : 'Sin fecha';
+            const senderShort = value.sender ? `${value.sender.substring(0, 6)}...${value.sender.slice(-4)}` : 'Unknown';
+            const messageDate = value.timestamp ? new Date(value.timestamp).toLocaleString() : 'No date';
             const role = value.role || (value.sender === currentUserAddress ? currentUserRole : '');
             const canDelete = (value.sender === currentUserAddress)
                 || ['admin', 'superadmin'].includes(currentUserRole)
                 || isSuperadminAddress(currentUserAddress);
             msgElement.innerHTML = `
-                <span class="sender">${value.sender === currentUserAddress ? 'Tú' : senderShort}<span class="role">${role ? ' (' + role + ')' : ''}</span></span>
+                <span class="sender">${value.sender === currentUserAddress ? 'You' : senderShort}<span class="role">${role ? ' (' + role + ')' : ''}</span></span>
                 <span class="text">${value.text}</span>
                 <span class="timestamp">${messageDate}</span>
-                ${canDelete ? `<button class="delete-btn" title="Eliminar" onclick="window.deleteMessage && window.deleteMessage('${id}')">🗑️</button>` : ''}
+                ${canDelete ? `<button class="delete-btn" title="Delete" onclick="window.deleteMessage && window.deleteMessage('${id}')">🗑️</button>` : ''}
             `;
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         };
@@ -548,23 +548,16 @@
          */
         window.deleteMessage = async (id) => {
             if (!confirm("Delete this message?")) return;
-            // try {
-                // If active address is in the superadmin list, bypass the explicit permission call.
-                // The SecurityManager will still validate server-side according to createSecurityContext.
-                const active = rbac.getActiveEthAddress();
-                if (isSuperadminAddress(active)) {
-                    await db.remove(id);
-                    return;
+            try {
+                const active = sm.getActiveEthAddress();
+                if (!active) { alert('Login required.'); return; }
+                if (!isSuperadminAddress(active)) {
+                    await sm.executeWithPermission('delete');
                 }
-                // Otherwise require 'delete' permission explicitly
-                await rbac.executeWithPermission('delete');
                 await db.remove(id);
-            // } catch (error) {
-            //     alert("You do not have permission to delete this message.");
-            // }
-            // Validate single permission as per RBAC API
-            await rbac.executeWithPermission('delete');
-            await db.remove(id);
+            } catch (error) {
+                alert("You do not have permission to delete this message.");
+            }
         };
         /**
          * Subscribes and renders chat messages in chronological order.
@@ -588,8 +581,8 @@
             const text = inputMessage.value.trim();
             if (!text) return;
             try {
-                const senderAddress = rbac.getActiveEthAddress();
-                if (!rbac.isSecurityActive() || !senderAddress) {
+                const senderAddress = sm.getActiveEthAddress();
+                if (!sm.isSecurityActive() || !senderAddress) {
                     alert('Login required to send messages.');
                     return;
                 }
