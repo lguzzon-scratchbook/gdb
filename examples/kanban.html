@@ -101,9 +101,9 @@
   <h1>Kanban Board</h1>
   <div class="kanban-board" id="kanbanBoard"></div>
   <script type="module">
-    import { GDB } from "../dist/index.js";
+  import { gdb } from "../dist/index.js";
 
-    const db = new GDB("kanbanGraph");
+  const db = await gdb("kanbanGraph");
     const columns = ["To Do", "In Progress", "Done"];
     const kanbanBoard = document.getElementById("kanbanBoard");
 
