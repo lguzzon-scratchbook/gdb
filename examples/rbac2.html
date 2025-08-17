@@ -218,7 +218,7 @@
     <!-- Secure Data Storage (Implicit Encryption) -->
     <div class="section">
       <h2>3. Secure Data Storage (Implicit Encryption)</h2>
-      <p>Uses <code>rbac.put()</code> for automatic encryption and <code>rbac.get()</code> for automatic
+      <p>Uses <code>sm.put()</code> for automatic encryption and <code>sm.get()</code> for automatic
         decryption.</p>
       <div class="flex-group">
         <div>
@@ -229,7 +229,7 @@
           <label for="secureNoteContentInput">Note Content:</label>
           <textarea id="secureNoteContentInput" rows="2">This is a super secret note!</textarea>
         </div>
-        <button id="btnSaveSecureNote" disabled>Save Secure Note (rbac.put)</button>
+        <button id="btnSaveSecureNote" disabled>Save Secure Note (sm.put)</button>
       </div>
       <hr>
       <div class="flex-group">
@@ -237,7 +237,7 @@
           <label for="loadSecureNoteIdInput">Note ID to Load:</label>
           <input type="text" id="loadSecureNoteIdInput" placeholder="Enter ID of saved note">
         </div>
-        <button id="btnLoadSecureNote" disabled>Load & Decrypt Note (rbac.get)</button>
+        <button id="btnLoadSecureNote" disabled>Load & Decrypt Note (sm.get)</button>
       </div>
       <div class="info-box">
         <strong>Loaded Note Content:</strong>
@@ -286,10 +286,10 @@
   </div>
 
   <script type="module">
-    // Import libraries (adjust paths if necessary)
-    // NOTE: For this to run, you need the actual JS files in the specified paths.
-    import { GDB } from "../dist/index.js";
-    import * as rbac from '../dist/rbac.min.js';
+  // Import libraries (adjust paths if necessary)
+  // NOTE: For this to run, you need the actual JS files in the specified paths.
+  import { gdb } from "../dist/index.js";
+
 
     // --- DOM Element Selectors ---
     const dbNameInput = document.getElementById('dbNameInput');
@@ -338,6 +338,7 @@
 
     // --- Application State ---
     let db = null;
+    let sm = null; // This will be initialized after DB creation
     let volatileIdentityCache = null;
     let roleListenerUnsubscribe = null;
     let realtimeTestNodeUnsubscribe = null;
@@ -380,7 +381,7 @@
       btnLoginWebAuthn.disabled = !isGdbReady || !securityState.hasWebAuthnHardwareRegistration || securityState.isActive;
       btnLoginMnemonic.disabled = !isGdbReady || securityState.isActive;
       btnLogout.disabled = !canPerformActions;
-      btnShowMnemonic.disabled = !canPerformActions || !rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
+      btnShowMnemonic.disabled = !canPerformActions || !sm.getMnemonicForDisplayAfterRegistrationOrRecovery();
       btnSaveSecureNote.disabled = !canPerformActions;
       btnLoadSecureNote.disabled = !canPerformActions;
       assignRoleBtn.disabled = !canPerformActions;
@@ -408,7 +409,7 @@
         const userNodeKey = `user:${securityState.activeAddress}`;
         try {
           const { unsubscribe } = await db.get(userNodeKey, (userNode) => {
-            const currentEth = rbac.getActiveEthAddress();
+            const currentEth = sm.getActiveEthAddress();
             const superAdmins = superAdminInput.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
             if (currentEth && superAdmins.includes(currentEth.toLowerCase())) {
@@ -443,11 +444,10 @@
       logToUI(`Initializing GDB with name: ${dbName}...`);
 
       try {
-        // Simulating library availability for in-browser testing without build
-        if (typeof GDB === 'undefined' || typeof rbac === 'undefined') {
-          throw new Error("GDB or RBAC libraries not found. Cannot run testbed.");
-        }
-        db = new GDB(dbName);
+
+        db = await gdb(dbName, { sm: true });
+        sm = db.sm;
+     
         logToUI("GDB instance ready.", "success");
         await setupAutomaticRealtimeSubscription();
       } catch (e) {
@@ -457,10 +457,10 @@
         return;
       }
 
-      rbac.setSecurityStateChangeCallback(handleSecurityStateChange);
+      sm.setSecurityStateChangeCallback(handleSecurityStateChange);
 
       const superAdmins = superAdminInput.value.split(',').map(s => s.trim()).filter(Boolean);
-      await rbac.createSecurityContext(db, superAdmins);
+      await sm.createSecurityContext(db, superAdmins);
       logToUI("RBAC Security Context initialized. Session may be restored.", "success");
 
       localStorage.setItem('gdb_testbed_v2_last_db_name', dbName);
@@ -487,7 +487,7 @@
 
     // REFACTOR: Event listener for Hard Reset button
     btnHardReset.addEventListener('click', () => {
-      if (confirm('Esto borrará toda la configuración local (nombre de la BD) y recargará la página. ¿Estás seguro?')) {
+      if (confirm('This will erase all local configuration (DB name) and reload the page. Are you sure?')) {
         logToUI("Performing hard reset...", "warn");
         localStorage.clear();
         location.reload();
@@ -510,7 +510,7 @@
     // btnRegisterNewUser.addEventListener('click', async () => {
     //   logToUI("Generating new volatile identity...", "info");
     //   try {
-    //     const identity = await rbac.startNewUserRegistration();
+    //     const identity = await sm.startNewUserRegistration();
     //     if (identity) {
     //       volatileIdentityCache = identity;
     //       // State will be updated by the callback, which shows the info box
@@ -526,7 +526,7 @@
     btnRegisterNewUser.addEventListener('click', async () => {
       logToUI("Generating new volatile identity...", "info");
       try {
-        const identity = await rbac.startNewUserRegistration();
+        const identity = await sm.startNewUserRegistration();
         if (identity) {
           volatileIdentityCache = identity;
           newEthAddressElem.textContent = identity.address;
@@ -545,7 +545,7 @@
       if (!volatileIdentityCache) { logToUI("No volatile identity to protect.", "error"); return; }
       logToUI("Protecting with WebAuthn...", "info");
       try {
-        const address = await rbac.protectCurrentIdentityWithWebAuthn(volatileIdentityCache.privateKey);
+        const address = await sm.protectCurrentIdentityWithWebAuthn(volatileIdentityCache.privateKey);
         if (address) {
           logToUI(`Identity protected with WebAuthn & logged in.`, "success");
           volatileIdentityCache = null; // Cleared on successful protection
@@ -556,7 +556,7 @@
     btnLoginWebAuthn.addEventListener('click', async () => {
       logToUI("Attempting WebAuthn login...", "info");
       try {
-        const address = await rbac.loginCurrentUserWithWebAuthn();
+        const address = await sm.loginCurrentUserWithWebAuthn();
         if (address) logToUI(`Logged in with WebAuthn.`, "success");
         else logToUI("WebAuthn login failed or cancelled.", "warn");
       } catch (e) { logToUI(`WebAuthn login error: ${e.message}`, "error"); }
@@ -567,7 +567,7 @@
       if (!mnemonic) { logToUI("Mnemonic is required.", "error"); return; }
       logToUI("Attempting mnemonic login...", "info");
       try {
-        volatileIdentityCache = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
+        volatileIdentityCache = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
         if (volatileIdentityCache) {
           logToUI(`Logged in with mnemonic. You can now protect this with WebAuthn.`, "success");
           mnemonicLoginInput.value = '';
@@ -582,14 +582,14 @@
         realtimeTestNodeUnsubscribe();
         realtimeTestNodeUnsubscribe = null;
       }
-      await rbac.clearSecurity();
+      await sm.clearSecurity();
       loadedSecureNoteContent.textContent = ''; // Clear decrypted note
       logToUI("Logged out successfully.", "success");
       await setupAutomaticRealtimeSubscription(); // Re-subscribe as anonymous user
     });
 
     btnShowMnemonic.addEventListener('click', () => {
-      const mnemonic = rbac.getMnemonicForDisplayAfterRegistrationOrRecovery();
+      const mnemonic = sm.getMnemonicForDisplayAfterRegistrationOrRecovery();
       if (mnemonic) {
         if (confirm("WARNING: Displaying secret mnemonic phrase. Continue?")) {
           alert(`Your current session mnemonic is:\n\n${mnemonic}`);
@@ -599,13 +599,13 @@
     });
 
     btnSaveSecureNote.addEventListener('click', async () => {
-      if (!rbac.isSecurityActive()) { logToUI("Login required to save secure note.", "error"); return; }
+      if (!sm.isSecurityActive()) { logToUI("Login required to save secure note.", "error"); return; }
       const content = secureNoteContentInput.value;
       let noteId = secureNoteIdInput.value.trim();
       if (!content) { logToUI("Note content cannot be empty.", "warn"); return; }
-      logToUI(`Saving secure note (ID: ${noteId || 'new'})... (via rbac.put)`, "info");
+      logToUI(`Saving secure note (ID: ${noteId || 'new'})... (via sm.put)`, "info");
       try {
-        const savedNodeId = await rbac.put({ note_content: content, savedAt: new Date().toISOString() }, noteId || undefined);
+        const savedNodeId = await sm.put({ note_content: content, savedAt: new Date().toISOString() }, noteId || undefined);
         logToUI(`Secure note saved. Node ID: ${savedNodeId}`, "success");
         if (!noteId) secureNoteIdInput.value = savedNodeId;
         loadSecureNoteIdInput.value = savedNodeId;
@@ -615,16 +615,16 @@
     });
 
     btnLoadSecureNote.addEventListener('click', async () => {
-      if (!rbac.isSecurityActive()) {
+      if (!sm.isSecurityActive()) {
         logToUI("Login is required to decrypt notes.", "warn");
         return;
       }
       const noteIdToLoad = loadSecureNoteIdInput.value.trim();
       if (!noteIdToLoad) { logToUI("Enter Note ID to load.", "warn"); return; }
-      logToUI(`Loading secure note ID: ${noteIdToLoad}... (via rbac.get)`, "info");
+      logToUI(`Loading secure note ID: ${noteIdToLoad}... (via sm.get)`, "info");
       loadedSecureNoteContent.textContent = 'Loading...';
       try {
-        const { result: node } = await rbac.get(noteIdToLoad);
+        const { result: node } = await sm.get(noteIdToLoad);
         if (node) {
           if (node.value && node.value._gdb_decryption_failed) {
             logToUI(`Failed to decrypt note '${noteIdToLoad}': ${node.value.reason}`, "error");
@@ -659,9 +659,9 @@
       if (!target || !role) { logToUI("Target ETH and Role are required.", "error"); return; }
       logToUI(`Attempting to assign role '${role}'...`, "info");
       try {
-        await rbac.executeWithPermission('assignRole');
+        await sm.executeWithPermission('assignRole');
         logToUI("Permission 'assignRole' granted. Sending request...", "info");
-        await rbac.assignRole(target, role);
+        await sm.assignRole(target, role);
         logToUI("Role assignment request sent to GDB.", "success");
       } catch (e) { logToUI(`Assign role error: ${e.message}`, "error"); }
     });
@@ -686,7 +686,7 @@
         value.ts = Date.now();
         realtimeNodeValueForTest.value = JSON.stringify(value);
         logToUI("Sending LEGITIMATE 'put'. Verifying 'write' permission...", "info");
-        await rbac.executeWithPermission('write');
+        await sm.executeWithPermission('write');
         logToUI("'write' permission granted. Proceeding with db.put().", "info");
         await db.put(value, REALTIME_TEST_NODE_ID);
         logToUI("Legit 'put' sent. Check other browser tabs.", "success");
@@ -696,15 +696,15 @@
     });
 
     putFakeSigP2PBtn.addEventListener('click', async () => {
-      if (!rbac.isSecurityActive()) { logToUI("Login first to get an active address.", "warn"); return; }
+      if (!sm.isSecurityActive()) { logToUI("Login first to get an active address.", "warn"); return; }
       logToUI("Simulating P2P 'put' with a FAKE SIGNATURE...", "info");
       const op = {
         type: 'insert', id: REALTIME_TEST_NODE_ID, value: { fake: true },
-        timestamp: db.hybridClock.now(), originEthAddress: rbac.getActiveEthAddress(),
+        timestamp: db.hybridClock.now(), originEthAddress: sm.getActiveEthAddress(),
         signature: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd1b"
       };
       try {
-        const { validatedOperations } = await db.securityManager.verifyIncomingOperations([op]);
+        const { validatedOperations } = await db.sm.verifyIncomingOperations([op]);
         if (validatedOperations && validatedOperations.length > 0) {
           logToUI("FAKE SIG TEST FAILED: Operation was validated!", "error");
         } else {
