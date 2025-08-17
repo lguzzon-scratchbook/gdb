@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,12 +55,12 @@
 
   <!-- Import GDB -->
   <script type="module">
-    // Import the GDB class from your file
-    import { GDB } from "../dist/index.js";
+    // Import the async factory
+    import { gdb } from "../dist/index.js";
     // import { withRadixIndex } from "../dist/radixIndex.min.js";
 
-    // Create an instance of GDB
-    const db = new GDB('test-db');
+    // Create an instance of GDB (async)
+    const db = await gdb('test-db');
 
     // Agregar el índice Radix
     // withRadixIndex(db);
@@ -70,12 +70,8 @@
 
     // Function to load the initial value
     async function loadInitialValue() {
-      const { result } = await db.get(recordId, (node)=>{
-        if (node) {
-          document.getElementById('currentValue').textContent = node.value;
-        } else {
-          document.getElementById('currentValue').textContent = '(No value)';
-        }
+      await db.get(recordId, (node) => {
+        document.getElementById('currentValue').textContent = node ? node.value : '(No value)';
       });
     }
     
@@ -95,7 +91,7 @@
       await db.put(newValue, recordId);
 
       // Clear the input field
-      document.getElementById('valueInput').value = '';
+  document.getElementById('valueInput').value = '';
     });
   </script>
 </body>
