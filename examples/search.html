@@ -176,8 +176,8 @@
         </div>
     </div>
     <script type="module">
-        import { GDB } from "../dist/index.js";
-        const db = new GDB('search-db');
+    import { gdb } from "../dist/index.js";
+    const db = await gdb('search-db');
         // List of allowed countries
         const allowedCountries = [
             "Spain", "United States", "Mexico"
