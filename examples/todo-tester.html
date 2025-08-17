@@ -38,10 +38,10 @@
     </div>
 
     <script type="module">
-        import { GDB } from "../dist/index.js"; // Asegúrate que la ruta es correcta
+    import { gdb } from "../dist/index.js";
 
-        const dbName = 'todoList'; // MISMO NOMBRE QUE TU APP TO-DO
-        const db = new GDB(dbName);
+    const dbName = 'todoList'; // Same name as your To-Do app
+    const db = await gdb(dbName);
         const logElement = document.getElementById('log');
         const startButton = document.getElementById('startRandomOps');
         const stopButton = document.getElementById('stopRandomOps');
