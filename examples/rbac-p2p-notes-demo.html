@@ -68,10 +68,9 @@
     </div>
 
     <script type="module">
-        // --- IMPORTS ---
-        // Ajusta estas rutas a tu estructura de proyecto
-        import { GDB } from "../dist/index.js";
-        import * as rbac from '../dist/rbac.min.js';
+    // --- IMPORTS ---
+    // Adjust these paths to your project structure
+    import { gdb } from "../dist/index.js";
 
         // --- DOM ELEMENTS ---
         const dbNameInput = document.getElementById('dbName');
@@ -95,16 +94,18 @@
         const logArea = document.getElementById('logArea');
 
         // --- APP STATE ---
-        let currentUnsubscribe = null;
-        let lastKnownWatchedNodeId = null;
+    let db = null;
+    let sm = null;
+    let currentUnsubscribe = null;
+    let lastKnownWatchedNodeId = null;
 
         function log(message, type = 'info') {
             const time = new Date().toLocaleTimeString();
             logArea.innerHTML += `<div>[${time}] ${message}</div>`;
             logArea.scrollTop = logArea.scrollHeight;
-            if (type === 'error') console.error(message);
-            else if (type === 'warn') console.warn(message);
-            else console.log(message);
+            if (type === 'error') console.error(`[${time}] ${message}`);
+            else if (type === 'warn') console.warn(`[${time}] ${message}`);
+            else console.log(`[${time}] ${message}`);
         }
 
         // --- RBAC STATE HANDLER ---
@@ -142,19 +143,14 @@
             log(`Initializing GDB: ${dbName}...`);
 
             try {
-                let db = new GDB(dbName);
-
-                log("GDB Ready.", 'success');
-                
-                await rbac.createSecurityContext(db); // No superadmins for this simple test
-                rbac.setSecurityStateChangeCallback(securityUpdateHandler);
-                log("RBAC Context Ready. Attempting session restore...", 'success');
-
-                // createSecurityContext attempts silent login, which will trigger securityUpdateHandler
-                // If no session, UI will prompt for login.
+                db = await gdb(dbName, { sm: true });
+                sm = db.sm;
+                log(`GDB Ready.`, 'success');
+                await sm.createSecurityContext(db); // No superadmins for this simple test
+                sm.setSecurityStateChangeCallback(securityUpdateHandler);
+                log(`Security Context Ready. Attempting session restore...`, 'success');
                 initSection.classList.add('hidden');
                 // UI visibility (login vs app) is handled by securityUpdateHandler
-
             } catch (e) {
                 log(`Initialization Error: ${e.message}`, 'error');
                 btnInitialize.disabled = false;
@@ -167,56 +163,55 @@
             const mnemonic = mnemonicInput.value.trim();
             if (!mnemonic) { log("Mnemonic is required.", 'error'); return; }
             try {
-                log("Attempting Mnemonic Login...");
-                const identity = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
+                log(`Attempting Mnemonic Login...`);
+                const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
                 if (identity) {
                     log(`Logged in with Mnemonic: ${identity.address.substring(0,10)}...`, 'success');
-                    mnemonicInput.value = ''; // Clear after use
+                    mnemonicInput.value = '';
                     newIdentityDetails.textContent = '';
                 } else {
-                    log("Mnemonic login failed. Check phrase.", 'error');
+                    log(`Mnemonic login failed. Check phrase.`, 'error');
                 }
             } catch (e) { log(`Login Error: ${e.message}`, 'error'); }
         });
 
         btnNewIdentity.addEventListener('click', async () => {
             try {
-                log("Generating new identity...");
-                const identity = await rbac.startNewUserRegistration();
+                log(`Generating new identity...`);
+                const identity = await sm.startNewUserRegistration();
                 if (identity) {
                     newIdentityDetails.innerHTML = `<b>New Identity (SAVE THIS MNEMONIC SECURELY!):</b><br>Address: ${identity.address}<br>Mnemonic: ${identity.mnemonic}`;
-                    mnemonicInput.value = identity.mnemonic; // Pre-fill for easy login
+                    mnemonicInput.value = identity.mnemonic;
                     log(`New Identity Generated. Address: ${identity.address.substring(0,10)}... Pre-filled mnemonic for login.`, 'success');
-                    // No auto-login here, user clicks login with prefilled mnemonic
                 } else {
-                    log("Failed to generate new identity.", 'error');
+                    log(`Failed to generate new identity.`, 'error');
                 }
             } catch(e) { log(`New Identity Error: ${e.message}`, 'error'); }
         });
 
         btnLogout.addEventListener('click', async () => {
-            log("Logging out...");
-            await rbac.clearSecurity();
-            log("Logged out.", 'success');
+            log(`Logging out...`);
+            await sm.clearSecurity();
+            log(`Logged out.`, 'success');
             newIdentityDetails.textContent = '';
         });
 
         // --- SECURE NOTES ---
         btnSaveNote.addEventListener('click', async () => {
-            const id = noteIdInput.value.trim() || undefined; // Pass undefined if empty for auto-ID
+            const id = noteIdInput.value.trim() || undefined;
             const contentStr = noteContentInput.value.trim();
-            if (!contentStr) { log("Note content is required.", 'error'); return; }
+            if (!contentStr) { log(`Note content is required.`, 'error'); return; }
 
             let contentToSave;
             try { contentToSave = JSON.parse(contentStr); }
-            catch(e) { contentToSave = contentStr; } // Save as string if not JSON
+            catch(e) { contentToSave = contentStr; }
 
             log(`Saving note with user ID: '${id || '(new)'}'...`);
             try {
-                const finalId = await rbac.put(contentToSave, id);
+                const finalId = await sm.put(contentToSave, id);
                 log(`Note saved. Final User ID: '${finalId}'. Content: ${JSON.stringify(contentToSave).substring(0,50)}...`, 'success');
-                if (!id) noteIdInput.value = finalId; // Update UI if ID was generated
-                watchNoteIdInput.value = finalId; // Suggest watching this new/updated note
+                if (!id) noteIdInput.value = finalId;
+                watchNoteIdInput.value = finalId;
             } catch (e) {
                 log(`Error saving note: ${e.message}`, 'error');
             }
@@ -224,14 +219,14 @@
 
         btnWatchNote.addEventListener('click', async () => {
             const idToWatch = watchNoteIdInput.value.trim();
-            if (!idToWatch) { log("Note ID to watch is required.", 'error'); return; }
+            if (!idToWatch) { log(`Note ID to watch is required.`, 'error'); return; }
 
             if (currentUnsubscribe && lastKnownWatchedNodeId === idToWatch) {
                 log(`Already watching note ID: ${idToWatch}.`, 'info');
                 return;
             }
-            
-            if (currentUnsubscribe) { // Unsubscribe from previous if any
+
+            if (currentUnsubscribe) {
                 currentUnsubscribe();
                 log(`Stopped watching previous note: ${lastKnownWatchedNodeId}.`, 'info');
             }
@@ -243,7 +238,7 @@
             lastKnownWatchedNodeId = idToWatch;
 
             try {
-                const { unsubscribe, result } = await rbac.get(idToWatch, (node) => {
+                const { unsubscribe, result } = await sm.get(idToWatch, (node) => {
                     log(`Real-time update for watched note '${idToWatch}': Decrypted=${node ? node.decrypted : 'N/A'}`, 'info');
                     if (node) {
                         let displayValue = `ID: ${node.id}\nTimestamp: ${JSON.stringify(node.timestamp)}\nDecrypted: ${node.decrypted}\n\nValue:\n`;
@@ -258,7 +253,6 @@
                     }
                 });
                 currentUnsubscribe = unsubscribe;
-                // Initial result is also handled by the callback now due to rbac.get's design
             } catch (e) {
                 log(`Error watching note ${idToWatch}: ${e.message}`, 'error');
                 watchedNoteDisplay.textContent = `Error watching note: ${e.message}`;
