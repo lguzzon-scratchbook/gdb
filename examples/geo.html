@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Geolocalización en Tiempo Real</title>
+  <title>Real-Time Geolocation</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
@@ -27,10 +27,10 @@
 </head>
 
 <body>
-  <h1>Detección de Ubicación en Tiempo Real</h1>
-  <p>Tu ubicación actual se actualizará automáticamente y se mostrarán nodos cercanos.</p>
+  <h1>Real-Time Location Detection</h1>
+  <p>Your current location will update automatically and nearby nodes will be displayed.</p>
 
-  <div id="status">Buscando ubicación...</div>
+  <div id="status">Searching for location...</div>
   <div id="current-location"></div>
 
   <div id="map"></div>
@@ -39,31 +39,27 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script type="module">
-    // Importar GDB y los operadores de geolocalización
-    import { GDB } from "../dist/index.js";
-    import { withGeolocationOperators } from "../dist/GeolocationOperators.min.js";
+  // Import gdb and geolocation operators
+  import { gdb } from "../dist/index.js";
 
-    // Crear una instancia de GDB
-    const db = new GDB("geolocationDB");
-
-    // Extender GDB con operadores de geolocalización
-    withGeolocationOperators(db);
+  // Create a gdb instance with geolocation operators
+  const db = await gdb("geolocationDB", { geo: true });
 
     // db.clear()
 
-    // Simular algunos nodos con coordenadas geográficas
+    // Simulate some nodes with geographic coordinates
     async function populateSampleData() {
-      // await db.put({ latitude: 34.53264501340196, longitude: -0.4273969105505087, name: "Nodo A" });
-      // await db.put({ latitude: 40.7306, longitude: -73.9352, name: "Nodo B" });
-      // await db.put({ latitude: 40.6501, longitude: -73.9496, name: "Nodo C" });
-      // await db.put({ latitude: 40.8404, longitude: -73.8688, name: "Nodo D" });
+      // await db.put({ latitude: 34.53264501340196, longitude: -0.4273969105505087, name: "Node A" });
+      // await db.put({ latitude: 40.7306, longitude: -73.9352, name: "Node B" });
+      // await db.put({ latitude: 40.6501, longitude: -73.9496, name: "Node C" });
+      // await db.put({ latitude: 40.8404, longitude: -73.8688, name: "Node D" });
     }
 
-    // Obtener la ubicación actual del usuario
+    // Get the user's current location
     function getCurrentLocation() {
       return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
-          reject("La geolocalización no está disponible en este navegador.");
+          reject("Geolocation is not available in this browser.");
         }
         navigator.geolocation.getCurrentPosition(
           (position) => resolve(position),
@@ -72,26 +68,21 @@
       });
     }
 
-    // Mostrar la ubicación en el mapa usando Leaflet
-    function displayMap(latitude, longitude, name = "Estás aquí.") {
-      const map = L.map('map').setView([latitude, longitude], 12); // Coordenadas iniciales y zoom
-
-      // Agregar la capa de OpenStreetMap
+    // Display the location on the map using Leaflet
+    function displayMap(latitude, longitude, name = "You are here.") {
+      const map = L.map('map').setView([latitude, longitude], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
-
-      // Agregar un marcador para la ubicación actual
       L.marker([latitude, longitude])
         .addTo(map)
         .bindPopup(name)
         .openPopup();
     }
 
-    // Buscar nodos cercanos usando el operador $near
+    // Find nearby nodes using the $near operator
     async function findNearbyNodes(latitude, longitude) {
       const { results } = await db.map();
-
       // {
       //   query: {
       //     location: {
@@ -99,47 +90,41 @@
       //     }
       //   }
       // }
-      console.log(results)
+      console.log(results);
       const resultsDiv = document.getElementById("results");
       if (results.length > 0) {
-        displayMap(node.value.latitude, node.value.longitude) 
-        resultsDiv.innerHTML = `<h3>Nodos cercanos:</h3><ul>${results
+        resultsDiv.innerHTML = `<h3>Nearby nodes:</h3><ul>${results
             .map(node => `<li>${node.value.name} (${node.value.latitude}, ${node.value.longitude})</li>`)
             .join("")}</ul>`;
       } else {
-        resultsDiv.innerHTML = "<p>No se encontraron nodos cercanos.</p>";
+        resultsDiv.innerHTML = "<p>No nearby nodes found.</p>";
       }
     }
 
-    // Inicializar la aplicación
+    // Initialize the app
     async function initApp() {
       try {
-        // Rellenar datos de muestra
+        // Fill sample data
         await populateSampleData();
-
-        // Obtener la ubicación actual
+        // Get current location
         const position = await getCurrentLocation();
         const { latitude, longitude } = position.coords;
-
-        // Mostrar la ubicación
-        document.getElementById("status").textContent = "Ubicación detectada.";
+        // Show location
+        document.getElementById("status").textContent = "Location detected.";
         document.getElementById("current-location").innerHTML = `
-          <strong>Latitud:</strong> ${latitude}<br>
-          <strong>Longitud:</strong> ${longitude}
+          <strong>Latitude:</strong> ${latitude}<br>
+          <strong>Longitude:</strong> ${longitude}
         `;
-
-        // Mostrar el mapa
+        // Show map
         displayMap(latitude, longitude);
-
-        // Buscar nodos cercanos
+        // Find nearby nodes
         await findNearbyNodes(latitude, longitude);
       } catch (error) {
         console.error("Error:", error);
         document.getElementById("status").textContent = `Error: ${error}`;
       }
     }
-
-    // Iniciar la aplicación
+    // Start the app
     initApp();
   </script>
 </body>
