@@ -123,13 +123,13 @@
   </div>
 
   <script type="module">
-    import { GDB } from "../dist/index.js";
-    import * as rbac from '../dist/rbac.min.js';
+  import { gdb } from "../dist/index.js";
 
-    // --- GLOBAL STATE ---
-    let db;
-    let taskSubscriptionUnsubscribe = null; // To hold the unsubscribe function for tasks
-    let volatileIdentity = null; // Stores temporary new identity { address, mnemonic, privateKey }
+  // --- GLOBAL STATE ---
+  let db;
+  let sm;
+  let taskSubscriptionUnsubscribe = null; // To hold the unsubscribe function for tasks
+  let volatileIdentity = null; // Stores temporary new identity { address, mnemonic, privateKey }
 
     // --- DOM ELEMENT REFERENCES ---
     // Auth Elements
@@ -338,11 +338,12 @@
       taskInput.value = '';
     }
 
+
     // --- AUTHENTICATION EVENT LISTENERS ---
     btnGenerateIdentity.addEventListener('click', async () => {
       try {
         updateStatus("Generating new identity...");
-        volatileIdentity = await rbac.startNewUserRegistration();
+        volatileIdentity = await sm.startNewUserRegistration();
         if (volatileIdentity) {
           ethAddressElem.textContent = volatileIdentity.address;
           mnemonicPhraseElem.textContent = volatileIdentity.mnemonic;
@@ -355,7 +356,7 @@
       if (!volatileIdentity) return;
       try {
         updateStatus("Starting WebAuthn registration...");
-        const protectedAddress = await rbac.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
+        const protectedAddress = await sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
         if (protectedAddress) {
           updateStatus(`Identity ${protectedAddress} protected & session started!`);
           volatileIdentity = null;
@@ -368,7 +369,7 @@
     btnLoginWebAuthn.addEventListener('click', async () => {
       try {
         updateStatus("Attempting WebAuthn login...");
-        const loggedInAddress = await rbac.loginCurrentUserWithWebAuthn();
+        const loggedInAddress = await sm.loginCurrentUserWithWebAuthn();
         if (!loggedInAddress) {
           updateStatus("WebAuthn login failed or was cancelled.", true);
         }
@@ -378,7 +379,7 @@
     btnLogout.addEventListener('click', async () => {
       try {
         updateStatus("Logging out...");
-        await rbac.clearSecurity();
+        await sm.clearSecurity();
         volatileIdentity = null;
         updateStatus("Successfully logged out.");
       } catch (error) { updateStatus(`Logout Error: ${error.message}`, true); }
@@ -393,20 +394,21 @@
     async function initializeApp() {
       try {
         updateStatus("Initializing Database...");
-        db = new GDB("secureTodoAppDB_v1");
+        db = await gdb("secureTodoAppDB_v1", { sm: true });
+        sm = db.sm;
 
         updateStatus("Initializing Security Context...");
-        await rbac.createSecurityContext(db);
+        await sm.createSecurityContext(db);
         
         // Set the master callback that drives the entire application's state
-        rbac.setSecurityStateChangeCallback(handleSecurityChange);
+        sm.setSecurityStateChangeCallback(handleSecurityChange);
         
         // Trigger the first state check to see if a user is already logged in
         const initialState = {
-          isActive: rbac.isSecurityActive(),
-          activeAddress: rbac.getActiveEthAddress(),
+          isActive: sm.isSecurityActive(),
+          activeAddress: sm.getActiveEthAddress(),
           hasVolatileIdentity: !!volatileIdentity,
-          hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
+          hasWebAuthnHardwareRegistration: sm.hasExistingWebAuthnRegistration()
         };
         await handleSecurityChange(initialState); // Run the handler to set the initial UI
 
