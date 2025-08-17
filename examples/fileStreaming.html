@@ -64,9 +64,9 @@
   <div id="status">Status: Idle</div>
 
   <script type="module">
-    import { GDB } from "../dist/index.js";
+    import { gdb } from "../dist/index.js";
 
-    const db = new GDB('file-room');
+    const db = await gdb('file-room');
     const fileChannel = db.room.channel('file');
 
     const progressContainer = document.getElementById('progressContainer');
@@ -91,38 +91,30 @@
       container.appendChild(downloadLink);
       progressContainer.appendChild(container);
 
-      document.getElementById('status').textContent = 'Status: Idle';
+  document.getElementById('status').textContent = 'Status: Idle';
     });
 
     fileChannel.on('progress', (percent, peerId, metadata) => {
       const key = `${peerId}-${metadata.filename}`;
       let bar = loadingBars[key];
-
       if (!bar) {
         const container = document.createElement('div');
-
         const label = document.createElement('div');
         label.className = 'file-label';
         label.textContent = metadata.filename;
-
         const progressBar = document.createElement('div');
         progressBar.className = 'progress-bar';
-
         const progressBarFill = document.createElement('div');
         progressBarFill.className = 'progress-bar-fill';
-
         progressBar.appendChild(progressBarFill);
         container.appendChild(label);
         container.appendChild(progressBar);
         progressContainer.appendChild(container);
-
         loadingBars[key] = progressBarFill;
         bar = progressBarFill;
       }
-
       bar.style.width = `${percent * 100}%`;
-
-      document.getElementById('status').textContent = 'Status: Recibing...';
+      document.getElementById('status').textContent = 'Status: Receiving...';
     });
 
     document.getElementById('fileInput').addEventListener('change', async (event) => {
