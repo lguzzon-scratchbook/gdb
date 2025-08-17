@@ -11,11 +11,11 @@
 </style>
 <textarea id="paste" placeholder="Pega aquí!"></textarea>
 <script type="module">
-  // Import GDB
-  import { GDB } from "../dist/index.js";
+  // Import gdb
+  import { gdb } from "../dist/index.js";
 
   // Initialize the database
-  const db = new GDB("graphdb-paste");
+  const db = await gdb("graphdb-paste");
 
   // Get the <textarea> element
   const paste = document.getElementById("paste");
