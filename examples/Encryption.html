@@ -125,174 +125,162 @@
     </div>
 
     <script type="module">
-        // Adjust paths if your 'dist' folder or file names are different.
-        import { GDB } from "../dist/index.js"; 
-        import * as rbac from '../dist/rbac.min.js'; 
 
-        // DOM Elements
-        const statusArea = document.getElementById('statusArea');
-        const loginSection = document.getElementById('loginSection');
-        const cryptoSection = document.getElementById('cryptoSection');
-        
-        const mnemonicInput = document.getElementById('mnemonicInput');
-        const btnLogin = document.getElementById('btnLogin');
-        
-        const currentUserAddressElem = document.getElementById('currentUserAddress');
-        const plainTextToEncryptInput = document.getElementById('plainTextToEncrypt');
-        const btnEncrypt = document.getElementById('btnEncrypt');
-        const encryptedOutputArea = document.getElementById('encryptedOutput');
-        
-        const cipherTextToDecryptInput = document.getElementById('cipherTextToDecrypt');
-        const btnDecrypt = document.getElementById('btnDecrypt');
-        const decryptedOutputArea = document.getElementById('decryptedOutput');
-        const btnLogout = document.getElementById('btnLogout');
+    // Adjust paths if your 'dist' folder or file names are different.
+    // ...existing code...
 
-        function updateStatus(message, isError = false) {
-            statusArea.textContent = `Status: ${message}`;
-            statusArea.style.color = isError ? '#d93025' : '#333';
-            statusArea.style.backgroundColor = isError ? '#fddede' : '#e9ecef';
-            console.log(message);
+    // DOM Elements
+    // ...existing code...
+    import { gdb } from "../dist/index.js";
+
+    // DOM Elements
+    const statusArea = document.getElementById('statusArea');
+    const loginSection = document.getElementById('loginSection');
+    const cryptoSection = document.getElementById('cryptoSection');
+    const mnemonicInput = document.getElementById('mnemonicInput');
+    const btnLogin = document.getElementById('btnLogin');
+    const currentUserAddressElem = document.getElementById('currentUserAddress');
+    const plainTextToEncryptInput = document.getElementById('plainTextToEncrypt');
+    const btnEncrypt = document.getElementById('btnEncrypt');
+    const encryptedOutputArea = document.getElementById('encryptedOutput');
+    const cipherTextToDecryptInput = document.getElementById('cipherTextToDecrypt');
+    const btnDecrypt = document.getElementById('btnDecrypt');
+    const decryptedOutputArea = document.getElementById('decryptedOutput');
+    const btnLogout = document.getElementById('btnLogout');
+
+    let db = null;
+    let sm = null;
+
+    function updateStatus(message, isError = false) {
+        statusArea.textContent = `Status: ${message}`;
+        statusArea.style.color = isError ? '#d93025' : '#333';
+        statusArea.style.backgroundColor = isError ? '#fddede' : '#e9ecef';
+        console.log(message);
+    }
+
+    function updateUI(securityState) {
+        if (!securityState) {
+            updateStatus("Security context not available.", true);
+            loginSection.classList.remove('hidden');
+            cryptoSection.classList.add('hidden');
+            return;
         }
+        if (securityState.isActive && securityState.activeAddress) {
+            loginSection.classList.add('hidden');
+            cryptoSection.classList.remove('hidden');
+            currentUserAddressElem.textContent = securityState.activeAddress;
+            updateStatus(`Logged in as ${securityState.activeAddress.substring(0,10)}... Ready to encrypt/decrypt.`);
+        } else {
+            loginSection.classList.remove('hidden');
+            cryptoSection.classList.add('hidden');
+            currentUserAddressElem.textContent = 'N/A';
+            plainTextToEncryptInput.value = '';
+            encryptedOutputArea.value = '';
+            cipherTextToDecryptInput.value = '';
+            decryptedOutputArea.textContent = 'Decrypted data will appear here...';
+            updateStatus("Logged out. Please login to use encryption features.");
+        }
+    }
 
-        // Update UI based on security state
-        function updateUI(securityState) {
-            if (!securityState) {
-                updateStatus("Security context not available.", true);
-                loginSection.classList.remove('hidden');
-                cryptoSection.classList.add('hidden');
-                return;
+    async function initializeApp() {
+        try {
+            updateStatus("Initializing GDB...");
+            db = await gdb("encryptionDemoDB", { sm: true });
+            sm = db.sm;
+            updateStatus("GDB ready. Initializing Security Context...");
+            await sm.createSecurityContext(db);
+            sm.setSecurityStateChangeCallback(updateUI);
+            const initialState = {
+                isActive: sm.isSecurityActive(),
+                activeAddress: sm.getActiveEthAddress(),
+            };
+            updateUI(initialState);
+            if (!initialState.isActive) {
+                updateStatus("Security Initialized. Please login to proceed.");
             }
+        } catch (error) {
+            updateStatus(`Initialization Error: ${error.message}`, true);
+            console.error("Initialization failed:", error);
+        }
+    }
 
-            if (securityState.isActive && securityState.activeAddress) {
-                loginSection.classList.add('hidden');
-                cryptoSection.classList.remove('hidden');
-                currentUserAddressElem.textContent = securityState.activeAddress;
-                updateStatus(`Logged in as ${securityState.activeAddress.substring(0,10)}... Ready to encrypt/decrypt.`);
+    btnLogin.addEventListener('click', async () => {
+        const mnemonic = mnemonicInput.value.trim();
+        if (!mnemonic) {
+            updateStatus("Please enter a mnemonic phrase.", true);
+            return;
+        }
+        try {
+            updateStatus("Attempting to login with mnemonic...");
+            const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
+            if (identity) {
+                mnemonicInput.value = '';
+                updateStatus(`Successfully logged in as ${identity.address}.`);
             } else {
-                loginSection.classList.remove('hidden');
-                cryptoSection.classList.add('hidden');
-                currentUserAddressElem.textContent = 'N/A';
-                // Clear crypto fields on logout
-                plainTextToEncryptInput.value = '';
-                encryptedOutputArea.value = '';
-                cipherTextToDecryptInput.value = '';
-                decryptedOutputArea.textContent = 'Decrypted data will appear here...';
-                updateStatus("Logged out. Please login to use encryption features.");
+                updateStatus("Failed to login with mnemonic. Please check the phrase.", true);
             }
+        } catch (error) {
+            updateStatus(`Mnemonic login error: ${error.message}`, true);
+            console.error("Mnemonic login error:", error);
         }
-        
-        async function initializeApp() {            
-            try {
-                updateStatus("Initializing GDB...");
-                let db = new GDB("encryptionDemoDB"); 
-                // await db.ready; // If GDB constructor needs explicit ready await
-                
-                updateStatus("GDB ready. Initializing RBAC Security Context...");
-                await rbac.createSecurityContext(db); 
-                
-                rbac.setSecurityStateChangeCallback(updateUI);
+    });
 
-                // Initial UI setup based on current state
-                const initialState = {
-                    isActive: rbac.isSecurityActive(),
-                    activeAddress: rbac.getActiveEthAddress(),
-                    // Other state properties if needed for this simple demo
-                };
-                updateUI(initialState); 
-                if (!initialState.isActive) {
-                    updateStatus("RBAC Initialized. Please login to proceed.");
-                }
-
-            } catch (error) {
-                updateStatus(`Initialization Error: ${error.message}`, true);
-                console.error("Initialization failed:", error);
-            }
+    btnEncrypt.addEventListener('click', async () => {
+        const dataToEncrypt = plainTextToEncryptInput.value;
+        if (!dataToEncrypt) {
+            updateStatus("Please enter some text to encrypt.", true);
+            return;
         }
+        if (!sm.isSecurityActive()) {
+            updateStatus("You must be logged in to encrypt data.", true);
+            return;
+        }
+        try {
+            updateStatus("Encrypting data...");
+            const encryptedString = await sm.encryptDataForCurrentUser(dataToEncrypt);
+            encryptedOutputArea.value = encryptedString;
+            cipherTextToDecryptInput.value = encryptedString;
+            updateStatus("Data encrypted successfully.");
+        } catch (error) {
+            updateStatus(`Encryption failed: ${error.message}`, true);
+            console.error("Encryption error:", error);
+        }
+    });
 
-        // Event Listeners
-        btnLogin.addEventListener('click', async () => {
-            const mnemonic = mnemonicInput.value.trim();
-            if (!mnemonic) {
-                updateStatus("Please enter a mnemonic phrase.", true);
-                return;
-            }
-            try {
-                updateStatus("Attempting to login with mnemonic...");
-                const identity = await rbac.loginOrRecoverUserWithMnemonic(mnemonic);
-                if (identity) {
-                    mnemonicInput.value = ''; // Clear after use
-                    // UI update will be handled by securityStateChangeCallback
-                    updateStatus(`Successfully logged in as ${identity.address}.`);
-                } else {
-                    updateStatus("Failed to login with mnemonic. Please check the phrase.", true);
-                }
-            } catch (error) {
-                updateStatus(`Mnemonic login error: ${error.message}`, true);
-                console.error("Mnemonic login error:", error);
-            }
-        });
+    btnDecrypt.addEventListener('click', async () => {
+        const dataToDecrypt = cipherTextToDecryptInput.value.trim();
+        if (!dataToDecrypt) {
+            updateStatus("Please enter some ciphertext to decrypt.", true);
+            return;
+        }
+        if (!sm.isSecurityActive()) {
+            updateStatus("You must be logged in to decrypt data.", true);
+            return;
+        }
+        try {
+            updateStatus("Decrypting data...");
+            const decryptedData = await sm.decryptDataForCurrentUser(dataToDecrypt);
+            decryptedOutputArea.textContent = JSON.stringify(decryptedData, null, 2);
+            updateStatus("Data decrypted successfully.");
+        } catch (error) {
+            updateStatus(`Decryption failed: ${error.message}. (Is this data for the current user and not corrupted?)`, true);
+            decryptedOutputArea.textContent = "Decryption failed.";
+            console.error("Decryption error:", error);
+        }
+    });
 
-        btnEncrypt.addEventListener('click', async () => {
-            const dataToEncrypt = plainTextToEncryptInput.value;
-            if (!dataToEncrypt) {
-                updateStatus("Please enter some text to encrypt.", true);
-                return;
-            }
-            if (!rbac.isSecurityActive()) {
-                updateStatus("You must be logged in to encrypt data.", true);
-                return;
-            }
+    btnLogout.addEventListener('click', async () => {
+        try {
+            updateStatus("Logging out...");
+            await sm.clearSecurity();
+            updateStatus("Successfully logged out.");
+        } catch (error) {
+            updateStatus(`Logout error: ${error.message}`, true);
+            console.error("Logout error:", error);
+        }
+    });
 
-            try {
-                updateStatus("Encrypting data...");
-                const encryptedString = await rbac.encryptDataForCurrentUser(dataToEncrypt);
-                encryptedOutputArea.value = encryptedString;
-                // For convenience, also put it into the decryption input
-                cipherTextToDecryptInput.value = encryptedString; 
-                updateStatus("Data encrypted successfully.");
-            } catch (error) {
-                updateStatus(`Encryption failed: ${error.message}`, true);
-                console.error("Encryption error:", error);
-            }
-        });
-
-        btnDecrypt.addEventListener('click', async () => {
-            const dataToDecrypt = cipherTextToDecryptInput.value.trim();
-            if (!dataToDecrypt) {
-                updateStatus("Please enter some ciphertext to decrypt.", true);
-                return;
-            }
-            if (!rbac.isSecurityActive()) {
-                updateStatus("You must be logged in to decrypt data.", true);
-                return;
-            }
-            
-            try {
-                updateStatus("Decrypting data...");
-                const decryptedData = await rbac.decryptDataForCurrentUser(dataToDecrypt);
-                decryptedOutputArea.textContent = JSON.stringify(decryptedData, null, 2); // Display original data
-                updateStatus("Data decrypted successfully.");
-            } catch (error) {
-                updateStatus(`Decryption failed: ${error.message}. (Is this data for the current user and not corrupted?)`, true);
-                decryptedOutputArea.textContent = "Decryption failed.";
-                console.error("Decryption error:", error);
-            }
-        });
-
-        btnLogout.addEventListener('click', async () => {
-            try {
-                updateStatus("Logging out...");
-                await rbac.clearSecurity();
-                // UI update will be handled by securityStateChangeCallback
-                updateStatus("Successfully logged out.");
-            } catch (error) {
-                updateStatus(`Logout error: ${error.message}`, true);
-                console.error("Logout error:", error);
-            }
-        });
-
-        // Initialize the application
-        initializeApp();
+    initializeApp();
     </script>
 </body>
 </html>
