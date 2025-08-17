@@ -139,7 +139,7 @@
 <body>
   <div class="sidebar">
     <ul class="query-list" id="queryList">
-      <!-- Consultas de ejemplo para posts -->
+  <!-- Example queries for posts -->
       <li class="query-item" data-query='{"prompt": "Get post id 5"}'>
         <strong>Get post id 5</strong><br>
         Searches for posts id 5.
@@ -171,13 +171,12 @@
     <div class="status-bar" id="statusBar">Ready</div>
   </div>
   <script type="module">
-    import { GDB } from "../dist/index.js";
-    import { withAI } from "../dist/AIQuery.min.js";
+  import { gdb } from "../dist/index.js";
 
-    const db = new GDB('posts-db2');
-    withAI(db);
+  // Create a GDB instance using the async factory with AI module
+  const db = await gdb('posts-db2', { ai: true });
 
-    // Función para insertar posts desde la API DummyJSON
+  // Function to insert posts from DummyJSON API
     window.insertRandomPosts = async () => {
       const insertButton = document.getElementById('insertButton');
       insertButton.classList.add('loading');
@@ -185,7 +184,7 @@
       try {
         const response = await fetch('https://dummyjson.com/posts');
         const data = await response.json();
-        const posts = data.posts.slice(0, 50); // Tomar solo 50 posts
+  const posts = data.posts.slice(0, 50); // Take only 50 posts
         for (const post of posts) {
           await db.put(post);
         }
@@ -199,7 +198,7 @@
       }
     };
 
-    // Función para resetear la base de datos
+  // Function to reset the database
     window.resetDatabase = async () => {
       try {
         await db.clear();
@@ -210,7 +209,7 @@
       }
     };
 
-    // Función para ejecutar una consulta y mostrar resultados
+  // Function to execute a query and display results
     async function executeQuery(obj) {
       let { results } = await db.map(obj);
       const resultsDiv = document.getElementById('results');
@@ -234,7 +233,7 @@
       }
     }
 
-    // Event listener para los elementos de la lista de consultas
+  // Event listener for query list items
     document.getElementById('queryList').addEventListener('click', async (event) => {
       if (event.target.classList.contains('query-item')) {
         document.querySelectorAll('.query-item').forEach(item => item.classList.remove('active'));
@@ -246,7 +245,7 @@
       }
     });
 
-    // Event listener para editar la consulta
+  // Event listener for editing the query
     document.getElementById('queryDisplay').addEventListener('keydown', async (event) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
@@ -260,14 +259,14 @@
       }
     });
 
-    // Función para verificar el estado de la base de datos
+  // Function to check the database status
     async function checkDatabaseStatus() {
       const { results } = await db.map({});
       const insertButton = document.getElementById('insertButton');
-      insertButton.disabled = results.length > 0; // Deshabilitar si hay registros
+  insertButton.disabled = results.length > 0; // Disable if there are records
     }
 
-    // Verificar el estado inicial de la base de datos al cargar la página
+  // Check the initial database status when loading the page
     checkDatabaseStatus();
   </script>
 </body>
