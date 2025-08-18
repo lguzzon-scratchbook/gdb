@@ -104,14 +104,14 @@ npm install genosdb
 ```
 
 ```javascript
-import { GDB } from "genosdb"
+import { gdb } from "genosdb"
 ```
 
 ### 2. Direct use in browser from a CDN
 
 ```html
 <script type="module">
-  import { GDB } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js"
+  import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js"
 </script>
 ```
 
