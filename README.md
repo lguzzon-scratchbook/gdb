@@ -117,6 +117,10 @@ import { gdb } from "genosdb"
 
 ## Documentation
 
+Our formal API reference and technical guides are located in the [`/docs` folder](https://github.com/estebanrfp/gdb/tree/main/docs) of this repository.
+
+For community-driven content, tutorials, and live examples, please visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
+
 For detailed documentation, visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
 
 For interactive, AI-assisted GenosDB documentation: 
