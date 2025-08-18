@@ -35,7 +35,7 @@ Initializes a new database GDB object.
 - **Parameters**:
   - `name` `{string}` – Database name (used for local storage or sync).
   - `options` `{Object}` _(optional)_:
-    - `sm` `{boolean}` – If `true`, loads the Security Module.
+    - `sm` `{boolean | Object}` – If `true`, loads the Security Module with default settings. Can also be an object with specific configuration parameters for the module.
     - `ai` `{boolean}` – If `true`, loads the AIQuery module.
     - `rx` `{boolean}` – If `true`, loads the Radix Index module.
     - `ii` `{boolean}` – If `true`, loads the Inverted Index module.
