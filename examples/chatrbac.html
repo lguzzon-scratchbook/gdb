@@ -213,7 +213,8 @@
                             <button id="btnCopyMnemonic" class="show-mnemonic-btn"
                                 style="padding: 6px 10px; font-size: 0.95em;">Copy</button>
                         </div>
-                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this recovery phrase in a safe place. It is the only way to recover your account if you lose access to WebAuthn or change devices.</div>
+                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this recovery phrase in a safe place. It is the
+                            only way to recover your account if you lose access to WebAuthn or change devices.</div>
                         <button id="btnProtectWebAuthn">2. Protect with WebAuthn & Login</button>
                     </div>
                 </div>
@@ -350,11 +351,16 @@
         async function initializeApp() {
             try {
                 statusBar.textContent = "Status: Initializing DB...";
-                db = await gdb("rbacChatAppDB", { sm : true });
+                db = await gdb("rbacChatAppDB", {
+                    sm: {
+                        superAdmins: SUPERADMIN_ADDRESSES,
+                        customRoles: CHAT_APP_ROLES,
+                    }
+                });
                 sm = db.sm
 
                 statusBar.textContent = "Status: DB ready. Initializing security context...";
-                await sm.createSecurityContext(db, SUPERADMIN_ADDRESSES);
+                // sm.createSecurityContext(db, SUPERADMIN_ADDRESSES);
                 // sm.setCustomRoles(CHAT_APP_ROLES);
                 sm.setSecurityStateChangeCallback(updateUI);
                 const initialState = {
@@ -457,7 +463,8 @@
                     try {
                         const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
                         if (!identity) return;
-                        await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                        const addr = await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                        if (!addr) return; // Registration failed (error already alerted by SWM)
                         alert('WebAuthn registered successfully.');
                         btnRegisterWebAuthn.style.display = 'none';
                     } catch (error) {
@@ -493,7 +500,8 @@
                     btnRegisterWebAuthn.disabled = false;
                     btnRegisterWebAuthn.onclick = async () => {
                         try {
-                            await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                            const addr = await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                            if (!addr) return; // Registration failed (error already alerted by SWM)
                             alert('WebAuthn registered successfully.');
                             btnRegisterWebAuthn.style.display = 'none';
                         } catch (error) {
