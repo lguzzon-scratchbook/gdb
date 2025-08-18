@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDB RBAC Chat Enhanced</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px 0;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .auth-section,
+        .chat-section {
+            margin-top: 20px;
+        }
+
+        .status-bar {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .mnemonic-warning {
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .messages {
+            border: 1px solid #eee;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            background-color: #fdfdfd;
+            border-radius: 5px;
+        }
+
+        .message {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 15px;
+            max-width: 75%;
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        .message.own {
+            background-color: #3498db;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 3px;
+        }
+
+        .message.other {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            margin-right: auto;
+            border-bottom-left-radius: 3px;
+        }
+
+        .message .sender {
+            font-size: 0.75em;
+            opacity: 0.8;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .message .text {
+            font-size: 0.95em;
+        }
+
+        .message .timestamp {
+            font-size: 0.7em;
+            opacity: 0.7;
+            display: block;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message .role {
+            font-size: 0.7em;
+            color: #8e44ad;
+            margin-left: 5px;
+        }
+
+        .message .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: none;
+            border: none;
+            color: #e74c3c;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+
+        .auth-options button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .auth-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-group {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .action-group:last-child {
+            border-bottom: none;
+        }
+
+        .show-mnemonic-btn {
+            background-color: #8e44ad;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔐 GDB RBAC Chat Enhanced</h1>
+        <div id="authSection" class="auth-section">
+            <h2>Login or Register</h2>
+            <div class="auth-options">
+                <div class="action-group">
+                    <h3>New user?</h3>
+                    <button id="btnRegisterNew">1. Generate new identity (Mnemonic)</button>
+                    <div id="newIdentityInfo" class="hidden">
+                        <p><strong>Address:</strong> <code id="newEthAddress"></code></p>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <strong>Mnemonic:</strong>
+                            <code id="newMnemonic"></code>
+                            <button id="btnCopyMnemonic" class="show-mnemonic-btn"
+                                style="padding: 6px 10px; font-size: 0.95em;">Copy</button>
+                        </div>
+                        <div class="mnemonic-warning">⚠️ IMPORTANT: Save this recovery phrase in a safe place. It is the only way to recover your account if you lose access to WebAuthn or change devices.</div>
+                        <button id="btnProtectWebAuthn">2. Protect with WebAuthn & Login</button>
+                    </div>
+                </div>
+                <div class="action-group">
+                    <h3>Existing user?</h3>
+                    <button id="btnLoginWebAuthn" disabled>Login with WebAuthn</button>
+                    <p>Or enter your mnemonic:</p>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button id="btnRegisterWebAuthn" style="display:none;">Register with WebAuthn</button>
+                        <button id="btnLoginMnemonic">Login with Mnemonic</button>
+                    </div>
+                    <textarea id="inputMnemonic" placeholder="Enter your 12-word mnemonic phrase..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div id="chatSection" class="chat-section hidden">
+            <h2>Chat Room</h2>
+            <div class="messages" id="messagesContainer"></div>
+            <textarea id="inputMessage" placeholder="Type your message..."></textarea>
+            <button id="btnSendMessage">Send message</button>
+            <button id="btnLogout">Logout</button>
+        </div>
+        <div class="status-bar" id="statusBar">Status: Not initialized.</div>
+    </div>
+    <script type="module">
+        import { gdb } from "../dist/index.js";
+
+        const SUPERADMIN_ADDRESSES = ["0x62c48827e883f114821211673Dc309a29Aae7e6A"];
+        // Normalize superadmin addresses to be case-insensitive
+        const SUPERADMIN_SET = new Set(SUPERADMIN_ADDRESSES.map(a => a.toLowerCase()));
+        const isSuperadminAddress = (addr) => !!addr && SUPERADMIN_SET.has(addr.toLowerCase());
+        const authSection = document.getElementById('authSection');
+        const chatSection = document.getElementById('chatSection');
+        const statusBar = document.getElementById('statusBar');
+        const btnRegisterNew = document.getElementById('btnRegisterNew');
+        const newIdentityInfo = document.getElementById('newIdentityInfo');
+        const newEthAddressElem = document.getElementById('newEthAddress');
+        const newMnemonicElem = document.getElementById('newMnemonic');
+        const btnShowMnemonic = document.getElementById('btnShowMnemonic');
+        const btnProtectWebAuthn = document.getElementById('btnProtectWebAuthn');
+        const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
+        const inputMnemonic = document.getElementById('inputMnemonic');
+        const btnLoginMnemonic = document.getElementById('btnLoginMnemonic');
+        const btnRegisterWebAuthn = document.getElementById('btnRegisterWebAuthn');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const inputMessage = document.getElementById('inputMessage');
+        const btnSendMessage = document.getElementById('btnSendMessage');
+        const btnLogout = document.getElementById('btnLogout');
+        let db;
+        let sm;
+        let volatileIdentity = null;
+        let unsubscribeMessages = null;
+        let currentUserAddress = null;
+        let currentUserRole = null;
+        // Align permissions with RBAC API docs: use 'delete' (no custom 'deleteAny')
+        const CHAT_APP_ROLES = {
+            superadmin: { can: ["assignRole", "delete", "write"], inherits: ["admin"] },
+            admin: { can: ["delete"], inherits: ["user"] },
+            user: { can: ["write"], inherits: ["guest"] },
+            guest: { can: ["read", "write", "sync"] },
+        };
+        /**
+         * Updates the UI according to the current RBAC security state.
+         * @param {{isActive:boolean, activeAddress:(string|null), isWebAuthnProtected:boolean, hasVolatileIdentity:boolean, hasWebAuthnHardwareRegistration:boolean}} securityState
+         */
+        const updateUI = async securityState => {
+            if (!securityState) {
+                statusBar.textContent = "Status: Security context not active.";
+                authSection.classList.remove('hidden');
+                chatSection.classList.add('hidden');
+                currentUserAddress = null;
+                currentUserRole = null;
+                return;
+            }
+            currentUserAddress = securityState.activeAddress;
+            // Determine role early: superadmin by address, otherwise ensure DB role
+            if (securityState.isActive) {
+                if (isSuperadminAddress(currentUserAddress)) {
+                    currentUserRole = 'superadmin';
+                } else {
+                    try { await ensureUserRole(currentUserAddress); } catch { }
+                }
+            } else {
+                currentUserRole = null;
+            }
+            let statusText = `Status: ${securityState.isActive ? `Session started as ${securityState.activeAddress.substring(0, 10)}...` : 'Session closed.'}`;
+            statusText += ` | WebAuthn active: ${securityState.isWebAuthnProtected}`;
+            statusText += ` | WebAuthn registered here: ${securityState.hasWebAuthnHardwareRegistration}`;
+            if (currentUserRole) statusText += ` | Role: ${currentUserRole}`;
+            statusBar.textContent = statusText;
+            btnLoginWebAuthn.disabled = !securityState.hasWebAuthnHardwareRegistration;
+            if (securityState.isActive) {
+                authSection.classList.add('hidden');
+                chatSection.classList.remove('hidden');
+                newIdentityInfo.classList.add('hidden');
+                loadMessages();
+            } else {
+                authSection.classList.remove('hidden');
+                chatSection.classList.add('hidden');
+                unsubscribeMessages?.();
+                unsubscribeMessages = null;
+                messagesContainer.innerHTML = '';
+            }
+            if (securityState.hasVolatileIdentity) {
+                newIdentityInfo.classList.remove('hidden');
+                btnRegisterNew.disabled = true;
+            } else {
+                newIdentityInfo.classList.add('hidden');
+                btnRegisterNew.disabled = false;
+            }
+        };
+        /**
+         * Ensures the user has a role; assigns 'user' if none exists.
+         * @param {string} address Ethereum address
+         * @returns {Promise<void>}
+         */
+        const ensureUserRole = async address => {
+            try {
+                // Preferred: user:<address> node, as in the RBAC example app
+                const { result: userNode } = await db.get(`user:${address}`);
+                if (userNode?.value?.role) { currentUserRole = userNode.value.role; return; }
+                // Fallback: legacy role storage
+                const { results } = await db.map({ query: { type: 'role', ethAddress: address }, $limit: 1 });
+                currentUserRole = results[0]?.value?.role ?? 'guest';
+            } catch (error) {
+                console.error("Error ensuring role:", error);
+                currentUserRole = 'guest';
+            }
+        };
+        /**
+         * Initializes DB and RBAC context; attempts silent WebAuthn login.
+         * @returns {Promise<void>}
+         */
+        async function initializeApp() {
+            try {
+                statusBar.textContent = "Status: Initializing DB...";
+                db = await gdb("rbacChatAppDB", { sm : true });
+                sm = db.sm
+
+                statusBar.textContent = "Status: DB ready. Initializing security context...";
+                await sm.createSecurityContext(db, SUPERADMIN_ADDRESSES);
+                // sm.setCustomRoles(CHAT_APP_ROLES);
+                sm.setSecurityStateChangeCallback(updateUI);
+                const initialState = {
+                    isActive: sm.isSecurityActive(),
+                    activeAddress: sm.getActiveEthAddress(),
+                    isWebAuthnProtected: sm.isCurrentSessionProtectedByWebAuthn(),
+                    hasVolatileIdentity: !!sm.getMnemonicForDisplayAfterRegistrationOrRecovery(),
+                    hasWebAuthnHardwareRegistration: sm.hasExistingWebAuthnRegistration()
+                };
+                updateUI(initialState);
+                if (sm.hasExistingWebAuthnRegistration() && !sm.isSecurityActive()) {
+                    await sm.loginCurrentUserWithWebAuthn().catch(err => console.warn("Silent WebAuthn login failed or no registration:", err.message));
+                }
+            } catch (error) {
+                console.error("Initialization failure:", error);
+                statusBar.textContent = `Error: ${error.message}`;
+                alert(`Initialization error: ${error.message}`);
+            }
+        }
+        btnRegisterNew.onclick = async () => {
+            try {
+                volatileIdentity = await sm.startNewUserRegistration();
+                if (volatileIdentity) {
+                    newEthAddressElem.textContent = volatileIdentity.address;
+                    newMnemonicElem.textContent = volatileIdentity.mnemonic;
+                } else {
+                    alert("Could not generate new identity.");
+                }
+            } catch (error) {
+                console.error("Registration error:", error);
+                alert(`Registration error: ${error.message}`);
+            }
+        };
+        // Copy mnemonic to clipboard and reflect short visual feedback
+        const btnCopyMnemonic = document.getElementById('btnCopyMnemonic');
+        btnCopyMnemonic.onclick = () => {
+            // Paste mnemonic into the login field and trigger verification via input event
+            const mnemonic = newMnemonicElem.textContent;
+            navigator.clipboard.writeText(mnemonic).then(() => {
+                const originalText = btnCopyMnemonic.textContent;
+                btnCopyMnemonic.textContent = 'Copied!';
+                setTimeout(() => btnCopyMnemonic.textContent = originalText, 1500);
+            });
+            inputMnemonic.value = mnemonic;
+            // Dispara la verificación como si el usuario hubiera pegado manualmente
+            inputMnemonic.dispatchEvent(new Event('input'));
+        };
+        btnProtectWebAuthn.onclick = async () => {
+            if (!volatileIdentity || !volatileIdentity.privateKey) {
+                alert("No identity generated to protect. Generate one first.");
+                return;
+            }
+            try {
+                const protectedAddress = await sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
+                if (protectedAddress) {
+                    alert(`Identity ${protectedAddress} protected with WebAuthn. Session started!`);
+                    volatileIdentity = null;
+                } else {
+                    alert("WebAuthn protection failed. Check support and secure connection.");
+                }
+            } catch (error) {
+                console.error("WebAuthn error:", error);
+                alert(`WebAuthn error: ${error.message}`);
+            }
+        };
+        btnLoginWebAuthn.onclick = async () => {
+            try {
+                const loggedInAddress = await sm.loginCurrentUserWithWebAuthn();
+                if (!loggedInAddress) {
+                    alert("WebAuthn login failed. Did you register WebAuthn on this site?");
+                }
+                // On success, no alert: UI will update via state callback.
+            } catch (error) {
+                console.error("WebAuthn login error:", error);
+                alert(`WebAuthn login error: ${error.message}`);
+            }
+        };
+        // On paste/type mnemonic, do NOT login automatically. Validate shape and suggest WebAuthn.
+        inputMnemonic.addEventListener('input', async () => {
+            const mnemonic = inputMnemonic.value.trim();
+            // Simple heuristic validation: 12-24 words
+            const words = mnemonic.split(/\s+/).filter(Boolean);
+            const looksValid = words.length >= 12; // keep permissive; actual check occurs on login
+            if (!looksValid) {
+                btnLoginMnemonic.disabled = true;
+                btnRegisterWebAuthn.style.display = 'none';
+                return;
+            }
+            // Enable login but do not start session automatically
+            btnLoginMnemonic.disabled = false;
+            try {
+                const hasReg = sm.hasExistingWebAuthnRegistration();
+                // If device has no WebAuthn registration, offer to register
+                btnRegisterWebAuthn.style.display = hasReg ? 'none' : '';
+                btnRegisterWebAuthn.disabled = !!hasReg;
+                // Click handler will be bound after actual login (when we have privateKey),
+                // or we can prompt the user to login first if needed.
+                btnRegisterWebAuthn.onclick = async () => {
+                    // To register, we need the private key; prompt a quick, temporary login then protect.
+                    try {
+                        const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
+                        if (!identity) return;
+                        await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                        alert('WebAuthn registered successfully.');
+                        btnRegisterWebAuthn.style.display = 'none';
+                    } catch (error) {
+                        alert('Error registering WebAuthn: ' + error.message);
+                    }
+                };
+            } catch (err) {
+                console.warn('Unable to check WebAuthn registration:', err?.message || err);
+                btnRegisterWebAuthn.style.display = 'none';
+            }
+        });
+
+        btnLoginMnemonic.onclick = async () => {
+            const mnemonic = inputMnemonic.value.trim();
+            if (!mnemonic) return;
+            let identity;
+            try {
+                identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
+            } catch { }
+            if (!identity) return;
+            console.log(`Session started with mnemonic for address ${identity.address}`);
+            // If it's not a superadmin address, ensure it has at least 'user' role
+            if (!isSuperadminAddress(identity.address)) {
+                await ensureUserRole(identity.address);
+            } else {
+                currentUserRole = 'superadmin';
+            }
+            inputMnemonic.value = '';
+            try {
+                const hasReg = sm.hasExistingWebAuthnRegistration();
+                if (!hasReg) {
+                    btnRegisterWebAuthn.style.display = '';
+                    btnRegisterWebAuthn.disabled = false;
+                    btnRegisterWebAuthn.onclick = async () => {
+                        try {
+                            await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                            alert('WebAuthn registered successfully.');
+                            btnRegisterWebAuthn.style.display = 'none';
+                        } catch (error) {
+                            alert('Error registering WebAuthn: ' + error.message);
+                        }
+                    };
+                } else {
+                    btnRegisterWebAuthn.style.display = 'none';
+                }
+            } catch { }
+        };
+        btnLogout.onclick = async () => {
+            try {
+                await sm.clearSecurity();
+            } catch (error) {
+                console.error("Logout error:", error);
+                alert(`Error logout: ${error.message}`);
+            }
+        };
+        /**
+         * Renders a chat message or removes it if action is 'removed'.
+         * @param {{id:string, value:any, action:string}} param0
+         */
+        const displayMessage = ({ id, value, action }) => {
+            if (action === 'removed') return document.getElementById(`msg-${id}`)?.remove();
+            if (!value?.type || value.type !== 'message') return;
+            let msgElement = document.getElementById(`msg-${id}`);
+            if (!msgElement) {
+                msgElement = document.createElement('div');
+                msgElement.id = `msg-${id}`;
+                msgElement.classList.add('message');
+                messagesContainer.appendChild(msgElement);
+            }
+            msgElement.className = value.sender === currentUserAddress ? 'message own' : 'message other';
+            const senderShort = value.sender ? `${value.sender.substring(0, 6)}...${value.sender.slice(-4)}` : 'Unknown';
+            const messageDate = value.timestamp ? new Date(value.timestamp).toLocaleString() : 'No date';
+            const role = value.role || (value.sender === currentUserAddress ? currentUserRole : '');
+            const canDelete = (value.sender === currentUserAddress)
+                || ['admin', 'superadmin'].includes(currentUserRole)
+                || isSuperadminAddress(currentUserAddress);
+            msgElement.innerHTML = `
+                <span class="sender">${value.sender === currentUserAddress ? 'You' : senderShort}<span class="role">${role ? ' (' + role + ')' : ''}</span></span>
+                <span class="text">${value.text}</span>
+                <span class="timestamp">${messageDate}</span>
+                ${canDelete ? `<button class="delete-btn" title="Delete" onclick="window.deleteMessage && window.deleteMessage('${id}')">🗑️</button>` : ''}
+            `;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        /**
+         * Deletes a message if permitted by current user's role.
+         * @param {string} id Node ID to delete
+         */
+        window.deleteMessage = async (id) => {
+            if (!confirm("Delete this message?")) return;
+            try {
+                const active = sm.getActiveEthAddress();
+                if (!active) { alert('Login required.'); return; }
+                if (!isSuperadminAddress(active)) {
+                    await sm.executeWithPermission('delete');
+                }
+                await db.remove(id);
+            } catch (error) {
+                alert("You do not have permission to delete this message.");
+            }
+        };
+        /**
+         * Subscribes and renders chat messages in chronological order.
+         * @returns {Promise<void>}
+         */
+        async function loadMessages() {
+            if (unsubscribeMessages) unsubscribeMessages();
+            messagesContainer.innerHTML = '';
+            try {
+                const { unsubscribe } = await db.map(
+                    { query: { type: 'message' }, field: 'timestamp', order: 'asc' },
+                    displayMessage
+                );
+                unsubscribeMessages = unsubscribe;
+            } catch (error) {
+                console.error("Error loading messages:", error);
+                alert(`Error loading messages: ${error.message}`);
+            }
+        }
+        btnSendMessage.onclick = async () => {
+            const text = inputMessage.value.trim();
+            if (!text) return;
+            try {
+                const senderAddress = sm.getActiveEthAddress();
+                if (!sm.isSecurityActive() || !senderAddress) {
+                    alert('Login required to send messages.');
+                    return;
+                }
+                const messageData = {
+                    type: 'message',
+                    sender: senderAddress,
+                    text: text,
+                    timestamp: Date.now(),
+                    role: currentUserRole
+                };
+                // Store message normally; open chat allows writing without a stored role
+                await db.put(messageData);
+                inputMessage.value = '';
+            } catch (error) {
+                console.error("Error sending message:", error);
+                alert(`Error sending message: ${error.message}`);
+            }
+        };
+        // Send message on Enter (without Shift)
+        inputMessage.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                btnSendMessage.click();
+            }
+        });
+        initializeApp();
+    </script>
+</body>
+
+</html>
