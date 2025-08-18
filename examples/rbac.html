@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GDB RBAC + Security Testbed (v2 Final - Corrected)</title>
+  <title>GDB RBAC + Security Testbed (v2.1 Refactored)</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -95,8 +95,7 @@
       background-color: #f0f0f0;
       padding: 10px;
       font-size: 0.9em;
-      } catch (e) {
-        logToUI('No-permission P2P error (local check failed): ' + e.message, 'error');
+      max-height: 150px;
       overflow-y: auto;
       border-radius: 4px;
       border: 1px solid #ddd;
@@ -152,7 +151,7 @@
 
 <body>
   <div class="container">
-    <h1>GDB RBAC + Security Testbed (v2 Final - Corrected)</h1>
+    <h1>GDB RBAC + Security Testbed (v2.1 Refactored)</h1>
     <p>A comprehensive testbed for GDB identity, RBAC, encryption, and P2P security, refactored with a maintainable,
       state-driven architecture.</p>
     <p><strong>Important:</strong> All actions are logged to the integrated console at the bottom.</p>
@@ -172,6 +171,9 @@
         </div>
       </div>
       <button id="btnInitializeDB">Initialize DB & RBAC</button>
+      <!-- REFACTOR: Hard Reset Button Added -->
+      <button id="btnHardReset" style="background-color: #e74c3c;"
+        title="Borra toda la configuración local y recarga la página.">Hard Reset Testbed</button>
       <span id="initStatus" style="margin-left: 10px; font-style: italic;"></span>
     </div>
 
@@ -185,9 +187,10 @@
         </div>
         <div id="newIdentityInfo" class="info-box hidden" style="flex-basis: 100%;">
           <p><strong>New ETH Address:</strong> <code id="newEthAddress"></code></p>
-          <p><strong>Mnemonic (SAVE THIS!):</strong>
+          <!-- REFACTOR: Copy Mnemonic Button Added -->
+          <p><strong>Mnemonic (SAVE THIS!):</strong> <button id="btnCopyMnemonic" class="hidden"
+              style="margin-left: 10px; padding: 2px 6px; font-size: 12px;">Copy</button></p>
           <pre id="newMnemonic"></pre>
-          </p>
         </div>
       </div>
       <hr>
@@ -212,10 +215,10 @@
       </div>
     </div>
 
-    <!-- Secure Data Storage (Implicit Encryption) - SECTION REPLACED FROM AUDIT.HTML -->
+    <!-- Secure Data Storage (Implicit Encryption) -->
     <div class="section">
       <h2>3. Secure Data Storage (Implicit Encryption)</h2>
-      <p>Uses <code>rbac.put()</code> for automatic encryption and <code>rbac.get()</code> for automatic
+      <p>Uses <code>sm.put()</code> for automatic encryption and <code>sm.get()</code> for automatic
         decryption.</p>
       <div class="flex-group">
         <div>
@@ -226,7 +229,7 @@
           <label for="secureNoteContentInput">Note Content:</label>
           <textarea id="secureNoteContentInput" rows="2">This is a super secret note!</textarea>
         </div>
-        <button id="btnSaveSecureNote" disabled>Save Secure Note (rbac.put)</button>
+        <button id="btnSaveSecureNote" disabled>Save Secure Note (sm.put)</button>
       </div>
       <hr>
       <div class="flex-group">
@@ -234,7 +237,7 @@
           <label for="loadSecureNoteIdInput">Note ID to Load:</label>
           <input type="text" id="loadSecureNoteIdInput" placeholder="Enter ID of saved note">
         </div>
-        <button id="btnLoadSecureNote" disabled>Load & Decrypt Note (rbac.get)</button>
+        <button id="btnLoadSecureNote" disabled>Load & Decrypt Note (sm.get)</button>
       </div>
       <div class="info-box">
         <strong>Loaded Note Content:</strong>
@@ -283,19 +286,23 @@
   </div>
 
   <script type="module">
-    // Import libraries (adjust paths if necessary)
+  // Import libraries (adjust paths if necessary)
+  // NOTE: For this to run, you need the actual JS files in the specified paths.
   import { gdb } from "../dist/index.js";
+
 
     // --- DOM Element Selectors ---
     const dbNameInput = document.getElementById('dbNameInput');
     const superAdminInput = document.getElementById('superAdminInput');
     const btnInitializeDB = document.getElementById('btnInitializeDB');
     const initStatus = document.getElementById('initStatus');
+    const btnHardReset = document.getElementById('btnHardReset'); // REFACTOR: Added
 
     const btnRegisterNewUser = document.getElementById('btnRegisterNewUser');
     const newIdentityInfo = document.getElementById('newIdentityInfo');
     const newEthAddressElem = document.getElementById('newEthAddress');
     const newMnemonicElem = document.getElementById('newMnemonic');
+    const btnCopyMnemonic = document.getElementById('btnCopyMnemonic'); // REFACTOR: Added
     const btnProtectWebAuthn = document.getElementById('btnProtectWebAuthn');
     const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
     const mnemonicLoginInput = document.getElementById('mnemonicLoginInput');
@@ -331,7 +338,7 @@
 
     // --- Application State ---
     let db = null;
-    let sm = null;
+    let sm = null; // This will be initialized after DB creation
     let volatileIdentityCache = null;
     let roleListenerUnsubscribe = null;
     let realtimeTestNodeUnsubscribe = null;
@@ -367,25 +374,30 @@
       const isGdbReady = !!db;
       const canPerformActions = isGdbReady && securityState.isActive;
 
-  btnRegisterNewUser.disabled = !isGdbReady || securityState.isActive;
-  btnProtectWebAuthn.disabled = !securityState.hasVolatileIdentity || securityState.isActive;
-  btnLoginWebAuthn.disabled = !isGdbReady || !securityState.hasWebAuthnHardwareRegistration || securityState.isActive;
-  btnLoginMnemonic.disabled = !isGdbReady || securityState.isActive;
-  btnLogout.disabled = !canPerformActions;
-  btnShowMnemonic.disabled = !canPerformActions || !sm.getMnemonicForDisplayAfterRegistrationOrRecovery();
-  btnSaveSecureNote.disabled = !canPerformActions;
-  btnLoadSecureNote.disabled = !canPerformActions;
-  assignRoleBtn.disabled = !canPerformActions;
-  putLegitP2PBtn.disabled = !canPerformActions;
-  putFakeSigP2PBtn.disabled = !canPerformActions;
-  putNoPermissionP2PBtn.disabled = !canPerformActions;
+      // REFACTOR: The mnemonic input field is now also controlled by the central state
+      mnemonicLoginInput.disabled = !isGdbReady || securityState.isActive;
+      btnRegisterNewUser.disabled = !isGdbReady || securityState.isActive;
+      btnProtectWebAuthn.disabled = !securityState.hasVolatileIdentity || securityState.isActive;
+      btnLoginWebAuthn.disabled = !isGdbReady || !securityState.hasWebAuthnHardwareRegistration || securityState.isActive;
+      btnLoginMnemonic.disabled = !isGdbReady || securityState.isActive;
+      btnLogout.disabled = !canPerformActions;
+      btnShowMnemonic.disabled = !canPerformActions || !sm.getMnemonicForDisplayAfterRegistrationOrRecovery();
+      btnSaveSecureNote.disabled = !canPerformActions;
+      btnLoadSecureNote.disabled = !canPerformActions;
+      assignRoleBtn.disabled = !canPerformActions;
+      putLegitP2PBtn.disabled = !canPerformActions;
+      putFakeSigP2PBtn.disabled = !canPerformActions;
+      putNoPermissionP2PBtn.disabled = !canPerformActions;
 
+      // REFACTOR: The visibility of the copy button is also controlled here
       if (securityState.hasVolatileIdentity && volatileIdentityCache) {
         newMnemonicElem.textContent = volatileIdentityCache.mnemonic;
         newEthAddressElem.textContent = volatileIdentityCache.address;
         newIdentityInfo.classList.remove('hidden');
+        btnCopyMnemonic.classList.remove('hidden');
       } else {
         newIdentityInfo.classList.add('hidden');
+        btnCopyMnemonic.classList.add('hidden');
         if (!securityState.isActive) volatileIdentityCache = null;
       }
 
@@ -431,13 +443,15 @@
       initStatus.textContent = "Initializing...";
       logToUI(`Initializing GDB with name: ${dbName}...`);
 
-      db = await gdb(dbName, { sm: true });
-      sm = db.sm;
       try {
+
+        db = await gdb(dbName, { sm: true });
+        sm = db.sm;
+     
         logToUI("GDB instance ready.", "success");
         await setupAutomaticRealtimeSubscription();
       } catch (e) {
-        logToUI(`GDB setup error: ${e.message}", "error");
+        logToUI(`GDB setup error: ${e.message}`, "error");
         initStatus.textContent = "GDB Initialization failed.";
         db = null;
         return;
@@ -447,29 +461,67 @@
 
       const superAdmins = superAdminInput.value.split(',').map(s => s.trim()).filter(Boolean);
       await sm.createSecurityContext(db, superAdmins);
-      logToUI("Security Context initialized. Session may be restored.", "success");
+      logToUI("RBAC Security Context initialized. Session may be restored.", "success");
 
       localStorage.setItem('gdb_testbed_v2_last_db_name', dbName);
       btnInitializeDB.disabled = true;
       dbNameInput.disabled = true;
       superAdminInput.disabled = true;
-  initStatus.textContent = `Initialized: ${dbName}`;
+      initStatus.textContent = `Initialized: ${dbName}`;
     }
 
     async function autoInitialize() {
       const persistedDBName = localStorage.getItem('gdb_testbed_v2_last_db_name');
       if (persistedDBName) {
         dbNameInput.value = persistedDBName;
-  logToUI('Attempting auto-initialization with persisted DB name: ' + persistedDBName, 'info');
+        logToUI(`Attempting auto-initialization with persisted DB name: ${persistedDBName}`, 'info');
         await initializeApp();
       } else {
         initStatus.textContent = "Ready to initialize.";
-        handleSecurityStateChange({ isActive: false });
+        handleSecurityStateChange({ isActive: false }); // Ensure UI is in logged-out state
       }
     }
 
     // --- Event Listeners ---
     btnInitializeDB.addEventListener('click', initializeApp);
+
+    // REFACTOR: Event listener for Hard Reset button
+    btnHardReset.addEventListener('click', () => {
+      if (confirm('This will erase all local configuration (DB name) and reload the page. Are you sure?')) {
+        logToUI("Performing hard reset...", "warn");
+        localStorage.clear();
+        location.reload();
+      }
+    });
+
+    // REFACTOR: Event listener for Copy Mnemonic button
+    btnCopyMnemonic.addEventListener('click', async () => {
+      const mnemonicText = newMnemonicElem.textContent;
+      if (!mnemonicText) return;
+      try {
+        await navigator.clipboard.writeText(mnemonicText);
+        logToUI("Mnemonic copied to clipboard.", "success");
+      } catch (err) {
+        logToUI("Failed to copy mnemonic to clipboard.", "error");
+        console.error('Clipboard copy failed: ', err);
+      }
+    });
+
+    // btnRegisterNewUser.addEventListener('click', async () => {
+    //   logToUI("Generating new volatile identity...", "info");
+    //   try {
+    //     const identity = await sm.startNewUserRegistration();
+    //     if (identity) {
+    //       volatileIdentityCache = identity;
+    //       // State will be updated by the callback, which shows the info box
+    //       logToUI(`New volatile ID created for ${identity.address.substring(0, 10)}... SAVE MNEMONIC!`, "success");
+    //     } else {
+    //       logToUI("Failed to generate identity.", "warn");
+    //     }
+    //   } catch (e) {
+    //     logToUI(`Registration error: ${e.message}`, "error");
+    //   }
+    // });
 
     btnRegisterNewUser.addEventListener('click', async () => {
       logToUI("Generating new volatile identity...", "info");
@@ -480,12 +532,12 @@
           newEthAddressElem.textContent = identity.address;
           newMnemonicElem.textContent = identity.mnemonic;
           newIdentityInfo.classList.remove('hidden');
-          logToUI('New volatile ID created for ' + identity.address.substring(0, 10) + '... SAVE MNEMONIC!', 'success');
+          logToUI(`New volatile ID created for ${identity.address.substring(0, 10)}... SAVE MNEMONIC!`, "success");
         } else {
           logToUI("Failed to generate identity.", "warn");
         }
       } catch (e) {
-  logToUI('Registration error: ' + e.message, 'error');
+        logToUI(`Registration error: ${e.message}`, "error");
       }
     });
 
@@ -496,9 +548,9 @@
         const address = await sm.protectCurrentIdentityWithWebAuthn(volatileIdentityCache.privateKey);
         if (address) {
           logToUI(`Identity protected with WebAuthn & logged in.`, "success");
-          volatileIdentityCache = null;
+          volatileIdentityCache = null; // Cleared on successful protection
         } else { logToUI("WebAuthn protection cancelled or failed.", "warn"); }
-      } catch (e) { logToUI(`WebAuthn protection error: ${e.message}", "error"); }
+      } catch (e) { logToUI(`WebAuthn protection error: ${e.message}`, "error"); }
     });
 
     btnLoginWebAuthn.addEventListener('click', async () => {
@@ -507,7 +559,7 @@
         const address = await sm.loginCurrentUserWithWebAuthn();
         if (address) logToUI(`Logged in with WebAuthn.`, "success");
         else logToUI("WebAuthn login failed or cancelled.", "warn");
-      } catch (e) { logToUI(`WebAuthn login error: ${e.message}", "error"); }
+      } catch (e) { logToUI(`WebAuthn login error: ${e.message}`, "error"); }
     });
 
     btnLoginMnemonic.addEventListener('click', async () => {
@@ -520,20 +572,24 @@
           logToUI(`Logged in with mnemonic. You can now protect this with WebAuthn.`, "success");
           mnemonicLoginInput.value = '';
         } else logToUI("Mnemonic login failed.", "error");
-      } catch (e) { logToUI(`Mnemonic login error: ${e.message}", "error"); }
+      } catch (e) { logToUI(`Mnemonic login error: ${e.message}`, "error"); }
     });
 
     btnLogout.addEventListener('click', async () => {
       logToUI("Logging out...", "info");
       if (roleListenerUnsubscribe) roleListenerUnsubscribe();
-      if (realtimeTestNodeUnsubscribe) realtimeTestNodeUnsubscribe();
-  await sm.clearSecurity();
+      if (realtimeTestNodeUnsubscribe) {
+        realtimeTestNodeUnsubscribe();
+        realtimeTestNodeUnsubscribe = null;
+      }
+      await sm.clearSecurity();
       loadedSecureNoteContent.textContent = ''; // Clear decrypted note
       logToUI("Logged out successfully.", "success");
+      await setupAutomaticRealtimeSubscription(); // Re-subscribe as anonymous user
     });
 
     btnShowMnemonic.addEventListener('click', () => {
-  const mnemonic = sm.getMnemonicForDisplayAfterRegistrationOrRecovery();
+      const mnemonic = sm.getMnemonicForDisplayAfterRegistrationOrRecovery();
       if (mnemonic) {
         if (confirm("WARNING: Displaying secret mnemonic phrase. Continue?")) {
           alert(`Your current session mnemonic is:\n\n${mnemonic}`);
@@ -543,11 +599,10 @@
     });
 
     btnSaveSecureNote.addEventListener('click', async () => {
-  if (!sm.isSecurityActive()) { logToUI("Login required to save secure note.", "error"); return; }
+      if (!sm.isSecurityActive()) { logToUI("Login required to save secure note.", "error"); return; }
       const content = secureNoteContentInput.value;
       let noteId = secureNoteIdInput.value.trim();
       if (!content) { logToUI("Note content cannot be empty.", "warn"); return; }
-
       logToUI(`Saving secure note (ID: ${noteId || 'new'})... (via sm.put)`, "info");
       try {
         const savedNodeId = await sm.put({ note_content: content, savedAt: new Date().toISOString() }, noteId || undefined);
@@ -555,7 +610,7 @@
         if (!noteId) secureNoteIdInput.value = savedNodeId;
         loadSecureNoteIdInput.value = savedNodeId;
       } catch (error) {
-        logToUI(`Failed to save secure note: ${error.message}", "error");
+        logToUI(`Failed to save secure note: ${error.message}`, "error");
       }
     });
 
@@ -566,23 +621,21 @@
       }
       const noteIdToLoad = loadSecureNoteIdInput.value.trim();
       if (!noteIdToLoad) { logToUI("Enter Note ID to load.", "warn"); return; }
-
       logToUI(`Loading secure note ID: ${noteIdToLoad}... (via sm.get)`, "info");
       loadedSecureNoteContent.textContent = 'Loading...';
       try {
         const { result: node } = await sm.get(noteIdToLoad);
         if (node) {
           if (node.value && node.value._gdb_decryption_failed) {
-            logToUI(`Failed to decrypt note '${noteIdToLoad}': ${node.value.reason}", "error");
+            logToUI(`Failed to decrypt note '${noteIdToLoad}': ${node.value.reason}`, "error");
             loadedSecureNoteContent.textContent = `DECRYPTION FAILED: ${node.value.reason}.`;
           } else if (node.value && node.value._gdb_decryption_unavailable) {
-            logToUI(`Cannot decrypt note '${noteIdToLoad}': ${node.value.note}", "warn");
+            logToUI(`Cannot decrypt note '${noteIdToLoad}': ${node.value.note}`, "warn");
             loadedSecureNoteContent.textContent = `CANNOT DECRYPT: ${node.value.note}`;
           } else if (node.value && node.value._gdb_decryption_error_meta) {
-            logToUI(`Cannot decrypt note '${noteIdToLoad}': ${node.value.note}", "error");
+            logToUI(`Cannot decrypt note '${noteIdToLoad}': ${node.value.note}`, "error");
             loadedSecureNoteContent.textContent = `DECRYPTION METADATA ERROR: ${node.value.note}`;
-          }
-          else {
+          } else {
             logToUI(`Secure note '${noteIdToLoad}' loaded and decrypted.`, "success");
             loadedSecureNoteContent.textContent = JSON.stringify(node.value, null, 2);
             if (node.value && node.value.note_content) {
@@ -591,11 +644,11 @@
             }
           }
         } else {
-          logToUI(`Secure note ID '${noteIdToLoad}' not found.", "warn");
+          logToUI(`Secure note ID '${noteIdToLoad}' not found.`, "warn");
           loadedSecureNoteContent.textContent = 'Note not found.';
         }
       } catch (error) {
-        logToUI(`Failed to load secure note '${noteIdToLoad}': ${error.message}", "error");
+        logToUI(`Failed to load secure note '${noteIdToLoad}': ${error.message}`, "error");
         loadedSecureNoteContent.textContent = `Error: ${error.message}`;
       }
     });
@@ -610,7 +663,7 @@
         logToUI("Permission 'assignRole' granted. Sending request...", "info");
         await sm.assignRole(target, role);
         logToUI("Role assignment request sent to GDB.", "success");
-      } catch (e) { logToUI(`Assign role error: ${e.message}", "error"); }
+      } catch (e) { logToUI(`Assign role error: ${e.message}`, "error"); }
     });
 
     async function setupAutomaticRealtimeSubscription() {
@@ -632,14 +685,13 @@
         let value = JSON.parse(realtimeNodeValueForTest.value);
         value.ts = Date.now();
         realtimeNodeValueForTest.value = JSON.stringify(value);
-
         logToUI("Sending LEGITIMATE 'put'. Verifying 'write' permission...", "info");
-    await sm.executeWithPermission('write');
-    logToUI("'write' permission granted. Proceeding with db.put().", "info");
-    await db.put(value, REALTIME_TEST_NODE_ID);
-    logToUI("Legit 'put' sent. Check other browser tabs.", "success");
+        await sm.executeWithPermission('write');
+        logToUI("'write' permission granted. Proceeding with db.put().", "info");
+        await db.put(value, REALTIME_TEST_NODE_ID);
+        logToUI("Legit 'put' sent. Check other browser tabs.", "success");
       } catch (e) {
-    logToUI('Legit P2P error: ' + e.message, 'error');
+        logToUI(`Legit P2P error: ${e.message}`, "error");
       }
     });
 
@@ -658,7 +710,7 @@
         } else {
           logToUI("FAKE SIG TEST PASSED: Invalid operation was correctly rejected.", "success");
         }
-      } catch (e) { logToUI(`Fake sig test error: ${e.message}", "error"); }
+      } catch (e) { logToUI(`Fake sig test error: ${e.message}`, "error"); }
     });
 
     putNoPermissionP2PBtn.addEventListener('click', async () => {
@@ -667,7 +719,6 @@
         value.ts = Date.now();
         realtimeNodeValueForTest.value = JSON.stringify(value);
         logToUI("Sending 'put' with VALID signature but (potentially) NO PERMISSION...", "info");
-
         await db.put(value, REALTIME_TEST_NODE_ID);
         logToUI("'put' sent. The receiving node's RBAC rules will determine if it's accepted.", "success");
       } catch (e) {
