@@ -10,7 +10,7 @@ This guide helps you migrate from the class-based API (`new GDB()`) to the new a
   - Initialize with the async function: `const db = await gdb(name, options)`.
   - If you use `new GDB()`, an error will be thrown with instructions and links to this guide.
 - Public operations API remains stable:
-  - `put`, `get`, `map`, `remove`, `link`, `clear`, `getAllNodes` keep their signatures and behavior.
+  - `put`, `get`, `map`, `remove`, `link`, `clear` keep their signatures and behavior.
 - Internals exposed for module compatibility:
   - `db.hybridClock`, `db.graph`, `db.syncChannel` are available as read-only getters.
   - `db.ready` may exist for legacy uses, but prefer `await gdb(...)`.
