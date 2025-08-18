@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2025-08-18
+
+### Changed
+- Security modules moved to lightweight factory functions: `SoftwareSecurityManager` and `SoftwareWalletManager`. Public APIs preserved and behavior unchanged.
+- `sm.js` updated to use the new factories, with idempotent middleware registration and a safer activation flow for signing/verification.
+- Configuration is now passed explicitly as function parameters from GDB into composed modules (e.g., `sm`), avoiding hidden globals and enabling cleaner composition and testing.
+
+Example (passing Security config into SM from GDB):
+
+```js
+const db = await gdb("rbacChatAppDB", {
+  sm: {
+    superAdmins: SUPERADMIN_ADDRESSES,
+    customRoles: CHAT_APP_ROLES,
+  },
+});
+const { sm } = db; // Access the Security Manager
+```
+
+### Improved
+- `sm.js` hardening around the middleware and storage path: middleware always returns an array; stable base IDs in `put()`; avoidance of double ID prefixes; `put()` returns the base ID consistently.
+- Logging consistency across GDB core and Security Manager with unified icons/severity (❌/⚠️/✅/ℹ️). Messages during WebAuthn and security activation are clearer and less ambiguous.
+
+### Fixed
+- Avoided edge cases where `sm.put()` could generate malformed IDs.
+
+### Notes
+- Public `gdb.js` API unchanged. Builds passed; bundle sizes remain approximately the same.
+
 ## [0.7.0] - 2025-08-18
 
 ### ⚠️ Breaking Change
