@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2025-08-18
+
+### Fixed
+- Fixed a bug affecting WebAuthn registration and login flows, which was introduced after refactoring core security modules to a factory pattern. This ensures that WebAuthn-protected identities can be created and accessed reliably.
+
+### Notes
+- If you encounter a similar error after updating, force a cache-less reload of your browser or append a version suffix to your import during development.
+
 ## [0.7.2] - 2025-08-18
 
 ### Changed
