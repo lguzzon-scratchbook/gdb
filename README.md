@@ -45,7 +45,7 @@ A lightweight, decentralized graph database designed for modern web applications
 
 ## Warning
 
-This project is under active development. Do not use it in production environments until it reaches the beta or stable phase. Check the [Project Status](#project-status) section for more details.
+This project is under active development in active beta and steadily approaching the first stable v1.0.0 release. Check the [Project Status](#project-status) section for progress updates.
 
 ## Project Status
 
