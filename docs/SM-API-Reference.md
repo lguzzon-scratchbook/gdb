@@ -9,14 +9,20 @@ The Security Module (SM) is not imported separately but is activated and attache
 To use the RBAC and identity features, you must enable the `sm` option when you initialize GDB.
 
 ```javascript
-import { gdb } from "genosdb"; // Or your local path
+import { gdb } from "genosdb";
 
-// Enable the security module by setting `sm: true`
-const db = await gdb("myAppDB", { sm: true });
+// Enable the security module and pass superadmin addresses directly
+const db = await gdb("myAppDB", { 
+  sm: {
+    superAdmins: ['0x1234...'] // Optional: superadmin addresses
+  }
+});
+
+// Or simply enable with defaults:
+// const db = await gdb("myAppDB", { sm: true });
 
 // Now you can access all security functions via `db.sm`
-// For example:
-// await db.sm.createSecurityContext(SUPERADMIN_ADDRESSES);
+console.log("Security context is automatically initialized");
 ```
 
 ---
@@ -29,9 +35,15 @@ The Security Module (SM) for GDB integrates several key security aspects:
     - **WebAuthn**: Secure, passwordless authentication using biometrics or hardware keys to protect/unseal a user's Ethereum private key.
     - **Mnemonic Phrases**: Traditional BIP39 phrases for account creation and recovery.
 2.  **Role-Based Access Control (RBAC)**:
-    - A configurable hierarchy of roles (e.g., `guest`, `user`, `admin`) defines what actions users can perform.
-    - Permissions are granular (e.g., `read`, `write`, `assignRole`).
+    - A configurable hierarchy of roles with default roles: `guest`, `user`, `manager`, `admin`, `superadmin`
+    - Default permissions:
+      - `guest`: `['read', 'sync']`
+      - `user`: `['write', 'link', 'sync']` + inherits guest
+      - `manager`: `['publish']` + inherits user  
+      - `admin`: `['delete']` + inherits manager
+      - `superadmin`: `['assignRole', 'deleteAny']` + inherits admin
     - Role assignments are stored within GDB itself, making them part of the synchronized state.
+    - Custom roles can be defined by passing them in the initial configuration
 3.  **P2P Operation Security**:
     - Outgoing database operations are cryptographically signed by the active user.
     - Incoming operations from peers are verified for signature validity and sender permissions before being applied.
@@ -43,13 +55,7 @@ The **`SoftwareWalletManager`** (an internal component) handles identity materia
 
 ## 🚀 Core Setup & Lifecycle
 
-### `db.sm.createSecurityContext(superAdminsArray?)`
-
-Initializes the security layer for the GDB object. This is the **primary entry point** after enabling the `sm` module. It configures GDB's internal `SoftwareSecurityManager` (initially in a verifier-only mode if no user is logged in), attempts silent WebAuthn login if applicable, and prepares the system for secure operations.
-
-- **Parameters**:
-  - `superAdminsArray` `{Array<string>}` _(optional)_ – An array of Ethereum addresses (strings) that should be considered super administrators. These addresses will have the `superadmin` role by default if their user node doesn't exist or has no role.
-- **Returns**: `{Promise<void>}`
+The security module is automatically initialized when you create a GDB instance with the `sm` option. No additional setup calls are required.
 
 #### Example
 
@@ -57,20 +63,19 @@ Initializes the security layer for the GDB object. This is the **primary entry p
 import { gdb } from "genosdb";
 
 async function initializeApp() {
-  // 1. Initialize GDB with the Security Module enabled
-  const db = await gdb("myAppDB", { sm: true });
-
-  // 2. Define Super Admins
-  const SUPERADMIN_ADDRESSES = ["0xYourSuperAdminEthAddress1"];
-
-  // 3. Create the security context
-  await db.sm.createSecurityContext(SUPERADMIN_ADDRESSES);
+  // Initialize GDB with the Security Module enabled and superadmins
+  const db = await gdb("myAppDB", { 
+    sm: {
+      superAdmins: ["0xYourSuperAdminEthAddress1", "0xYourSuperAdminEthAddress2"]
+    }
+  });
   
-  console.log("Security Context Initialized for GDB.");
+  console.log("Security Context Automatically Initialized for GDB.");
   // UI can now be updated based on db.sm.isSecurityActive(), db.sm.getActiveEthAddress(), etc.
 }
 
 initializeApp();
+```
 ```
 
 ---
@@ -308,14 +313,11 @@ try {
 
 ## 👑 Role Management & Permissions
 
-### `db.sm.setCustomRoles(customRoles)`
+### Custom Roles Configuration
 
-Defines or overrides the default role hierarchy and associated permissions. This allows for fine-grained, application-specific access control configurations.
+Custom roles are defined by passing them in the initial GDB configuration, not through a separate method call.
 
-- **Signature**: `(customRoles: Object): void`
-- **Returns**: `{void}`
-
-#### Custom Roles Configuration Example
+#### Example: Defining Custom Roles
 
 ```javascript
 const myAppRoles = {
@@ -326,8 +328,15 @@ const myAppRoles = {
   guest: { can: ["read", "sync"] }, // Guests can read and receive syncs
 };
 
-db.sm.setCustomRoles(myAppRoles);
-console.log("Custom roles have been set.");
+// Pass custom roles in the initial configuration
+const db = await gdb("myAppDB", { 
+  sm: {
+    superAdmins: ["0xYourSuperAdminEthAddress1"],
+    customRoles: myAppRoles
+  }
+});
+
+console.log("Custom roles have been configured during initialization.");
 ```
 
 ---
