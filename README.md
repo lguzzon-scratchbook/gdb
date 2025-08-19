@@ -35,12 +35,13 @@ A lightweight, decentralized graph database designed for modern web applications
 
 ### ✅ **GenosDB Core**
 
-- Efficient storage in OPFS.
-- Real-time synchronization between tabs and devices.
-- CRUD operations for nodes and relationships.
-- Efficient serialization using MessagePack and compression with Pako.
-- Enabling reverse or Radix Tree indexing through external modules.
-- GenosDB supports external modules that extend its capabilities.
+- **High-Performance Engine & Efficient Storage:** Utilizes OPFS for fast, local-first storage. The engine is optimized for extreme write loads, capable of processing tens of thousands of operations per second without blocking the main UI thread.
+- **Powerful & Flexible Queries:** Supports standard CRUD operations for nodes and relationships, plus advanced, multi-hop recursive graph traversals to discover deep connections.
+- **Real-time Synchronization:**
+    - **Between Devices (P2P):** Employs an intelligent hybrid system (via GenosRTC) that combines real-time delta updates with a full-state fallback to ensure data consistency across all peers.
+    - **Between Tabs:** Uses BroadcastChannel for instant, local synchronization.
+- **Optimized Data Handling:** Efficiently serializes data with MessagePack and compresses it with Pako to reduce storage footprint and network payload.
+- **Extensible & Modular:** The core is lightweight, but its capabilities can be easily extended with external modules for features like advanced indexing (e.g., Radix Tree).
 
 ## Warning
 
