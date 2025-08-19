@@ -1,11 +1,17 @@
 
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.8.5] - 2025-08-20
+
+### Added
+- **Audit Parameter:** Introduced the `audit` parameter to the database factory. This enables real-time auditing of the operation log (oplog) using AI. The audit module can analyze, detect, and act on patterns or prohibited content in oplog entries, providing automated moderation and data integrity features.
 
 ## [0.8.3] - 2025-08-19
 
