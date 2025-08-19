@@ -76,7 +76,6 @@ async function initializeApp() {
 
 initializeApp();
 ```
-```
 
 ---
 
