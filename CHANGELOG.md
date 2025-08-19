@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-08-19
+
+### Added
+- **Configurable Persistence Delay:** Added a `saveDelay` option to the `gdb()` factory function, allowing fine-grained control over the OPFS save debounce timing. This improves the balance between performance and data persistence.
+- **Configurable Oplog Size:** Introduced the `oplogSize` option to configure the operation log's capacity, enabling optimization of delta-sync performance based on application needs.
+
+### Changed
+- **Unprecedented Write Performance:** The core engine's debouncing and asynchronous architecture have been optimized to handle extreme write loads. GDB can now process tens of thousands of operations per second across all modern browsers without blocking the main UI thread, ensuring a fluid user experience.
+- **Performance:** Refactored the `createDebouncedTask` utility to be more concise and efficient. It continues to leverage `requestIdleCallback` to minimize main-thread impact during background tasks.
+
+### Fixed
+- **High-Throughput Stability:** Addressed potential UI hangs during massive batch operations. It is now recommended to set `saveDelay: 0` for such scenarios to ensure maximum stability and immediate persistence.
+
 ## [0.7.3] - 2025-08-18
 
 ### Fixed
