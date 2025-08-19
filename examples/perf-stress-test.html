@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GenosDB • Perf & Realtime Stress Test</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+
+    header {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin: 0 8px 0 0;
+    }
+
+    section {
+      margin-top: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid #9993;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      opacity: .8;
+      margin-bottom: 6px;
+    }
+
+    input,
+    button {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #9995;
+      background: transparent;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: #4a8cff;
+      color: #fff;
+      border-color: #4a8cff;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .stat {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #9992;
+    }
+
+    pre {
+      background: #0002;
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 300px;
+      overflow: auto;
+    }
+
+    .muted {
+      opacity: .7;
+    }
+
+    button.primary.selected {
+      box-shadow: inset 0 0 0 2px #2f6fe0;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>GenosDB – Perf & Realtime Stress Test</h1>
+    <div class="row">
+      <input id="dbName" value="perf-test" />
+      <button id="btnInit" class="primary">Init DB</button>
+      <button id="btnClear">Clear DB</button>
+      <span id="status" class="muted">Not initialized</span>
+    </div>
+  </header>
+
+  <section class="grid">
+    <div class="card">
+      <h3>Realtime Subscription</h3>
+      <div class="row">
+        <button id="btnToggleSub" class="primary" aria-pressed="false">Subscribe</button>
+      </div>
+      <div class="stats" style="margin-top:8px">
+        <span class="stat">initial: <b id="cInit">0</b></span>
+        <span class="stat">added: <b id="cAdd">0</b></span>
+        <span class="stat">updated: <b id="cUpd">0</b></span>
+        <span class="stat">removed: <b id="cRem">0</b></span>
+        <span class="stat">results: <b id="cRes">0</b></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Mass Insert</h3>
+      <div class="row">
+        <div>
+          <label for="count">Items</label>
+          <input id="count" type="number" min="1" value="5000" />
+        </div>
+        <div>
+          <label for="chunk">Chunk size</label>
+          <input id="chunk" type="number" min="1" value="500" />
+        </div>
+        <button id="btnMass" class="primary">Insert</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label class="row" style="gap:6px; margin:0">
+          <input id="pauseRealtime" type="checkbox" checked />
+          Pause realtime during bulk
+        </label>
+      </div>
+      <p class="muted">Inserts items in chunks using Promise.allSettled with a micro-yield between batches.</p>
+    </div>
+
+    <div class="card">
+      <h3>Nested Object + Date</h3>
+      <div class="row">
+        <button id="btnNested" class="primary">Insert Nested</button>
+        <button id="btnCheck">Read & Check Types</button>
+      </div>
+      <p class="muted">Verifies structuredClone deep copy and MessagePack persistence for Date and nested structures.
+      </p>
+      <div>Last nested ID: <code id="nestedId">—</code></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Logs</h3>
+    <pre id="log"></pre>
+  </section>
+
+  <script type="module">
+    // Import from local dist build
+    import { gdb } from "../dist/index.js";
+
+    /** @typedef {{ physical:number, logical:number }} HLC */
+    /** @typedef {{ id:string, value:any, edges?:string[], timestamp?:HLC }} Node */
+
+    const logEl = document.getElementById("log");
+    
+    // --- START: OPTIMIZED LOGGING LOGIC ---
+    let logBatch = [];
+    let logTimeout = null;
+
+    const flushLogs = () => {
+      if (logBatch.length > 0) {
+        logEl.textContent += logBatch.join('\n') + '\n';
+        logEl.scrollTop = logEl.scrollHeight;
+        logBatch = [];
+      }
+      logTimeout = null;
+    };
+
+    const append = (msg) => {
+      const t = new Date().toLocaleTimeString();
+      logBatch.push(`[${t}] ${msg}`);
+      if (!logTimeout) {
+        logTimeout = setTimeout(flushLogs, 50); // Batch DOM updates every 50ms
+      }
+    };
+    // --- END: OPTIMIZED LOGGING LOGIC ---
+
+    const set = (id, v) => document.getElementById(id).textContent = String(v);
+
+    let db = null;
+    let unsub = null;
+    let counters = { initial: 0, added: 0, updated: 0, removed: 0 };
+    let lastResults = 0;
+    let lastNestedId = null;
+    let suppressRealtime = false; // Pause subscription callbacks during bulk
+    let isSubscribed = false; // Gate RX logs and map callbacks
+
+    const resetCounters = () => { counters = { initial: 0, added: 0, updated: 0, removed: 0 }; renderCounters(); };
+    const renderCounters = () => {
+      set("cInit", counters.initial);
+      set("cAdd", counters.added);
+      set("cUpd", counters.updated);
+      set("cRem", counters.removed);
+      set("cRes", lastResults);
+    };
+
+    // Initialize DB
+    document.getElementById("btnInit").addEventListener("click", async () => {
+      if (db) return append("DB already initialized.");
+      const name = document.getElementById("dbName").value.trim() || "perf-test";
+      append(`Initializing DB '${name}'...`);
+      db = await gdb(name, { saveDelay: 100 });
+      document.getElementById("status").textContent = `Ready: ${name}`;
+      document.getElementById("btnInit").textContent = "Ready";
+      document.getElementById("btnInit").disabled = true;
+      append("DB ready. You can Subscribe or start tests.");
+
+      // RX logs: BroadcastChannel updates from other tabs
+      try {
+        const bc = new BroadcastChannel(`graphdb_sync_${name}`);
+        bc.onmessage = (e) => { if (!isSubscribed) return; append(`[RX][BC] ${e.data}`); };
+      } catch { /* ignore */ }
+
+      // RX logs: P2P messages types from peers (if available)
+      try {
+        const ch = db.syncChannel;
+        if (ch && typeof ch.on === 'function') {
+          ch.on('message', (data) => {
+            if (!isSubscribed) return;
+            try {
+              if (Array.isArray(data)) {
+                const types = data.map(d => d?.type).filter(Boolean);
+                const summary = types.reduce((acc, type) => (acc[type] = (acc[type] || 0) + 1, acc), {});
+                append(`[RX][P2P] ${JSON.stringify(summary)}`);
+              } else {
+                 append(`[RX][P2P] ${data?.type || typeof data}`);
+              }
+            } catch {
+              append(`[RX][P2P] message`);
+            }
+          });
+        }
+        const room = db.room;
+        if (room && typeof room.on === 'function') {
+          room.on('peer:join', (id) => { if (!isSubscribed) return; append(`[P2P] peer:join ${id.slice(0, 8)}...`); });
+          room.on('peer:leave', (id) => { if (!isSubscribed) return; append(`[P2P] peer:leave ${id.slice(0, 8)}...`); });
+        }
+      } catch { /* ignore */ }
+    });
+
+    // Clear DB
+    document.getElementById("btnClear").addEventListener("click", async () => {
+      if (!db) return append("Init DB first.");
+      await db.clear();
+      resetCounters();
+      lastResults = 0; renderCounters();
+      append("All data cleared.");
+    });
+
+    // Subscribe realtime
+    const btnToggleSub = document.getElementById("btnToggleSub");
+    const updateToggle = () => {
+      btnToggleSub.textContent = isSubscribed ? "Unsubscribed" : "Subscribe";
+      btnToggleSub.setAttribute('aria-pressed', String(isSubscribed));
+      btnToggleSub.classList.toggle('selected', isSubscribed);
+    };
+
+    btnToggleSub.addEventListener("click", async () => {
+      if (!db) return append("Init DB first.");
+      if (!isSubscribed) {
+        resetCounters();
+        append("Subscribing to map...");
+        
+        // --- START: OPTIMIZED MAP CALLBACK ---
+        const { results, unsubscribe } = await db.map(({ action }) => {
+          if (suppressRealtime) return; // skip updates while bulk inserting
+          
+          if (action === 'initial') counters.initial++;
+          else if (action === 'added') counters.added++;
+          else if (action === 'updated') counters.updated++;
+          else if (action === 'removed') counters.removed++;
+          
+          // Render counters on next animation frame to batch updates
+          requestAnimationFrame(renderCounters);
+        });
+        // --- END: OPTIMIZED MAP CALLBACK ---
+
+        // Log a summary after the initial batch is processed
+        append(`[RX][MAP] Initial batch processed. Count: ${counters.initial}`);
+
+        lastResults = results.length; renderCounters();
+        unsub = unsubscribe;
+        isSubscribed = true;
+        append(`Subscribed. Initial results: ${results.length}`);
+        updateToggle();
+      } else {
+        if (unsub) { unsub(); unsub = null; }
+        isSubscribed = false;
+        append("Unsubscribed.");
+        updateToggle();
+      }
+    });
+
+    // Mass insert in chunks
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    async function* chunk(arr, size) { for (let i = 0; i < arr.length; i += size) yield arr.slice(i, i + size); }
+
+    document.getElementById("btnMass").addEventListener("click", async () => {
+      if (!db) return append("Init DB first.");
+      const total = Math.max(1, Number(document.getElementById("count").value || 500));
+      const size = Math.max(1, Number(document.getElementById("chunk").value || 50));
+      const pause = document.getElementById("pauseRealtime").checked;
+      append(`Inserting ${total} items in chunks of ${size}...`);
+
+      const items = Array.from({ length: total }, (_, i) => ({
+        type: "task",
+        title: `Task #${i + 1}`,
+        done: false,
+        meta: { tags: ["stress", "batch"], i, details: { nested: { depth: 2 } } }
+      }));
+
+      let inserted = 0; const t0 = performance.now();
+      if (pause) suppressRealtime = true;
+      
+      for await (const batch of chunk(items, size)) {
+        await Promise.allSettled(batch.map(v => db.put(v)));
+        inserted += batch.length; 
+        append(`Inserted ${inserted}/${total}`);
+        await sleep(0); // Yield back to the UI thread to prevent freezing
+      }
+
+      if (pause) {
+        suppressRealtime = false;
+        append("Realtime updates resumed.");
+      }
+
+      const dt = (performance.now() - t0).toFixed(1);
+      append(`Done inserting. Elapsed: ${dt} ms`);
+
+      // Manually refresh current results count if subscribed
+      if (unsub) {
+        append("Refreshing results count...");
+        const { results } = await db.map({ query: {}, realtime: false });
+        lastResults = results.length; 
+        renderCounters();
+        append(`Total results in DB: ${lastResults}`);
+      }
+    });
+
+    // Nested object + Date
+    document.getElementById("btnNested").addEventListener("click", async () => {
+      if (!db) return append("Init DB first.");
+      const id = await db.put({
+        type: "test",
+        title: "Nested object test",
+        createdAt: new Date(),
+        meta: {
+          tags: ["nested", "types"],
+          info: { level: 1, path: ["a", "b"], bytes: new Uint8Array([1, 2, 3]).buffer }
+        }
+      });
+      lastNestedId = id; document.getElementById("nestedId").textContent = id; append(`Nested inserted: ${id}`);
+    });
+
+    document.getElementById("btnCheck").addEventListener("click", async () => {
+      if (!db) return append("Init DB first.");
+      if (!lastNestedId) return append("Insert nested first.");
+      const { result } = await db.get(lastNestedId);
+      if (!result) return append(`Nested object with ID ${lastNestedId} not found.`);
+
+      const v = result.value;
+      const isDate = v?.createdAt instanceof Date;
+      const edgesLen = (result.edges || []).length;
+      append(`Read nested: isDate=${isDate}, edges=${edgesLen}, valueKeys=${Object.keys(v || {}).join(',')}`);
+    });
+
+    // Helpful explicit log for multi-tab test
+    append("Tip: Open this page in a second tab with the same DB name to verify BroadcastChannel + P2P realtime.");
+  </script>
+</body>
+
+</html>
