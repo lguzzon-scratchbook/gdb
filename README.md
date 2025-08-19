@@ -45,7 +45,7 @@ A lightweight, decentralized graph database designed for modern web applications
 
 ## Warning
 
-This project is under active development in active beta and steadily approaching the first stable v1.0.0 release. Check the [Project Status](#project-status) section for progress updates.
+GenosDB is in active beta and soon will deliver its first stable release, v1.0.0. See the [Project Status](#project-status) section for the latest updates.
 
 ## Project Status
 
