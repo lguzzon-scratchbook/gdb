@@ -1,11 +1,22 @@
-# Changelog
 
+# Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.8.3] - 2025-08-19
+
+### Added
+- **Modular Extension Support:** The GDB core now allows the creation and integration of new custom modules in a simple and secure way. The architecture enables extension without modifying the core.
+
+### Changed
+- **Secure Public API:** The public API exposes only the minimal resources required for extension and operation, without revealing internal method names or sensitive details, strengthening security and encapsulation.
+
+### Notes
+- Indexing modules are fully compatible with version 0.8.0 and above.
 
 ## [0.8.0] - 2025-08-19
 
