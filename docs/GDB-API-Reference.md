@@ -26,11 +26,11 @@ import { gdb } from "genosdb"
 
 ---
 
-## 🏭 Factory Function
+## ⚙️ Async Factory Function (for top-level await)
 
 ### `await gdb(name, options?)`
 
-Initializes a new database GDB object.
+Creates and configures a database connection.
 
 - **Parameters**:
   - `name` `{string}` – Database name (used for local storage or sync).
@@ -41,11 +41,13 @@ Initializes a new database GDB object.
     - `ii` `{boolean}` – If `true`, loads the Inverted Index module.
     - `geo` `{boolean}` – If `true`, loads the Geo module.
     - `password` `{string}` – Optional encryption key.
-    - `relayUrls` `{string[]}` – Optional – Custom list of secure WebSocket relay URLs (for Nostr). When provided, this replaces the default relay list and overrides `relayRedundancy`.
+    - `relayUrls` `{string[]}` – Optional – Custom list of secure WebSocket relay URLs (for Nostr).
     - `turnConfig` `{Array<Object>}` – Optional – Configuration for TURN servers. Each object can include:
       - `urls` `{string | string[]}` – Single URL or array of URLs to access the TURN server.
       - `username` `{string}` – Username for TURN authentication.
       - `credential` `{string}` – Password or token for TURN authentication.
+    - `saveDelay` `{number}` _(optional)_ – The debounce delay in milliseconds for saving the graph to persistent storage. Higher values reduce disk I/O under heavy write loads but increase the risk of data loss if the browser crashes. Defaults to `200`.
+    - `oplogSize` `{number}` _(optional)_ – The maximum number of recent operations to keep in the operation log for delta-based P2P synchronization. Larger values allow peers to sync efficiently after longer disconnections but consume more memory. Defaults to `20`.
 
 - **Returns**: `gdb` object.
 
@@ -86,6 +88,34 @@ const turnConfig = [
 ]
 
 const db = await gdb("my-db", { turnConfig })
+```
+
+---
+
+## 🧩 Core Methods
+
+### `use(middleware)`
+
+Registers a middleware function to process or transform incoming P2P messages before they are applied to the local database. Middlewares are executed in the order they are registered.
+
+- **Parameters**:
+  - `middleware` `async {Function}` – An asynchronous function that receives an array of incoming operations. It **must** return a (potentially modified) array of operations to be processed. Returning an empty array `[]` will effectively discard the incoming batch.
+- **Returns**: `{void}`
+
+```js
+// Middleware to log all incoming operations
+db.use(async (operations) => {
+  console.log('Received P2P operations:', operations);
+  // Return the operations to allow them to be processed
+  return operations;
+});
+
+// Middleware to block all 'remove' operations
+db.use(async (operations) => {
+  const filteredOps = operations.filter(op => op.type !== 'remove');
+  console.log(`Filtering out ${operations.length - filteredOps.length} 'remove' operations.`);
+  return filteredOps;
+});
 ```
 
 ---
