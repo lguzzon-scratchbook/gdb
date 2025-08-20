@@ -1,7 +1,3 @@
-Below is the corrected version of the `WHITEPAPER.md` document in English, addressing inaccuracies such as the `db.link` method (which accepts only two parameters, `sourceId` and `targetId`, not a `type` parameter) and ensuring consistency with the provided documentation (`GenosRTC-Guide.md`, `GDB-API-Reference.md`, `GenosRTC-API-Reference.md`, `SM-API-Reference.md`). I've also refined the content for clarity, accuracy, and alignment with the technical details from the provided documents, while maintaining the original structure and intent.
-
----
-
 # GenosDB: A Decentralized P2P Graph Database for Web3 Applications
 
 ## Abstract
