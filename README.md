@@ -118,9 +118,12 @@ import { gdb } from "genosdb"
 
 ## Documentation
 
-Our formal API reference and technical guides are located in the [`/docs`](https://github.com/estebanrfp/gdb/tree/main/docs) folder of this repository.
+- **Technical Docs**: Find API references and guides in [/docs](https://github.com/estebanrfp/gdb/blob/main/docs/index.md).
 
-For community-driven content, detailed documentation, tutorials, and live examples, please visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki).
+- **Introduction & Concepts**: Visit our [GitHub Wiki](https://github.com/estebanrfp/gdb/wiki) for an overview.
+
+- **Tutorials**: Explore use cases on [Medium](https://medium.com/genosdb).
+
 
 For interactive, AI-assisted GenosDB documentation: 
 
@@ -130,7 +133,12 @@ For interactive, AI-assisted GenosDB documentation:
 
 We’ve created a collection of interactive examples to help you understand how GDB works in real-world scenarios. These examples cover everything from basic setup to advanced features like RBAC and P2P synchronization.
 
-👉 [Explore Examples](https://github.com/estebanrfp/gdb/wiki/EXAMPLES.md)
+👉 [Explore /docs/Examples.md](https://github.com/estebanrfp/gdb/blob/main/docs/EXAMPLES.md)
+
+## Roadmap & Whitepaper
+
+- [View Roadmap](./ROADMAP.md)
+- [View Whitepaper](./WHITEPAPER.md)
 
 ### **Internal Dependencies**
 
