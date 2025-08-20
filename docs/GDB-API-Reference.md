@@ -136,7 +136,7 @@ const id = await db.put({ type: "User", name: "Ana" })
 await db.put({ name: "Ana B" }, id)
 ```
 
-> **More examples**: See [.put()](<https://github.com/estebanrfp/gdb/wiki/.put()>).
+> **More examples**: See [PUT Guide](PUT-Guide.md).
 
 ---
 
@@ -155,7 +155,7 @@ Retrieves a node by its ID. If a `callback` is provided, it enters reactive mode
 const { result } = await db.get(id)
 ```
 
-> **More examples**: See [.get()](<https://github.com/estebanrfp/gdb/wiki/.get()>).
+> **More examples**: See [GET Guide](GET-Guide.md).
 
 ---
 
@@ -325,7 +325,7 @@ const { unsubscribe } = await db.map(({ id, value, action }) => {
 // making the code cleaner and easier to maintain.
 ```
 
-> **More examples**: See [.map()](<https://github.com/estebanrfp/gdb/wiki/.map()>) for logical operators and pagination.
+> **More examples**: See - [MAP Guide](MAP-Guide.md) for logical operators and pagination.
 
 ---
 
