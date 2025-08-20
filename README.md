@@ -140,6 +140,8 @@ We’ve created a collection of interactive examples to help you understand how 
 - [View Roadmap](./ROADMAP.md)
 - [View Whitepaper](./WHITEPAPER.md)
 
+---
+
 ### **Internal Dependencies**
 
 Below is a list of internal dependencies and their purposes within the project:
