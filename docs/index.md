@@ -7,3 +7,5 @@ Welcome to the official technical documentation for GenosDB.
 - [GenosRTC API Reference](GenosRTC-API-Reference.md)
 - [GenosRTC Guide](GenosRTC-Guide.md)
 - [Examples](EXAMPLES.md)
+- [View Roadmap](../ROADMAP.md)
+- [View Whitepaper](../WHITEPAPER.md)
