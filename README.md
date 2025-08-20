@@ -23,6 +23,8 @@ A lightweight, decentralized graph database designed for modern web applications
 
 [![Liberapay receiving](https://img.shields.io/liberapay/receives/estebanrfp.svg?logo=liberapay)](https://liberapay.com/estebanrfp/donate)
 
+> ✅ GenosDB uses network access by design for real-time P2P synchronization (Socket.dev notice)
+
 > ⚠️ Migration Guide: The class-based API `new GDB()` has been removed. Please migrate to the async factory function. See the guide: [MIGRATION.md](./MIGRATION.md)
 
 <!-- ### Nostr.band Followers
