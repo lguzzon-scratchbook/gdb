@@ -9,11 +9,21 @@
     .blink {
       animation: blink-bg 0.4s linear 1 !important;
     }
+
     @keyframes blink-bg {
-      0% { background: #e0ffff; }
-      50% { background: #f4f7fc; }
-      100% { background: #e0ffff; }
+      0% {
+        background: #e0ffff;
+      }
+
+      50% {
+        background: #f4f7fc;
+      }
+
+      100% {
+        background: #e0ffff;
+      }
     }
+
     body {
       font-family: Arial, sans-serif;
       max-width: 400px;
@@ -100,18 +110,19 @@
 
 <body>
   <h2>To-Do List ( Audit Module )</h2>
-  <textarea id="promptInput" placeholder="Audit prompt" style="margin-bottom:8px;width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:16px;resize:vertical;min-height:48px;max-height:160px;"></textarea>
+  <textarea id="promptInput" placeholder="Audit prompt"
+    style="margin-bottom:8px;width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:16px;resize:vertical;min-height:48px;max-height:160px;"></textarea>
   <input type="text" id="taskInput" placeholder="New task">
   <ul id="taskList"></ul>
   <script type="module">
-  import { gdb } from "../dist/index.js";
+    let unsubscribe;
+    import { gdb } from "../dist/index.js";
 
-  let currentPrompt = "detect offensive or inappropriate language, spam [find closely spaced timestamps] or prohibited content";
-  document.getElementById('promptInput').value = currentPrompt;
+    let currentPrompt = "detect offensive or inappropriate language, spam [find closely spaced timestamps] or prohibited content";
+    document.getElementById('promptInput').value = currentPrompt;
 
-  let db = await gdb('todoList', ({ audit: { prompt: currentPrompt } }));
-  let unsubscribe;
-  const currentNodeIds = new Set();
+    let db = await gdb('todoList', ({ audit: { prompt: currentPrompt } }));
+    const currentNodeIds = new Set();
 
     // Create DOM elements for each task
     function createTaskElements(li, id, { text, completed }) {
@@ -156,7 +167,9 @@
     }
 
     // Add task handler
-    function handleAddTask(id, { text, completed }) {
+    function handleAddTask(id, value) {
+      if (!value || typeof value !== 'object') return;
+      const { text, completed } = value;
       const li = document.createElement('li');
       li.id = id;
       createTaskElements(li, id, { text, completed });
@@ -253,20 +266,19 @@
 
     // Subscribe to real-time database changes
     async function subscribeDB() {
-      if (unsubscribe) unsubscribe();
       document.getElementById('taskList').innerHTML = "";
       currentNodeIds.clear();
-      unsubscribe = (await db.map(({ id, value, action }) => {
+      const { unsubscribe } = await db.map(({ id, value, action }) => {
         if (action === "initial" || action === "added") handleAddTask(id, value);
         if (action === "updated") handleUpdateTask(id, value);
         if (action === "removed") handleDeleteTask(id);
-      })).unsubscribe;
+      })
     }
     await subscribeDB();
 
     // Add task on Enter key press
-    document.getElementById('taskInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') addTask();
+    document.getElementById('taskInput').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') await addTask();
     });
 
     // Change prompt on Enter (with Ctrl+Enter for multiline)
@@ -279,6 +291,7 @@
           currentPrompt = newPrompt;
           db = await gdb('todoList', ({ audit: { prompt: currentPrompt } }));
           await subscribeDB();
+
           promptBox.classList.add('blink');
           setTimeout(() => promptBox.classList.remove('blink'), 800);
         }
