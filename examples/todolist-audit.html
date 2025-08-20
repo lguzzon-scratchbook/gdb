@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -115,16 +116,40 @@
   <input type="text" id="taskInput" placeholder="New task">
   <ul id="taskList"></ul>
   <script type="module">
-    let unsubscribe;
     import { gdb } from "../dist/index.js";
 
+    let db;
+    let unsubscribe = null;
+    const currentNodeIds = new Set();
     let currentPrompt = "detect offensive or inappropriate language, spam [find closely spaced timestamps] or prohibited content";
     document.getElementById('promptInput').value = currentPrompt;
 
-    let db = await gdb('todoList', ({ audit: { prompt: currentPrompt } }));
-    const currentNodeIds = new Set();
+    // ------------------- DB Init -------------------
+    async function initDB(prompt) {
+  // Close previous subscription if it exists
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
 
-    // Create DOM elements for each task
+  // Re-initialize DB with the new prompt
+      db = await gdb("todoList", ({ audit: { prompt } }));
+
+  // Clear UI
+      document.getElementById("taskList").innerHTML = "";
+      currentNodeIds.clear();
+
+  // New subscription
+      const sub = await db.map(({ id, value, action }) => {
+        if (action === "initial" || action === "added") handleAddTask(id, value);
+        if (action === "updated") handleUpdateTask(id, value);
+        if (action === "removed") handleDeleteTask(id);
+      });
+
+      unsubscribe = sub.unsubscribe;
+    }
+
+    // ------------------- UI -------------------
     function createTaskElements(li, id, { text, completed }) {
       const taskTextSpan = document.createElement('span');
       taskTextSpan.className = completed ? 'completed' : '';
@@ -166,7 +191,6 @@
       li.append(taskTextSpan, taskEditTextInput, iconContainer);
     }
 
-    // Add task handler
     function handleAddTask(id, value) {
       if (!value || typeof value !== 'object') return;
       const { text, completed } = value;
@@ -177,7 +201,6 @@
       currentNodeIds.add(id);
     }
 
-    // Update task handler
     function handleUpdateTask(id, { text, completed }) {
       const li = document.getElementById(id);
       if (!li) return;
@@ -189,13 +212,11 @@
       taskTextSpan.className = completed ? 'completed' : '';
       taskEditTextInput.value = text;
 
-      // Exit edit mode if active
       if (!taskEditTextInput.classList.contains('hidden')) {
         cancelEdit(li);
       }
     }
 
-    // Delete task handler
     function handleDeleteTask(id) {
       const li = document.getElementById(id);
       if (li) {
@@ -204,23 +225,21 @@
       }
     }
 
-    // UI logic: enable edit mode
     function enableEditMode(li) {
-      li.querySelector('span').classList.add('hidden'); // Hide task text
-      li.querySelector('input').classList.remove('hidden'); // Show input field
-      li.querySelector('.edit-buttons').classList.remove('hidden'); // Show save/cancel buttons
-      li.querySelector('button:first-child').style.display = 'none'; // Hide edit button
+      li.querySelector('span').classList.add('hidden');
+      li.querySelector('input').classList.remove('hidden');
+      li.querySelector('.edit-buttons').classList.remove('hidden');
+      li.querySelector('button:first-child').style.display = 'none';
     }
 
-    // UI logic: cancel edit mode
     function cancelEdit(li) {
-      li.querySelector('span').classList.remove('hidden'); // Show task text
-      li.querySelector('input').classList.add('hidden'); // Hide input field
-      li.querySelector('.edit-buttons').classList.add('hidden'); // Hide save/cancel buttons
-      li.querySelector('button:first-child').style.display = 'inline-block'; // Show edit button
+      li.querySelector('span').classList.remove('hidden');
+      li.querySelector('input').classList.add('hidden');
+      li.querySelector('.edit-buttons').classList.add('hidden');
+      li.querySelector('button:first-child').style.display = 'inline-block';
     }
 
-    // DB operation: toggle task completion
+    // ------------------- DB Ops -------------------
     async function toggleTask(id) {
       const li = document.getElementById(id);
       if (!li) return;
@@ -228,16 +247,11 @@
       const taskTextSpan = li.querySelector('span');
       const completed = !taskTextSpan.classList.contains('completed');
       taskTextSpan.classList.toggle('completed');
-      await db.put({
-        text: taskTextSpan.textContent,
-        completed
-      }, id);
+      await db.put({ text: taskTextSpan.textContent, completed }, id);
     }
 
-    // DB operation: save edited task
     async function saveEdit(id, newText) {
       if (!newText.trim()) return;
-
       const li = document.getElementById(id);
       if (!li) return;
 
@@ -247,41 +261,22 @@
       cancelEdit(li);
     }
 
-    // DB operation: delete task
     async function deleteTask(id) {
       await db.remove(id);
     }
 
-    // DB operation: add new task
     async function addTask() {
       const input = document.getElementById('taskInput');
       if (!input.value.trim()) return;
-
-      await db.put({
-        text: input.value,
-        completed: false
-      });
+      await db.put({ text: input.value, completed: false });
       input.value = '';
     }
 
-    // Subscribe to real-time database changes
-    async function subscribeDB() {
-      document.getElementById('taskList').innerHTML = "";
-      currentNodeIds.clear();
-      const { unsubscribe } = await db.map(({ id, value, action }) => {
-        if (action === "initial" || action === "added") handleAddTask(id, value);
-        if (action === "updated") handleUpdateTask(id, value);
-        if (action === "removed") handleDeleteTask(id);
-      })
-    }
-    await subscribeDB();
-
-    // Add task on Enter key press
+    // ------------------- Listeners -------------------
     document.getElementById('taskInput').addEventListener('keypress', async (e) => {
       if (e.key === 'Enter') await addTask();
     });
 
-    // Change prompt on Enter (with Ctrl+Enter for multiline)
     const promptBox = document.getElementById('promptInput');
     promptBox.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
@@ -289,15 +284,17 @@
         const newPrompt = promptBox.value.trim();
         if (newPrompt && newPrompt !== currentPrompt) {
           currentPrompt = newPrompt;
-          db = await gdb('todoList', ({ audit: { prompt: currentPrompt } }));
-          await subscribeDB();
+          await initDB(currentPrompt);
 
           promptBox.classList.add('blink');
           setTimeout(() => promptBox.classList.remove('blink'), 800);
         }
       }
     });
+
+    // ------------------- Start -------------------
+    await initDB(currentPrompt);
+
   </script>
 </body>
-
 </html>
