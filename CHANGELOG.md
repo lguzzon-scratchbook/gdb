@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-08-21
+
+### ⚠️ Breaking Change
+- **P2P/RTC networking now requires explicit activation:**  
+  The `rtc` flag must be set to `true` in the `gdb()` factory options to enable real-time P2P synchronization.  
+  If omitted, the database will operate in local-only mode and will not connect to the network or relays.
+  **Migration Guide:**  
+  Update your initialization:
+  ```js
+  const db = await gdb("myDB", { rtc: true });
+  ```
+  Apps relying on automatic network sync must update their configuration to restore previous behavior.
+
+### Improved
+- Significantly reduced bundle size: GenosRTC is now dynamically imported only if RTC is required.
+- Prevents unwanted network connections, improving privacy and audit scores.
+
 ## [0.8.5] - 2025-08-20
 
 ### Added
