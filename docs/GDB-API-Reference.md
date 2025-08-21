@@ -35,6 +35,7 @@ Creates and configures a database connection.
 - **Parameters**:
   - `name` `{string}` – Database name (used for local storage or sync).
   - `options` `{Object}` _(optional)_:
+    - `rtc` `{boolean}` – If `true`, enables real-time P2P networking and relay connections. If omitted or `false`, the database works in local-only mode (no network sync).
     - `sm` `{boolean | Object}` – If `true`, loads the Security Module with default settings. Can also be an object with specific configuration parameters for the module.
     - `ai` `{boolean}` – If `true`, loads the AIQuery module.
     - `rx` `{boolean}` – If `true`, loads the Radix Index module.
@@ -63,17 +64,25 @@ const db = await gdb("my-db")
 const secureDb = await gdb("secure-db", { password: "secret" })
 ```
 
+#### `rtc` To explicitly enable the P2P networking module (opcional) 
+
+```javascript
+// Initialize with P2P networking enabled
+const db = await gdb("p2p-db", { rtc: true }); // (rtc: true) for realtime updates
+```
+
 #### `relayUrls` (opcional)
 
 To specify custom relays for Nostr when initializing the database:
 
 ```javascript
 const db = await gdb("my-db", {
+  rtc: true,
   relayUrls: ["wss://relay1.example.com", "wss://relay2.example.com"],
 })
 ```
 
-#### `turnConfig` (opcional)
+#### `turnConfig` (optional)
 
 Once you have a TURN server, configure GenosDB with it like this:
 
@@ -87,7 +96,7 @@ const turnConfig = [
   },
 ]
 
-const db = await gdb("my-db", { turnConfig })
+const db = await gdb("my-db", { rtc: true, turnConfig })
 ```
 
 ---
@@ -342,6 +351,8 @@ await db.clear()
 ---
 
 ### GenosRTC API Reference
+
+> **Note:** All features described in this section are available only when the database is initialized with the `{ rtc: true }` option, as this enables the GenosRTC module.
 
 Every `GDB` object includes a `db.room` object, powered by the internal **GenosRTC** module, for real-time peer-to-peer communication.
 
