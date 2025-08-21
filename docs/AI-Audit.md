@@ -24,15 +24,14 @@ When you activate the audit option, the module is loaded dynamically at that mom
 ## **Installation**
 
 The audit option is included with GenosDB.  
-To enable it, simply initialize your database with the `audit: true` parameter and a custom prompt:
+To enable it, simply initialize your database with the `audit` parameter y un prompt personalizado:
 
 ```javascript
 import { gdb } from "genosdb";
 
 const db = await gdb("my-db", {
   rtc: true,
-  audit: true,
-  prompt: "detect offensive or inappropriate language, spam [find closely spaced timestamps] or prohibited content"
+  audit: { prompt: "detect offensive or inappropriate language, spam [find closely spaced timestamps] or prohibited content" }
 });
 ```
 
