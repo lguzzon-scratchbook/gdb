@@ -103,7 +103,7 @@
     ];
 
     // Initialize GenosDB using async factory
-    const db = await gdb('todoList-relayUrls', { rtc: true, relayUrls });
+    const db = await gdb('todoList-relayUrls', { rtc: { relayUrls } });
 
     const currentNodeIds = new Set();
 
