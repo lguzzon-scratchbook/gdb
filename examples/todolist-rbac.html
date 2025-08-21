@@ -394,7 +394,7 @@
     async function initializeApp() {
       try {
         updateStatus("Initializing Database...");
-        db = await gdb("secureTodoAppDB_v1", { sm: true });
+        db = await gdb("secureTodoAppDB_v1", { rtc: true, sm: true });
         sm = db.sm;
 
         updateStatus("Initializing Security Context...");

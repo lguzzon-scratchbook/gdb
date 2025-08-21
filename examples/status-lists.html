@@ -1,44 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>gdb-p2p: Active & Inactive Lists</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; }
-        .container { display: flex; justify-content: space-around; gap: 20px; }
-        .list-column { flex: 1; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #1c1e21; margin-bottom: 30px; }
-        h2 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0; }
-        #controls { text-align: center; margin-bottom: 30px; }
-        #controls button {
-            background-color: #42b72a; color: white; border: none;
-            padding: 12px 20px; cursor: pointer; border-radius: 6px; font-size: 1em;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background-color 0.2s;
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f2f5;
+            color: #333;
         }
-        #controls button:hover { background-color: #36a420; }
-        ul { list-style-type: none; padding: 0; }
-        li {
-            background-color: #f9f9f9;
-            padding: 12px 15px; border: 1px solid #ddd;
-            margin-bottom: 10px; border-radius: 6px;
-            display: flex; justify-content: space-between; align-items: center;
+
+        .container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+        }
+
+        .list-column {
+            flex: 1;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1c1e21;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        #controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        #controls button {
+            background-color: #42b72a;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 1em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             transition: background-color 0.2s;
         }
-        li:hover { background-color: #e9ebee; }
-        li span { flex-grow: 1; color: #1c1e21; }
-        li button {
-            color: white; border: none;
-            padding: 8px 12px; cursor: pointer; border-radius: 4px;
-            font-size: 0.9em; transition: background-color 0.2s;
+
+        #controls button:hover {
+            background-color: #36a420;
         }
-        .btn-set-inactive { background-color: #ffc107; color: #212529;} /* Yellow */
-        .btn-set-inactive:hover { background-color: #e0a800; }
-        .btn-set-active { background-color: #28a745; } /* Green */
-        .btn-set-active:hover { background-color: #218838; }
-        .empty-list { color: #777; font-style: italic; padding: 10px; text-align: center; }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #f9f9f9;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        li:hover {
+            background-color: #e9ebee;
+        }
+
+        li span {
+            flex-grow: 1;
+            color: #1c1e21;
+        }
+
+        li button {
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+
+        .btn-set-inactive {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        /* Yellow */
+        .btn-set-inactive:hover {
+            background-color: #e0a800;
+        }
+
+        .btn-set-active {
+            background-color: #28a745;
+        }
+
+        /* Green */
+        .btn-set-active:hover {
+            background-color: #218838;
+        }
+
+        .empty-list {
+            color: #777;
+            font-style: italic;
+            padding: 10px;
+            text-align: center;
+        }
     </style>
 </head>
+
 <body>
     <h1>Task Manager (Active & Inactive)</h1>
 
@@ -59,10 +145,10 @@
 
     <script type="module">
 
-    import { gdb } from "../dist/index.js";
+        import { gdb } from "../dist/index.js";
 
-    // Initialize GenosDB using async factory
-    const db = await gdb("my-tasks-db-v2");
+        // Initialize GenosDB using async factory
+        const db = await gdb("my-tasks-db-v2", { rtc: true });
 
         const activeItemsListElement = document.getElementById('activeItemsList');
         const inactiveItemsListElement = document.getElementById('inactiveItemsList');
@@ -90,9 +176,9 @@
                 return;
             }
 
-            itemsToDisplay.sort(([,a], [,b]) => (a.name || "").localeCompare(b.name || "")).forEach(([id, itemData]) => {
+            itemsToDisplay.sort(([, a], [, b]) => (a.name || "").localeCompare(b.name || "")).forEach(([id, itemData]) => {
                 const listItem = document.createElement('li');
-                
+
                 const itemNameSpan = document.createElement('span');
                 itemNameSpan.textContent = itemData.name || `Task (ID: ${id})`;
                 listItem.appendChild(itemNameSpan);
@@ -116,7 +202,7 @@
             });
         }
 
-        
+
         // Main function to set up the app
         async function initializeApp() {
             // await db.clear(); // Start clean for the demo
@@ -171,4 +257,5 @@
         initializeApp();
     </script>
 </body>
+
 </html>

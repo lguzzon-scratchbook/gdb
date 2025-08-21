@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
       font-family: Arial, sans-serif;
       text-align: center;
     }
+
     .board {
       display: grid;
       grid-template-columns: repeat(3, 100px);
@@ -17,6 +19,7 @@
       margin: 20px auto;
       width: 320px;
     }
+
     .cell {
       width: 100px;
       height: 100px;
@@ -28,9 +31,11 @@
       cursor: pointer;
       background-color: lightgray;
     }
+
     .cell.taken {
       cursor: not-allowed;
     }
+
     #role-selection {
       display: flex;
       flex-direction: column;
@@ -38,6 +43,7 @@
       justify-content: center;
       margin: 20px auto;
     }
+
     #role-selection button {
       margin: 5px;
       padding: 10px 20px;
@@ -46,6 +52,7 @@
     }
   </style>
 </head>
+
 <body>
   <h1>Tic Tac Toe with GDB</h1>
   <div id="role-selection">
@@ -57,11 +64,11 @@
   <p id="status">Waiting for players...</p>
   <button id="reset-button">Reset</button>
   <script type="module">
-  import { gdb } from "../dist/index.js";
+    import { gdb } from "../dist/index.js";
 
-  // Initialize GenosDB using async factory
-  const db = await gdb('tic-tac-toe');
-  const gameChannel = db.room.channel("gamesync");
+    // Initialize GenosDB using async factory
+    const db = await gdb('tic-tac-toe', { rtc: true });
+    const gameChannel = db.room.channel("gamesync");
     const boardElement = document.getElementById('board');
     const statusElement = document.getElementById('status');
     const roleSelection = document.getElementById('role-selection');
@@ -154,8 +161,8 @@
       }
     }
 
-    gameChannel.on('message', data =>{
-  if (data.role) {
+    gameChannel.on('message', data => {
+      if (data.role) {
         const peers = db.room.getPeers();
         const count = Object.keys(peers).length;
 
@@ -197,4 +204,5 @@
     createBoard();
   </script>
 </body>
+
 </html>

@@ -174,10 +174,10 @@
   </div>
 
   <script type="module">
-  import { gdb } from "../dist/index.js";
+    import { gdb } from "../dist/index.js";
 
-  // Create a GDB instance using the async factory
-  const db = await gdb("my-todo-list-app");
+    // Create a GDB instance using the async factory
+    const db = await gdb("my-todo-list-app", { rtc: true });
     const taskListElement = document.getElementById("taskList")
     const addTaskForm = document.getElementById("addTaskForm")
     const taskInput = document.getElementById("taskInput")

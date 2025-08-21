@@ -1,27 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do List TESTER / GDB</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #fceaea; color: #333; }
-        h2 { text-align: center; color: #c0392b; }
-        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; background-color: #3498db; color: white; font-size: 16px; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        #controls button { background-color: #2ecc71; }
-        #controls button:hover:not(:disabled) { background-color: #27ae60; }
-        #speed-control { margin: 10px 0; }
-        #log { margin-top: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; height: 300px; overflow-y: scroll; background-color: #fff; }
-        .log-entry { padding: 5px 0; border-bottom: 1px dashed #eee; }
-        .log-entry:last-child { border-bottom: none; }
-        .log-insert { color: green; }
-        .log-delete { color: red; }
-        .log-update { color: blue; }
-        .log-error { color: darkred; font-weight: bold; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background-color: #fceaea;
+            color: #333;
+        }
+
+        h2 {
+            text-align: center;
+            color: #c0392b;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        #controls button {
+            background-color: #2ecc71;
+        }
+
+        #controls button:hover:not(:disabled) {
+            background-color: #27ae60;
+        }
+
+        #speed-control {
+            margin: 10px 0;
+        }
+
+        #log {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: scroll;
+            background-color: #fff;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-insert {
+            color: green;
+        }
+
+        .log-delete {
+            color: red;
+        }
+
+        .log-update {
+            color: blue;
+        }
+
+        .log-error {
+            color: darkred;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
     <h2>To-Do List - Automated Tester</h2>
     <div id="controls">
@@ -38,10 +106,10 @@
     </div>
 
     <script type="module">
-    import { gdb } from "../dist/index.js";
+        import { gdb } from "../dist/index.js";
 
-    const dbName = 'todoList'; // Same name as your To-Do app
-    const db = await gdb(dbName);
+        const dbName = 'todoList'; // Same name as your To-Do app
+        const db = await gdb(dbName, { rtc: true });
         const logElement = document.getElementById('log');
         const startButton = document.getElementById('startRandomOps');
         const stopButton = document.getElementById('stopRandomOps');
@@ -70,7 +138,7 @@
                 const newId = await db.put({ text: taskText, completed: Math.random() < 0.3 });
                 if (newId) { // Asegurarse que db.put devuelve un ID
                     taskIds.push(newId);
-                    logMessage(`INSERTED: ID ${newId.substring(0,8)}... - "${taskText}"`, 'insert');
+                    logMessage(`INSERTED: ID ${newId.substring(0, 8)}... - "${taskText}"`, 'insert');
                 } else {
                     logMessage(`WARN: db.put for insert did not return an ID.`, 'error');
                 }
@@ -88,15 +156,15 @@
             const idToDelete = taskIds.splice(randomIndex, 1)[0];
             try {
                 await db.remove(idToDelete);
-                logMessage(`DELETED: ID ${idToDelete.substring(0,8)}...`, 'delete');
+                logMessage(`DELETED: ID ${idToDelete.substring(0, 8)}...`, 'delete');
             } catch (error) {
-                logMessage(`ERROR deleting task ID ${idToDelete.substring(0,8)}...: ${error.message}`, 'error');
+                logMessage(`ERROR deleting task ID ${idToDelete.substring(0, 8)}...: ${error.message}`, 'error');
             }
         }
 
         async function randomUpdate() {
             if (taskIds.length === 0) {
-                 logMessage("No tasks created by this tester to update yet.");
+                logMessage("No tasks created by this tester to update yet.");
                 return;
             }
             const randomIndex = Math.floor(Math.random() * taskIds.length);
@@ -105,9 +173,9 @@
             const newCompleted = Math.random() < 0.5;
             try {
                 await db.put({ text: newText, completed: newCompleted }, idToUpdate);
-                logMessage(`UPDATED: ID ${idToUpdate.substring(0,8)}... to "${newText}", completed: ${newCompleted}`, 'update');
+                logMessage(`UPDATED: ID ${idToUpdate.substring(0, 8)}... to "${newText}", completed: ${newCompleted}`, 'update');
             } catch (error) {
-                logMessage(`ERROR updating task ID ${idToUpdate.substring(0,8)}...: ${error.message}`, 'error');
+                logMessage(`ERROR updating task ID ${idToUpdate.substring(0, 8)}...: ${error.message}`, 'error');
             }
         }
 
@@ -152,7 +220,7 @@
             clearButton.disabled = false;
             speedInput.disabled = false;
         });
-        
+
         clearButton.addEventListener('click', async () => {
             if (intervalId) {
                 logMessage("Please stop random operations before clearing.", "error");
@@ -170,7 +238,7 @@
                         for (const task of allTasks) {
                             if (task && task.id) { // Asegurarse que la tarea y el ID existen
                                 await db.remove(task.id);
-                                logMessage(`DELETED (clear all): ID ${task.id.substring(0,8)}...`, 'delete');
+                                logMessage(`DELETED (clear all): ID ${task.id.substring(0, 8)}...`, 'delete');
                             }
                         }
                         taskIds = [];
@@ -211,4 +279,5 @@
         logMessage("Tester App Initialized. Ready to start operations.");
     </script>
 </body>
+
 </html>

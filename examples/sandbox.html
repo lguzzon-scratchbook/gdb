@@ -250,14 +250,14 @@
   </div>
 
   <script type="module">
-  import { gdb } from "../dist/index.js";
+    import { gdb } from "../dist/index.js";
 
-  // Initialize GenosDB with AI module enabled
-  const db = await gdb('ultimate-sandbox-db-v3', { ai: true });
-  const sm = db.sm; // Security manager (sm)
+    // Initialize GenosDB with AI module enabled
+    const db = await gdb('ultimate-sandbox-db-v3', { rtc: true, ai: true });
+    const sm = db.sm; // Security manager (sm)
 
-  // Check if DB is empty and seed if needed
-  const { results } = await db.map({ $limit: 1 });
+    // Check if DB is empty and seed if needed
+    const { results } = await db.map({ $limit: 1 });
 
     const resetButton = document.getElementById('resetButton');
     const queryDisplay = document.getElementById('queryDisplay');
@@ -275,45 +275,45 @@
 
 
     async function seedData() {
-  statusBar.textContent = 'Seeding data...';
-  await db.clear();
+      statusBar.textContent = 'Seeding data...';
+      await db.clear();
 
-  // Create sample companies
-  const company1Id = await db.put({ type: 'Company', name: 'Innovate Inc.', country: 'USA' });
-  const company2Id = await db.put({ type: 'Company', name: 'Data Corp', country: 'Canada' });
+      // Create sample companies
+      const company1Id = await db.put({ type: 'Company', name: 'Innovate Inc.', country: 'USA' });
+      const company2Id = await db.put({ type: 'Company', name: 'Data Corp', country: 'Canada' });
 
-  // Create sample employees
-  const emp1Id = await db.put({ type: 'Employee', name: 'Alice', role: 'Developer', level: 'Senior', age: 32, country: 'USA', isActive: true, hireDate: '2020-01-15T00:00:00Z', tags: ['JavaScript', 'React', 'CSS'] });
-  const emp2Id = await db.put({ type: 'Employee', name: 'Bob', role: 'Developer', level: 'Mid', age: 28, country: 'USA', isActive: true, hireDate: '2021-06-20T00:00:00Z', tags: ['JavaScript', 'Node.js'] });
-  const emp3Id = await db.put({ type: 'Employee', name: 'Charlie', role: 'Designer', level: 'Senior', age: 35, country: 'Canada', isActive: false, hireDate: '2019-03-10T00:00:00Z', tags: ['Figma', 'UX'] });
-  const emp4Id = await db.put({ type: 'Employee', name: 'Diana', role: 'Developer', level: 'Senior', age: 41, country: 'USA', isActive: true, hireDate: '2018-11-01T00:00:00Z', tags: ['Java', 'Spring'], email: 'diana@example.com' });
-  const emp5Id = await db.put({ type: 'Employee', name: 'Frank', role: 'Data Scientist', level: 'Lead', age: 38, country: 'Canada', isActive: true, hireDate: '2019-08-22T00:00:00Z', tags: ['Python', 'AI'], email: 'frank@example.com' });
-  const emp6Id = await db.put({ type: 'Employee', name: 'Grace', role: 'Product Manager', level: 'Senior', age: 39, country: 'USA', isActive: true, hireDate: '2017-05-12T00:00:00Z', tags: ['Agile', 'Roadmap'] });
-  const emp7Id = await db.put({ type: 'Employee', name: 'Henry', role: 'Developer', level: 'Junior', age: 24, country: 'USA', isActive: true, hireDate: '2023-01-30T00:00:00Z', tags: ['JavaScript', 'HTML'] });
-  const emp8Id = await db.put({ type: 'Employee', name: 'Ivy', role: 'QA Engineer', level: 'Mid', age: 29, country: 'Canada', isActive: true, hireDate: '2021-09-01T00:00:00Z', tags: ['Cypress', 'Testing'] });
-  const emp9Id = await db.put({ type: 'Employee', name: 'Jack', role: 'DevOps', level: 'Senior', age: 45, country: 'USA', isActive: false, hireDate: '2016-07-18T00:00:00Z', tags: ['AWS', 'Docker'], email: 'jack@example.com' });
-  const emp10Id = await db.put({ type: 'Employee', name: 'Karen', role: 'Data Analyst', level: 'Mid', age: 31, country: 'Canada', isActive: true, hireDate: '2022-02-14T00:00:00Z', tags: ['SQL', 'Tableau'] });
-  const emp11Id = await db.put({ type: 'Employee', name: 'Leo', role: 'Developer', level: 'Lead', age: 36, country: 'USA', isActive: true, hireDate: '2018-10-10T00:00:00Z', tags: ['JavaScript', 'Architecture'] });
-  const emp12Id = await db.put({ type: 'Employee', name: 'Mona', role: 'HR', level: 'Manager', age: 42, country: 'Canada', isActive: true, hireDate: '2017-12-01T00:00:00Z', tags: ['Recruiting', 'People Ops'], email: 'mona@example.com' });
+      // Create sample employees
+      const emp1Id = await db.put({ type: 'Employee', name: 'Alice', role: 'Developer', level: 'Senior', age: 32, country: 'USA', isActive: true, hireDate: '2020-01-15T00:00:00Z', tags: ['JavaScript', 'React', 'CSS'] });
+      const emp2Id = await db.put({ type: 'Employee', name: 'Bob', role: 'Developer', level: 'Mid', age: 28, country: 'USA', isActive: true, hireDate: '2021-06-20T00:00:00Z', tags: ['JavaScript', 'Node.js'] });
+      const emp3Id = await db.put({ type: 'Employee', name: 'Charlie', role: 'Designer', level: 'Senior', age: 35, country: 'Canada', isActive: false, hireDate: '2019-03-10T00:00:00Z', tags: ['Figma', 'UX'] });
+      const emp4Id = await db.put({ type: 'Employee', name: 'Diana', role: 'Developer', level: 'Senior', age: 41, country: 'USA', isActive: true, hireDate: '2018-11-01T00:00:00Z', tags: ['Java', 'Spring'], email: 'diana@example.com' });
+      const emp5Id = await db.put({ type: 'Employee', name: 'Frank', role: 'Data Scientist', level: 'Lead', age: 38, country: 'Canada', isActive: true, hireDate: '2019-08-22T00:00:00Z', tags: ['Python', 'AI'], email: 'frank@example.com' });
+      const emp6Id = await db.put({ type: 'Employee', name: 'Grace', role: 'Product Manager', level: 'Senior', age: 39, country: 'USA', isActive: true, hireDate: '2017-05-12T00:00:00Z', tags: ['Agile', 'Roadmap'] });
+      const emp7Id = await db.put({ type: 'Employee', name: 'Henry', role: 'Developer', level: 'Junior', age: 24, country: 'USA', isActive: true, hireDate: '2023-01-30T00:00:00Z', tags: ['JavaScript', 'HTML'] });
+      const emp8Id = await db.put({ type: 'Employee', name: 'Ivy', role: 'QA Engineer', level: 'Mid', age: 29, country: 'Canada', isActive: true, hireDate: '2021-09-01T00:00:00Z', tags: ['Cypress', 'Testing'] });
+      const emp9Id = await db.put({ type: 'Employee', name: 'Jack', role: 'DevOps', level: 'Senior', age: 45, country: 'USA', isActive: false, hireDate: '2016-07-18T00:00:00Z', tags: ['AWS', 'Docker'], email: 'jack@example.com' });
+      const emp10Id = await db.put({ type: 'Employee', name: 'Karen', role: 'Data Analyst', level: 'Mid', age: 31, country: 'Canada', isActive: true, hireDate: '2022-02-14T00:00:00Z', tags: ['SQL', 'Tableau'] });
+      const emp11Id = await db.put({ type: 'Employee', name: 'Leo', role: 'Developer', level: 'Lead', age: 36, country: 'USA', isActive: true, hireDate: '2018-10-10T00:00:00Z', tags: ['JavaScript', 'Architecture'] });
+      const emp12Id = await db.put({ type: 'Employee', name: 'Mona', role: 'HR', level: 'Manager', age: 42, country: 'Canada', isActive: true, hireDate: '2017-12-01T00:00:00Z', tags: ['Recruiting', 'People Ops'], email: 'mona@example.com' });
 
-  // Link employees to companies
-  await db.link(company1Id, emp1Id);
-  await db.link(company1Id, emp2Id);
-  await db.link(company1Id, emp4Id);
-  await db.link(company2Id, emp3Id);
-  await db.link(company2Id, emp5Id);
-  await db.link(company1Id, emp7Id);
-  await db.link(emp1Id, emp2Id);
+      // Link employees to companies
+      await db.link(company1Id, emp1Id);
+      await db.link(company1Id, emp2Id);
+      await db.link(company1Id, emp4Id);
+      await db.link(company2Id, emp3Id);
+      await db.link(company2Id, emp5Id);
+      await db.link(company1Id, emp7Id);
+      await db.link(emp1Id, emp2Id);
 
-  statusBar.textContent = 'Data seeded successfully.';
-  console.log('Sample data seeded.');
+      statusBar.textContent = 'Data seeded successfully.';
+      console.log('Sample data seeded.');
     }
 
     async function executeQuery(queryObj) {
-  // Log the query object
-  console.log('Executing query:', queryObj);
+      // Log the query object
+      console.log('Executing query:', queryObj);
       resultsDiv.innerHTML = '';
-  statusBar.textContent = 'Executing query...';
+      statusBar.textContent = 'Executing query...';
 
       try {
         const { results } = await db.map(queryObj);

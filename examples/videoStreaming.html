@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Real-Time Video Streaming</title>
   <style>
     body {
@@ -10,6 +11,7 @@
       text-align: center;
       margin: 20px;
     }
+
     #videos {
       display: flex;
       flex-wrap: wrap;
@@ -17,6 +19,7 @@
       gap: 10px;
       margin-top: 20px;
     }
+
     video {
       width: 300px;
       height: 200px;
@@ -24,12 +27,14 @@
       border-radius: 10px;
       background-color: black;
     }
+
     button {
       padding: 10px 20px;
       font-size: 16px;
       margin: 10px;
       cursor: pointer;
     }
+
     #status {
       margin-top: 20px;
       font-size: 18px;
@@ -37,6 +42,7 @@
     }
   </style>
 </head>
+
 <body>
   <h1>Real-Time Video Streaming App</h1>
   <p>Join the room and start streaming your webcam video to other peers.</p>
@@ -50,10 +56,10 @@
   <div id="videos"></div>
 
   <script type="module">
-  import { gdb } from "../dist/index.js";
+    import { gdb } from "../dist/index.js";
 
-  // Initialize GenosDB using async factory
-  const db = await gdb('video-room');
+    // Initialize GenosDB using async factory
+    const db = await gdb('video-room', { rtc: true });
     // CORRECCIÓN 1: Usar un canal dedicado para mensajes de control
     const videoControlChannel = db.room.channel("videocontrol");
 
@@ -91,7 +97,7 @@
       video.srcObject = stream;
       peerVideos[peerId] = video;
     });
-    
+
     videoControlChannel.on('message', (data, peerId) => {
       if (data.action === 'stop_stream' && peerVideos[peerId]) {
         console.log(`Peer ${peerId} stopped streaming. Cleaning up.`);
@@ -132,6 +138,7 @@
         document.getElementById('stopButton').disabled = true;
       }
     });
-</script>
+  </script>
 </body>
+
 </html>

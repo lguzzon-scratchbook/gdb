@@ -352,6 +352,7 @@
             try {
                 statusBar.textContent = "Status: Initializing DB...";
                 db = await gdb("rbacChatAppDB", {
+                    rtc: true,
                     sm: {
                         superAdmins: SUPERADMIN_ADDRESSES,
                         customRoles: CHAT_APP_ROLES,

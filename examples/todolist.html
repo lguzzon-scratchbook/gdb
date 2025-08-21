@@ -97,7 +97,7 @@
   <script type="module">
     import { gdb } from "../dist/index.js";
 
-    const db = await gdb('todoList');
+    const db = await gdb('todoList', { rtc: true });
     
     const currentNodeIds = new Set();
 

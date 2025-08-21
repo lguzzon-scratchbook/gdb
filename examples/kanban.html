@@ -103,7 +103,8 @@
   <script type="module">
   import { gdb } from "../dist/index.js";
 
-  const db = await gdb("kanbanGraph");
+  const db = await gdb("kanbanGraph", { rtc: true });
+  
     const columns = ["To Do", "In Progress", "Done"];
     const kanbanBoard = document.getElementById("kanbanBoard");
 

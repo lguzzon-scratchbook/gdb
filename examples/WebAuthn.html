@@ -126,8 +126,7 @@
     </div>
 
     <script type="module">
-        import { GDB } from "../dist/index.js";
-        import * as rbac from '../dist/rbac.min.js'; // Adjust path according to your structure
+        import { gdb } from "../dist/index.js";
 
         // DOM Elements
         const statusArea = document.getElementById('statusArea');
@@ -194,23 +193,23 @@
         async function initializeApp() {            
             try {
                 updateStatus("Initializing GDB...");
-                const db = new GDB("webAuthnDemoDB_v2"); // Use a slightly different DB name if testing fresh
+                const db = await gdb("webAuthnDemoDB_v2", { rtc: true }); // Use a slightly different DB name if testing fresh
   
                 updateStatus("GDB ready. Initializing RBAC Security Context...");
 
-                await rbac.createSecurityContext(db); 
+                await db.sm.createSecurityContext(db); 
                 
                 // Set the callback that will manage UI updates
-                rbac.setSecurityStateChangeCallback(updateUI);
+                db.sm.setSecurityStateChangeCallback(updateUI);
 
                 // Manually trigger an initial UI update based on the current state
                 // This is important because createSecurityContext might silently log in a user via WebAuthn
                 const initialState = {
-                    isActive: rbac.isSecurityActive(),
-                    activeAddress: rbac.getActiveEthAddress(),
-                    isWebAuthnProtected: rbac.isCurrentSessionProtectedByWebAuthn(),
-                    hasVolatileIdentity: !!(volatileIdentity || rbac.getMnemonicForDisplayAfterRegistrationOrRecovery()),
-                    hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
+                    isActive: db.sm.isSecurityActive(),
+                    activeAddress: db.sm.getActiveEthAddress(),
+                    isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn(),
+                    hasVolatileIdentity: !!(volatileIdentity || db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery()),
+                    hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration()
                 };
                 updateUI(initialState); // This will correctly set button states on page load
 
@@ -227,7 +226,7 @@
             try {
                 updateStatus("Generating new identity...");
                 // This will also clear any existing session, if any
-                volatileIdentity = await rbac.startNewUserRegistration(); 
+                volatileIdentity = await db.sm.startNewUserRegistration(); 
                 
                 if (volatileIdentity) {
                     ethAddressElem.textContent = volatileIdentity.address;
@@ -249,7 +248,7 @@
             }
             try {
                 updateStatus("Starting WebAuthn registration... Follow browser prompts.");
-                const protectedAddress = await rbac.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey); 
+                const protectedAddress = await db.sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey); 
                 
                 if (protectedAddress) {
                     updateStatus(`Identity ${protectedAddress} protected with WebAuthn & session started!`);
@@ -266,7 +265,7 @@
         btnLoginWebAuthn.addEventListener('click', async () => {
             try {
                 updateStatus("Attempting WebAuthn login... Follow browser prompts.");
-                const loggedInAddress = await rbac.loginCurrentUserWithWebAuthn();
+                const loggedInAddress = await db.sm.loginCurrentUserWithWebAuthn();
                 if (loggedInAddress) {
                     updateStatus(`Successfully logged in with WebAuthn as ${loggedInAddress}!`);
                     // UI updates via securityStateChangeCallback
@@ -281,16 +280,16 @@
         btnLogout.addEventListener('click', async () => {
             try {
                 updateStatus("Logging out...");
-                await rbac.clearSecurity();
+                await db.sm.clearSecurity();
                 updateStatus("Successfully logged out.");
                 volatileIdentity = null; // Ensure no lingering volatile identity
                 // UI updates via securityStateChangeCallback. Force one if needed.
                  const refreshedState = { // Re-fetch state after logout
-                    isActive: rbac.isSecurityActive(),
-                    activeAddress: rbac.getActiveEthAddress(),
-                    isWebAuthnProtected: rbac.isCurrentSessionProtectedByWebAuthn(),
+                    isActive: db.sm.isSecurityActive(),
+                    activeAddress: db.sm.getActiveEthAddress(),
+                    isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn(),
                     hasVolatileIdentity: false, 
-                    hasWebAuthnHardwareRegistration: rbac.hasExistingWebAuthnRegistration()
+                    hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration()
                 };
                 updateUI(refreshedState);
 

@@ -286,9 +286,9 @@
   </div>
 
   <script type="module">
-  // Import libraries (adjust paths if necessary)
-  // NOTE: For this to run, you need the actual JS files in the specified paths.
-  import { gdb } from "../dist/index.js";
+    // Import libraries (adjust paths if necessary)
+    // NOTE: For this to run, you need the actual JS files in the specified paths.
+    import { gdb } from "../dist/index.js";
 
 
     // --- DOM Element Selectors ---
@@ -445,9 +445,9 @@
 
       try {
 
-        db = await gdb(dbName, { sm: true });
+        db = await gdb(dbName, { rtc: true, sm: true });
         sm = db.sm;
-     
+
         logToUI("GDB instance ready.", "success");
         await setupAutomaticRealtimeSubscription();
       } catch (e) {

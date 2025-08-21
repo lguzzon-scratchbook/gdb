@@ -265,7 +265,7 @@
         // --- IMPORT SECTION ---
         // Ensure GDB is the default export if that's how gdb.js is structured
 
-    import { gdb } from "../dist/index.js";
+        import { gdb } from "../dist/index.js";
 
         // DOM Elements
         const dbNameInput = document.getElementById('dbNameInput');
@@ -424,7 +424,7 @@
             initStatus.textContent = "Initializing...";
             logToUI(`Initializing GDB with name: ${dbName}...`);
             try {
-                db = await gdb(dbName, { sm: true });
+                db = await gdb(dbName, { rtc: true, sm: true });
                 sm = db.sm; // Security manager (sm)
 
                 logToUI("GDB instance ready.", "success");

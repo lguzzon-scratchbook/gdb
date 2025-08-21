@@ -239,7 +239,8 @@
       <ul>
         <li><strong>Create node:</strong> Type text in the first input and press <kbd>Enter</kbd>.</li>
         <li><strong>Edit node:</strong> Select a node by clicking it, edit the text in the second input, then press
-          <kbd>Enter</kbd>.</li>
+          <kbd>Enter</kbd>.
+        </li>
         <li><strong>Connect nodes:</strong> Click a node to select it, then hold <kbd>Shift</kbd> and click another
           node.</li>
         <li><strong>Delete node:</strong> Double-click a node and confirm.</li>
@@ -260,11 +261,9 @@
   <!-- JAVASCRIPT - ORIGINAL VERSION - COMPLETELY UNTOUCHED -->
   <script type="module">
     // Import GDB
-  import { gdb } from "../dist/index.js";
+    import { gdb } from "../dist/index.js";
 
-  const db = await gdb("testGraph");
-
-    // db.clear()
+    const db = await gdb("testGraph", { rtc: true });
 
     // Initialize Cytoscape with 'cose' layout settings
     let cy = cytoscape({
@@ -300,7 +299,7 @@
     async function updateGraph({ id, value, edges, action }) { // Manteniendo la firma original
       try {
         console.log('>', action)
-        
+
         // --- Manejo de Nodos (Exactamente como en tu original) ---
         if (action === 'initial') {
           // Evitar añadir duplicados si 'initial' se llama varias veces
@@ -478,7 +477,7 @@
       try {
         await db.link(sourceId, targetNodeId);
         console.log(`Link created between ${sourceId} and ${targetNodeId}`);
-  cy.add({ group: "edges", data: { id: `${sourceId}-${targetNodeId}`, source: sourceId, target: targetNodeId } });
+        cy.add({ group: "edges", data: { id: `${sourceId}-${targetNodeId}`, source: sourceId, target: targetNodeId } });
         selectedNodeId = null;
         cy.$id(sourceId).unselect();
       } catch (error) {
@@ -486,8 +485,8 @@
       }
     }
 
-  // Initial load, real-time updates
-  await db.map(updateGraph);
+    // Initial load, real-time updates
+    await db.map(updateGraph);
 
   </script>
 </body>

@@ -39,11 +39,11 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script type="module">
-  // Import gdb and geolocation operators
-  import { gdb } from "../dist/index.js";
+    // Import gdb and geolocation operators
+    import { gdb } from "../dist/index.js";
 
-  // Create a gdb instance with geolocation operators
-  const db = await gdb("geolocationDB", { geo: true });
+    // Create a gdb instance with geolocation operators
+    const db = await gdb("geolocationDB", { rtc: true, geo: true });
 
     // db.clear()
 
@@ -94,8 +94,8 @@
       const resultsDiv = document.getElementById("results");
       if (results.length > 0) {
         resultsDiv.innerHTML = `<h3>Nearby nodes:</h3><ul>${results
-            .map(node => `<li>${node.value.name} (${node.value.latitude}, ${node.value.longitude})</li>`)
-            .join("")}</ul>`;
+          .map(node => `<li>${node.value.name} (${node.value.latitude}, ${node.value.longitude})</li>`)
+          .join("")}</ul>`;
       } else {
         resultsDiv.innerHTML = "<p>No nearby nodes found.</p>";
       }

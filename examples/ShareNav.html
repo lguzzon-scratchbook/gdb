@@ -73,7 +73,8 @@
 
     <script type="module">
         import { GDB } from "../dist/index.js";
-        const db = new GDB('search-db');
+
+        const db = new GDB('search-db', { rtc: true });
 
         const [sendData, getData] = db.room.makeAction('nodePosition');
 

@@ -15,7 +15,7 @@
   import { gdb } from "../dist/index.js";
 
   // Initialize the database
-  const db = await gdb("graphdb-paste");
+  const db = await gdb("graphdb-paste", { rtc: true });
 
   // Get the <textarea> element
   const paste = document.getElementById("paste");
@@ -26,7 +26,7 @@
   // Function to save textarea content to GDB
   const saveContent = async () => {
     const content = paste.value; // Get current textarea content
-    await db.put({content}, TEXTAREA_ID); // Save content to GDB
+    await db.put({ content }, TEXTAREA_ID); // Save content to GDB
   };
 
   // Event to save content in real time

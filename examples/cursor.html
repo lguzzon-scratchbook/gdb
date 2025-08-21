@@ -6,13 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Real-Time Cursors with GDB & GenosRTC</title>
   <style>
-    body, html {
+    body,
+    html {
       width: 100%;
       height: 100%;
       margin: 0;
       overflow: hidden;
       background-color: #1e1e1e;
-  cursor: none; /* Hide system cursor */
+      cursor: none;
+      /* Hide system cursor */
     }
 
     .cursor {
@@ -22,7 +24,8 @@
       position: absolute;
       pointer-events: none;
       transform: translate(-50%, -50%);
-      transition: transform 0.05s ease-out; /* Movimiento súper suave */
+      transition: transform 0.05s ease-out;
+      /* Movimiento súper suave */
       z-index: 1000;
       display: flex;
       align-items: center;
@@ -37,7 +40,7 @@
 <body>
   <!-- Container for other participants' cursors -->
   <div id="remote-cursors-container"></div>
-  
+
   <!-- Your own cursor, managed separately -->
   <div class="cursor" id="local-cursor" style="background-color: rgba(255, 255, 255, 0.5);"></div>
 
@@ -54,7 +57,7 @@
       try {
         // 1. INITIALIZATION
         // Use async factory for GDB
-        const db = await gdb('cursormove');
+        const db = await gdb('cursormove', { rtc: true });
 
         // 2. CHANNEL API
         // Get the channel object, use db.room for the app

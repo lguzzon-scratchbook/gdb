@@ -181,7 +181,7 @@
     /** @typedef {{ id:string, value:any, edges?:string[], timestamp?:HLC }} Node */
 
     const logEl = document.getElementById("log");
-    
+
     // --- START: OPTIMIZED LOGGING LOGIC ---
     let logBatch = [];
     let logTimeout = null;
@@ -228,7 +228,7 @@
       if (db) return append("DB already initialized.");
       const name = document.getElementById("dbName").value.trim() || "perf-test";
       append(`Initializing DB '${name}'...`);
-      db = await gdb(name, { saveDelay: 100 });
+      db = await gdb(name, { rtc: true, saveDelay: 100 });
       document.getElementById("status").textContent = `Ready: ${name}`;
       document.getElementById("btnInit").textContent = "Ready";
       document.getElementById("btnInit").disabled = true;
@@ -252,7 +252,7 @@
                 const summary = types.reduce((acc, type) => (acc[type] = (acc[type] || 0) + 1, acc), {});
                 append(`[RX][P2P] ${JSON.stringify(summary)}`);
               } else {
-                 append(`[RX][P2P] ${data?.type || typeof data}`);
+                append(`[RX][P2P] ${data?.type || typeof data}`);
               }
             } catch {
               append(`[RX][P2P] message`);
@@ -289,16 +289,16 @@
       if (!isSubscribed) {
         resetCounters();
         append("Subscribing to map...");
-        
+
         // --- START: OPTIMIZED MAP CALLBACK ---
         const { results, unsubscribe } = await db.map(({ action }) => {
           if (suppressRealtime) return; // skip updates while bulk inserting
-          
+
           if (action === 'initial') counters.initial++;
           else if (action === 'added') counters.added++;
           else if (action === 'updated') counters.updated++;
           else if (action === 'removed') counters.removed++;
-          
+
           // Render counters on next animation frame to batch updates
           requestAnimationFrame(renderCounters);
         });
@@ -340,10 +340,10 @@
 
       let inserted = 0; const t0 = performance.now();
       if (pause) suppressRealtime = true;
-      
+
       for await (const batch of chunk(items, size)) {
         await Promise.allSettled(batch.map(v => db.put(v)));
-        inserted += batch.length; 
+        inserted += batch.length;
         append(`Inserted ${inserted}/${total}`);
         await sleep(0); // Yield back to the UI thread to prevent freezing
       }
@@ -360,7 +360,7 @@
       if (unsub) {
         append("Refreshing results count...");
         const { results } = await db.map({ query: {}, realtime: false });
-        lastResults = results.length; 
+        lastResults = results.length;
         renderCounters();
         append(`Total results in DB: ${lastResults}`);
       }

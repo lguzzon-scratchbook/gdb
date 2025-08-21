@@ -1,21 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GenosDB - `$edge` Operator Testbed</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f4f7f9; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .panel { background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 800px; width: 100%; }
-        h1, h2 { color: #1a253c; border-bottom: 2px solid #eef2f5; padding-bottom: 10px; }
-        button { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; background-color: #e9ecef; color: #333; font-weight: bold; font-size: 16px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; text-align: left; }
-        button:hover { background-color: #dde; border-color: #bbb; }
-        button span { font-weight: normal; font-size: 0.9em; color: #666; display: block; margin-top: 5px; }
-        pre { background-color: #eef2f5; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; font-family: "Courier New", Courier, monospace; line-height: 1.5; }
-        #log { max-height: 150px; overflow-y: auto; font-size: 0.9em; }
-        .instructions { background-color: #d4edda; border-left: 4px solid #155724; padding: 10px 15px; margin-bottom: 20px;}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f7f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .panel {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1,
+        h2 {
+            color: #1a253c;
+            border-bottom: 2px solid #eef2f5;
+            padding-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background-color: #e9ecef;
+            color: #333;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            text-align: left;
+        }
+
+        button:hover {
+            background-color: #dde;
+            border-color: #bbb;
+        }
+
+        button span {
+            font-weight: normal;
+            font-size: 0.9em;
+            color: #666;
+            display: block;
+            margin-top: 5px;
+        }
+
+        pre {
+            background-color: #eef2f5;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: "Courier New", Courier, monospace;
+            line-height: 1.5;
+        }
+
+        #log {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+
+        .instructions {
+            background-color: #d4edda;
+            border-left: 4px solid #155724;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="panel">
@@ -23,9 +93,9 @@
         <div class="instructions">
             <strong>Open the Developer Console (F12)</strong> to see the results of each test.
         </div>
-        
+
         <h2>Test Scenarios:</h2>
-        
+
         <button id="test1">
             Test 1: Get ALL Person Descendants
             <span>Should find all 4 people in the Perez family tree (Juan, Maria, Pedro, Ana).</span>
@@ -40,12 +110,12 @@
             Test 3: Get Descendants with OR
             <span>Uses `{ $or: [...] }`. Should find only Pedro and Ana.</span>
         </button>
-        
+
         <button id="test4">
             Test 4: Get Descendants of a specific child (Juan)
             <span>Starts the search from 'Juan'. Should find only Pedro.</span>
         </button>
-        
+
         <button id="test5">
             Test 5: No Matching Descendants
             <span>Searches for `{ type: 'Pet' }`. Should find 0 results.</span>
@@ -57,7 +127,8 @@
 
     <script type="module">
         import { gdb } from "../dist/index.js";
-        const db = await gdb('final-edge-test-db-v3');
+
+        const db = await gdb('final-edge-test-db-v3', { rtc: true });
 
         const logEl = document.getElementById('log');
         const logMessage = (message) => {
@@ -127,4 +198,5 @@
 
     </script>
 </body>
+
 </html>

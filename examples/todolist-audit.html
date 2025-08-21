@@ -129,7 +129,7 @@
         unsubscribe();
       }
 
-      db = await gdb('todoList', {audit: {prompt}});
+      db = await gdb('todoList', { rtc: true, audit: { prompt } });
 
       const { unsubscribe: newUnsubscribe } = await db.map(({ id, value, action }) => {
         if (action === "initial" || action === "added") handleAddTask(id, value);

@@ -1,25 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RBAC P2P Secure Notes Test</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f0f4f8; color: #333; }
-        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 700px; margin: auto;}
-        h1, h2 { color: #2c3e50; }
-        .section { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], textarea { width: calc(100% - 18px); padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        textarea { min-height: 50px; resize: vertical; }
-        button { background-color: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; }
-        .note-display { margin-top: 10px; padding: 10px; background-color: #e9f7ef; border: 1px solid #a7d7c5; border-radius: 4px; }
-        .note-display pre { white-space: pre-wrap; word-break: break-all; margin: 0; }
-        .log-area { font-size: 0.9em; color: #555; margin-top:15px; max-height: 100px; overflow-y: auto; border-top: 1px solid #eee; padding-top:10px;}
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 700px;
+            margin: auto;
+        }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        textarea {
+            width: calc(100% - 18px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        textarea {
+            min-height: 50px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+        }
+
+        .note-display {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e9f7ef;
+            border: 1px solid #a7d7c5;
+            border-radius: 4px;
+        }
+
+        .note-display pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+        }
+
+        .log-area {
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 15px;
+            max-height: 100px;
+            overflow-y: auto;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>RBAC P2P Secure Notes Test</h1>
@@ -43,7 +120,7 @@
         <div class="section hidden" id="appSection">
             <h2>3. Secure Notes</h2>
             <p>Logged in as: <strong id="currentUser">N/A</strong></p>
-            
+
             <div>
                 <label for="noteId">Note ID:</label>
                 <input type="text" id="noteId" placeholder="e.g., myShoppingList">
@@ -68,9 +145,9 @@
     </div>
 
     <script type="module">
-    // --- IMPORTS ---
-    // Adjust these paths to your project structure
-    import { gdb } from "../dist/index.js";
+        // --- IMPORTS ---
+        // Adjust these paths to your project structure
+        import { gdb } from "../dist/index.js";
 
         // --- DOM ELEMENTS ---
         const dbNameInput = document.getElementById('dbName');
@@ -94,10 +171,10 @@
         const logArea = document.getElementById('logArea');
 
         // --- APP STATE ---
-    let db = null;
-    let sm = null;
-    let currentUnsubscribe = null;
-    let lastKnownWatchedNodeId = null;
+        let db = null;
+        let sm = null;
+        let currentUnsubscribe = null;
+        let lastKnownWatchedNodeId = null;
 
         function log(message, type = 'info') {
             const time = new Date().toLocaleTimeString();
@@ -114,7 +191,7 @@
             if (state.isActive && state.activeAddress) {
                 loginSection.classList.add('hidden');
                 appSection.classList.remove('hidden');
-                currentUserDisplay.textContent = `${state.activeAddress.substring(0,10)}...`;
+                currentUserDisplay.textContent = `${state.activeAddress.substring(0, 10)}...`;
             } else {
                 loginSection.classList.remove('hidden');
                 appSection.classList.add('hidden');
@@ -143,7 +220,7 @@
             log(`Initializing GDB: ${dbName}...`);
 
             try {
-                db = await gdb(dbName, { sm: true });
+                db = await gdb(dbName, { rtc: true, sm: true });
                 sm = db.sm;
                 log(`GDB Ready.`, 'success');
                 await sm.createSecurityContext(db); // No superadmins for this simple test
@@ -157,7 +234,7 @@
                 dbNameInput.disabled = false;
             }
         });
-        
+
         // --- IDENTITY ---
         btnLogin.addEventListener('click', async () => {
             const mnemonic = mnemonicInput.value.trim();
@@ -166,7 +243,7 @@
                 log(`Attempting Mnemonic Login...`);
                 const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
                 if (identity) {
-                    log(`Logged in with Mnemonic: ${identity.address.substring(0,10)}...`, 'success');
+                    log(`Logged in with Mnemonic: ${identity.address.substring(0, 10)}...`, 'success');
                     mnemonicInput.value = '';
                     newIdentityDetails.textContent = '';
                 } else {
@@ -182,11 +259,11 @@
                 if (identity) {
                     newIdentityDetails.innerHTML = `<b>New Identity (SAVE THIS MNEMONIC SECURELY!):</b><br>Address: ${identity.address}<br>Mnemonic: ${identity.mnemonic}`;
                     mnemonicInput.value = identity.mnemonic;
-                    log(`New Identity Generated. Address: ${identity.address.substring(0,10)}... Pre-filled mnemonic for login.`, 'success');
+                    log(`New Identity Generated. Address: ${identity.address.substring(0, 10)}... Pre-filled mnemonic for login.`, 'success');
                 } else {
                     log(`Failed to generate new identity.`, 'error');
                 }
-            } catch(e) { log(`New Identity Error: ${e.message}`, 'error'); }
+            } catch (e) { log(`New Identity Error: ${e.message}`, 'error'); }
         });
 
         btnLogout.addEventListener('click', async () => {
@@ -204,12 +281,12 @@
 
             let contentToSave;
             try { contentToSave = JSON.parse(contentStr); }
-            catch(e) { contentToSave = contentStr; }
+            catch (e) { contentToSave = contentStr; }
 
             log(`Saving note with user ID: '${id || '(new)'}'...`);
             try {
                 const finalId = await sm.put(contentToSave, id);
-                log(`Note saved. Final User ID: '${finalId}'. Content: ${JSON.stringify(contentToSave).substring(0,50)}...`, 'success');
+                log(`Note saved. Final User ID: '${finalId}'. Content: ${JSON.stringify(contentToSave).substring(0, 50)}...`, 'success');
                 if (!id) noteIdInput.value = finalId;
                 watchNoteIdInput.value = finalId;
             } catch (e) {
@@ -276,4 +353,5 @@
 
     </script>
 </body>
+
 </html>

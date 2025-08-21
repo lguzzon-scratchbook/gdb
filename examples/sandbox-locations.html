@@ -121,7 +121,7 @@
   import { gdb } from "../dist/index.js";
 
   // Standard initialization with geolocation
-  const db = await gdb('geolocationDB', { geo: true });
+  const db = await gdb('geolocationDB', { rtc: true, geo: true });
 
   // Initialize the map with Leaflet
   const map = L.map('map').setView([40.7128, -74.006], 12); // Initial coordinates and zoom

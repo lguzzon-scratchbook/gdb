@@ -60,10 +60,7 @@
     // import { withRadixIndex } from "../dist/radixIndex.min.js";
 
     // Create an instance of GDB (async)
-    const db = await gdb('test-db');
-
-    // Agregar el índice Radix
-    // withRadixIndex(db);
+    const db = await gdb('singleNode-db', { rtc: true });
 
     // Unique record ID
     const recordId = 'unique-record-id';

@@ -70,9 +70,10 @@
   <div id="audios"></div>
 
   <script type="module">
-  import { gdb } from "../dist/index.js";
+    import { gdb } from "../dist/index.js";
 
-  const db = await gdb('audio-room');
+    const db = await gdb('audio-room', { rtc: true });
+    
     const audioControlChannel = db.room.channel("audiocontrol");
 
     const peerAudios = {};
@@ -165,10 +166,10 @@
     });
 
     db.room.on('peer:join', peerId => {
-        console.log(`${peerId} joined the room`);
-        if (selfStream) {
-            db.room.addStream(selfStream, peerId);
-        }
+      console.log(`${peerId} joined the room`);
+      if (selfStream) {
+        db.room.addStream(selfStream, peerId);
+      }
     });
 
     db.room.on('peer:leave', peerId => {

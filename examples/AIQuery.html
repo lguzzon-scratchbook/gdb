@@ -174,7 +174,7 @@
   import { gdb } from "../dist/index.js";
 
   // Create a GDB instance using the async factory with AI module
-  const db = await gdb('posts-db2', { ai: true });
+  const db = await gdb('posts-db2', { rtc: true, ai: true });
 
   // Function to insert posts from DummyJSON API
     window.insertRandomPosts = async () => {
