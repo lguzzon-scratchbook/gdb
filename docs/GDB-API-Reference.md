@@ -68,7 +68,7 @@ const secureDb = await gdb("secure-db", { password: "secret" })
 
 ```javascript
 // Initialize with P2P networking enabled
-const db = await gdb("p2p-db", { rtc: true }); // (rtc: true) for realtime updates
+const db = await gdb("my-db", { rtc: true }); // (rtc: true) for realtime updates
 ```
 
 #### `relayUrls` (opcional)

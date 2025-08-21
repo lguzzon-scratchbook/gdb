@@ -45,11 +45,12 @@ Below is a generic example demonstrating how to use the Streaming feature in you
 
 ```javascript
 // 1. Import the GenosDB library
-import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js";
+import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js"
 
 // 2. Initialize GenosDB (the name is the room ID)
-const db = await gdb("example-channel");
-const room = db.room;
+const db = await gdb("p2p-db", { rtc: true }) // (rtc: true) for realtime updates
+
+const room = db.room
 
 // 3. Create a channel for data messages
 const dataChannel = room.channel("example-action")
@@ -193,12 +194,10 @@ File streaming allows peers to send and receive files using GenosRTC's **Data Ch
 This example demonstrates file transfer using `db.room.channel`.
 
 ```javascript
-// 1. Import the GenosDB library
-import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js";
-
 // 2. Initialize a secure room with encryption
-const db = await gdb("file-room", { password: "secure-password" });
-const room = db.room;
+const db = await gdb("file-room", { rtc: true, password: "secure-password" })
+
+const room = db.room
 
 // 3. Create a data channel for file transfers
 const fileChannel = room.channel("file-transfer")

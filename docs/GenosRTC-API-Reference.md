@@ -13,11 +13,12 @@ To use the P2P functionalities, simply import and instantiate `GDB`. The GenosRT
 import { gdb } from "./dist/index.js" // Adjust the path according to your project
 
 // 2. Create a GDB instance
+
 // The database name also serves as the room ID.
-const db = await gdb("my-chat-room", {
-  // Configuration options for the P2P network (optional)
-  password: "secret-key", // Encrypts signaling data
-  relayUrls: ["wss://relay.example.com"], // Nostr relays for peer discovery
+const db = await gdb("my-db", {
+  rtc: true, // Required to enable the P2P module
+  password: "secret-key", // Optional: encrypts signaling data
+  relayUrls: ["wss://relay.example.com"], // Optional: for peer discovery
 })
 
 // 3. Access the room object

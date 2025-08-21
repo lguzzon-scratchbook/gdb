@@ -8,18 +8,26 @@ The `db.map` function is a powerful and flexible tool for querying data from you
 
 ---
 
+### **Examples**
+
+```javascript
+// (rtc: true) for realtime updates
+const db = await gdb("my-db", { rtc: true })
+```
+
 ### **1. Ways to Call `map`**
 
 #### **a) Without Callback (Static Mode)**
+
 You can call `map` without passing a callback. In this case, the function will return an object containing the filtered results as an array under the `results` property.
 
 ```javascript
 const { results } = await db.map({
-  query: { field: 'value' },
-  order: 'desc',
-  $limit: 10
-});
-console.log(results);
+  query: { field: "value" },
+  order: "desc",
+  $limit: 10,
+})
+console.log(results)
 ```
 
 - **Supported Parameters**:
@@ -29,21 +37,22 @@ console.log(results);
 ---
 
 #### **b) With Callback (Real-Time Mode)**
+
 If you pass a callback, the function can automatically activate `realtime` mode unless you explicitly set `realtime: false`. The callback will handle real-time updates.
 
 ```javascript
 const { unsubscribe } = await db.map(
   {
-    query: { field: 'value' },
-    realtime: true
+    query: { field: "value" },
+    realtime: true,
   },
   (data) => {
-    console.log(data.id, data.value);
+    console.log(data.id, data.value)
   }
-);
+)
 
 // Cancel the subscription when no longer needed
-unsubscribe();
+unsubscribe()
 ```
 
 - **Supported Parameters**:
@@ -53,27 +62,28 @@ unsubscribe();
 ---
 
 #### **c) Callback with Detailed Notifications**
+
 The callback can receive additional details about changes if it accepts more than one parameter. This allows you to distinguish between nodes being added, removed, or updated.
 
 ```javascript
 const { results, unsubscribe } = await db.map(
   {
-    query: { field: 'value' },
-    realtime: true
+    query: { field: "value" },
+    realtime: true,
   },
   ({ id, value, action }) => {
-    if (action === 'added') {
-      console.log(`Node added: ${id}`, value);
-    } else if (action === 'removed') {
-      console.log(`Node removed: ${id}`);
-    } else if (action === 'updated') {
-      console.log(`Node updated: ${id}`, value);
+    if (action === "added") {
+      console.log(`Node added: ${id}`, value)
+    } else if (action === "removed") {
+      console.log(`Node removed: ${id}`)
+    } else if (action === "updated") {
+      console.log(`Node updated: ${id}`, value)
     }
   }
-);
+)
 
 // Cancel the subscription when no longer needed
-unsubscribe();
+unsubscribe()
 ```
 
 - **Supported Parameters**:
@@ -83,30 +93,31 @@ unsubscribe();
 ---
 
 #### **d) Flexible Argument Order**
+
 Arguments can be passed in any order, as long as an object is used for the options and a function for the callback.
 
 ```javascript
 // Option 1: Callback first
 await db.map(
   (data) => {
-    console.log(data.id, data.value);
+    console.log(data.id, data.value)
   },
   {
-    query: { field: 'value' },
-    order: 'asc'
+    query: { field: "value" },
+    order: "asc",
   }
-);
+)
 
 // Option 2: Options first
 await db.map(
   {
-    query: { field: 'value' },
-    order: 'asc'
+    query: { field: "value" },
+    order: "asc",
   },
   (data) => {
-    console.log(data.id, data.value);
+    console.log(data.id, data.value)
   }
-);
+)
 ```
 
 ---
@@ -114,18 +125,19 @@ await db.map(
 ### **2. Supported Parameters**
 
 #### **a) Configuration Options**
+
 Options are passed as an object and can include the following fields:
 
-| Field          | Type              | Description                                                                 |
-|----------------|-------------------|-----------------------------------------------------------------------------|
-| `realtime`     | `boolean`         | Enables or disables real-time mode.                                       |
-| `query`        | `object`          | Defines conditions to filter nodes.                                       |
-| `field`        | `string`          | Field by which to order the results.                                      |
-| `order`        | `'asc' \| 'desc'` | Sorting direction.                                                        |
-| `$limit`       | `number`          | Maximum number of results to return.                                      |
-| `$after`       | `string`          | ID of the node after which to start.                                      |
-| `$before`      | `string`          | ID of the node before which to end.                                       |
-| `strictMode`   | `boolean`         | Throws errors if attempting to access non-existent fields.                |
+| Field        | Type              | Description                                                |
+| ------------ | ----------------- | ---------------------------------------------------------- |
+| `realtime`   | `boolean`         | Enables or disables real-time mode.                        |
+| `query`      | `object`          | Defines conditions to filter nodes.                        |
+| `field`      | `string`          | Field by which to order the results.                       |
+| `order`      | `'asc' \| 'desc'` | Sorting direction.                                         |
+| `$limit`     | `number`          | Maximum number of results to return.                       |
+| `$after`     | `string`          | ID of the node after which to start.                       |
+| `$before`    | `string`          | ID of the node before which to end.                        |
+| `strictMode` | `boolean`         | Throws errors if attempting to access non-existent fields. |
 
 Example:
 
@@ -143,28 +155,30 @@ Example:
 ---
 
 #### **b) Query Language**
+
 The `query` field supports an advanced query language with special operators:
 
-| Operator   | Description                              | Example                                   |
-|------------|------------------------------------------|-------------------------------------------|
-| `$eq`      | Exact equality                          | `{ age: { $eq: 25 } }`                   |
-| `$ne`      | Not equal                               | `{ age: { $ne: 25 } }`                   |
-| `$gt`      | Greater than                            | `{ age: { $gt: 18 } }`                   |
-| `$gte`     | Greater than or equal                   | `{ age: { $gte: 18 } }`                  |
-| `$lt`      | Less than                               | `{ age: { $lt: 30 } }`                   |
-| `$lte`     | Less than or equal                      | `{ age: { $lte: 30 } }`                  |
-| `$in`      | Value within an array                   | `{ status: { $in: ['active', 'pending'] } }` |
-| `$between` | Value between two numbers or dates      | `{ age: { $between: [18, 30] } }`        |
-| `$exists`  | Checks if a field exists                | `{ name: { $exists: true } }`            |
-| `$text`    | Text search within fields               | `{ $text: 'search term' }`               |
-| `$like`    | SQL-like pattern matching               | `{ name: { $like: 'J%' } }`             |
-| `$regex`   | Regular expression matching             | `{ name: { $regex: '^John' } }`         |
-| `$and`     | All conditions must be true             | `{ $and: [{ age: { $gt: 18 } }, { status: 'active' }] }` |
-| `$or`      | At least one condition must be true     | `{ $or: [{ age: { $gt: 18 } }, { status: 'active' }] }` |
-| `$not`     | Negates a condition                     | `{ $not: { age: { $gt: 18 } } }`         |
-| `$edge`    | Performs a recursive graph traversal, returning all descendant nodes that match a sub-query. | { $edge: { type: 'Person', age: { $gt: 18 } } } |
+| Operator   | Description                                                                                  | Example                                                  |
+| ---------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `$eq`      | Exact equality                                                                               | `{ age: { $eq: 25 } }`                                   |
+| `$ne`      | Not equal                                                                                    | `{ age: { $ne: 25 } }`                                   |
+| `$gt`      | Greater than                                                                                 | `{ age: { $gt: 18 } }`                                   |
+| `$gte`     | Greater than or equal                                                                        | `{ age: { $gte: 18 } }`                                  |
+| `$lt`      | Less than                                                                                    | `{ age: { $lt: 30 } }`                                   |
+| `$lte`     | Less than or equal                                                                           | `{ age: { $lte: 30 } }`                                  |
+| `$in`      | Value within an array                                                                        | `{ status: { $in: ['active', 'pending'] } }`             |
+| `$between` | Value between two numbers or dates                                                           | `{ age: { $between: [18, 30] } }`                        |
+| `$exists`  | Checks if a field exists                                                                     | `{ name: { $exists: true } }`                            |
+| `$text`    | Text search within fields                                                                    | `{ $text: 'search term' }`                               |
+| `$like`    | SQL-like pattern matching                                                                    | `{ name: { $like: 'J%' } }`                              |
+| `$regex`   | Regular expression matching                                                                  | `{ name: { $regex: '^John' } }`                          |
+| `$and`     | All conditions must be true                                                                  | `{ $and: [{ age: { $gt: 18 } }, { status: 'active' }] }` |
+| `$or`      | At least one condition must be true                                                          | `{ $or: [{ age: { $gt: 18 } }, { status: 'active' }] }`  |
+| `$not`     | Negates a condition                                                                          | `{ $not: { age: { $gt: 18 } } }`                         |
+| `$edge`    | Performs a recursive graph traversal, returning all descendant nodes that match a sub-query. | { $edge: { type: 'Person', age: { $gt: 18 } } }          |
 
 ---
+
 2.c) Recursive Graph Traversal Queries: The $edge Operator
 The $edge operator is the cornerstone of Recursive Graph Traversal Queries in GenosDB. It transforms a standard query into a powerful graph exploration tool. Instead of filtering the starting nodes, it uses them as entry points to traverse their entire descendant tree (children, grandchildren, etc.), returning a final list of all descendant nodes that match the specified criteria.
 Basic Syntax
@@ -194,59 +208,63 @@ The sub-query object inside $edge acts as a filter for the descendants. The fina
 ### **3. Practical Examples**
 
 #### **Example 1: Static Query**
+
 ```javascript
 const { results } = await db.map({
-  query: { age: { $gt: 18 }, status: 'active' },
-  field: 'name',
-  order: 'asc',
-  $limit: 5
-});
-console.log(results);
+  query: { age: { $gt: 18 }, status: "active" },
+  field: "name",
+  order: "asc",
+  $limit: 5,
+})
+console.log(results)
 ```
 
 #### **Example 2: Real-Time Query**
+
 ```javascript
 const { results, unsubscribe } = await db.map(
   {
-    query: { status: 'active' },
-    realtime: true
+    query: { status: "active" },
+    realtime: true,
   },
   (newResults) => {
-    console.log('Real-time results:', newResults);
+    console.log("Real-time results:", newResults)
   }
-);
+)
 
 // Cancel the subscription when no longer needed
-unsubscribe();
+unsubscribe()
 ```
 
 #### **Example 3: Complex Query with Operators**
+
 ```javascript
 const { results } = await db.map({
   query: {
     $and: [
       { age: { $gte: 18 } },
       { age: { $lte: 30 } },
-      { status: { $in: ['active', 'pending'] } }
-    ]
+      { status: { $in: ["active", "pending"] } },
+    ],
   },
-  field: 'age',
-  order: 'desc'
-});
-console.log(results);
+  field: "age",
+  order: "desc",
+})
+console.log(results)
 ```
 
 #### **Example 4: Using `$like` and `$regex`**
+
 ```javascript
 const { results } = await db.map({
   query: {
-    name: { $like: 'J%' },
-    email: { $regex: '@example\\.com$' }
+    name: { $like: "J%" },
+    email: { $regex: "@example\\.com$" },
   },
-  field: 'name',
-  order: 'asc'
-});
-console.log(results);
+  field: "name",
+  order: "asc",
+})
+console.log(results)
 ```
 
 ---
@@ -255,10 +273,10 @@ console.log(results);
 
 The `db.map` function always returns an object with the following properties:
 
-| Property     | Type       | Description                                                                 |
-|--------------|------------|-----------------------------------------------------------------------------|
-| `results`    | `array`    | The filtered results as an array.                                          |
-| `unsubscribe`| `function` | A function to cancel the real-time subscription (only present if `realtime` is enabled). |
+| Property      | Type       | Description                                                                              |
+| ------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| `results`     | `array`    | The filtered results as an array.                                                        |
+| `unsubscribe` | `function` | A function to cancel the real-time subscription (only present if `realtime` is enabled). |
 
 ---
 
@@ -266,9 +284,10 @@ The `db.map` function always returns an object with the following properties:
 
 The `db.map` function has been designed to provide a consistent and intuitive interface for querying data. By always returning an object with `results` and optionally `unsubscribe`, it eliminates confusion and ensures a smooth developer experience. Whether you're working with static queries or real-time updates, `db.map` is a versatile tool that adapts to your needs.
 
---- 
+---
 
 ### **Key Updates in This Version**
+
 - Added support for `$like` (SQL-like pattern matching) and `$regex` (regular expressions).
 - Enhanced `$text` operator for nested field searches.
 - Improved `$between` to support date ranges.

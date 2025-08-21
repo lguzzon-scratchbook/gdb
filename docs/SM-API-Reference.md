@@ -6,20 +6,24 @@ The Security Module (SM) is not imported separately but is activated and attache
 
 ### Enable the Security Module
 
-To use the RBAC and identity features, you must enable the `sm` option when you initialize GDB.
+To use the SM RBAC and identity features, you must enable the `sm` option when you initialize GDB.
 
 ```javascript
-import { gdb } from "genosdb";
+// Import module
+import { gdb } from "./dist/index.js";
+```
 
+```javascript
 // Enable the security module and pass superadmin addresses directly
-const db = await gdb("myAppDB", { 
+const db = await gdb("my-db", {
+  rtc: true, 
   sm: {
-    superAdmins: ['0x1234...'] // Optional: superadmin addresses
+    superAdmins: ["0x1...", "0x2..."] // superadmin addresses
   }
 });
 
 // Or simply enable with defaults:
-// const db = await gdb("myAppDB", { sm: true });
+// const db = await gdb("my-db", { rtc: true, sm: true });
 
 // Now you can access all security functions via `db.sm`
 console.log("Security context is automatically initialized");
@@ -60,13 +64,12 @@ The security module is automatically initialized when you create a GDB instance 
 #### Example
 
 ```javascript
-import { gdb } from "genosdb";
-
 async function initializeApp() {
   // Initialize GDB with the Security Module enabled and superadmins
-  const db = await gdb("myAppDB", { 
+  const db = await gdb("my-db", { 
+    rtc: true,
     sm: {
-      superAdmins: ["0xYourSuperAdminEthAddress1", "0xYourSuperAdminEthAddress2"]
+      superAdmins: ["0x1...", "0x2..."] // superadmin addresses
     }
   });
   
@@ -328,9 +331,9 @@ const myAppRoles = {
 };
 
 // Pass custom roles in the initial configuration
-const db = await gdb("myAppDB", { 
+const db = await gdb("my-db", { 
   sm: {
-    superAdmins: ["0xYourSuperAdminEthAddress1"],
+    superAdmins: ["0x1...", "0x2..."] // superadmin addresses
     customRoles: myAppRoles
   }
 });

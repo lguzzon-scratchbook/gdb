@@ -42,10 +42,13 @@ This method is useful for removing nodes from the graph while ensuring data cons
 
 #### **Examples**
 
+```javascript
+// (rtc: true) for realtime updates
+const db = await gdb("my-db", { rtc: true });
+```
+
 ##### **Example 1: Removing a Node**
 ```javascript
-const db = new GDB('database name'); // Assume Database is initialized
-
 // Add a node to the graph
 const nodeId = await db.put({ name: "Alice", age: 25 });
 
@@ -63,8 +66,6 @@ In this example:
 
 ##### **Example 2: Removing a Non-Existent Node**
 ```javascript
-const db = new GDB('database name'); // Assume Database is initialized
-
 // Attempt to remove a non-existent node
 await db.remove("non_existent_id");
 
@@ -78,8 +79,6 @@ In this example:
 
 ##### **Example 3: Cleaning Up Edges**
 ```javascript
-const db = new GDB('database name'); // Assume Database is initialized
-
 // Add two nodes to the graph
 const nodeId1 = await db.put({ name: "Alice", age: 25 });
 const nodeId2 = await db.put({ name: "Bob", age: 30 });
