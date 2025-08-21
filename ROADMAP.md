@@ -1,5 +1,5 @@
 # GenosDB Roadmap
-
+[![image](https://i.imgur.com/llWHG9z.jpg)](https://github.com/estebanrfp/gdb)
 Welcome to the roadmap for **GenosDB**, a decentralized P2P graph database powering modern Web3 applications, including our 3D metaverse built with Babylon.js. This document outlines our vision and next steps. Share your feedback in [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions) or on Twitter/X ([@estebanrfp](https://github.com/estebanrfp))!
 
 ## Vision
