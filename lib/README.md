@@ -32,5 +32,6 @@ Only **minified** files are included in the `dist/` directory as part of the dis
 Import directly from the package:
 
 ```js
-import { GDB } from "genosdb";
-const db = new GDB("myDatabase");
+import { gdb } from "genosdb";
+
+const db = await gdb("myDatabase");
