@@ -41,4 +41,4 @@ const db = await gdb("my-db", {
 
 You can see a practical implementation in the following example:
 
-[Todo List Audit Example](../examples/todolist-audit.html)
+[Open Todo List Audit Example](https://estebanrfp.github.io/gdb/examples/todolist-audit.html)
