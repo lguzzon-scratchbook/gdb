@@ -35,18 +35,17 @@ Creates and configures a database connection.
 - **Parameters**:
   - `name` `{string}` – Database name (used for local storage or sync).
   - `options` `{Object}` _(optional)_:
-    - `rtc` `{boolean}` – If `true`, enables real-time P2P networking and relay connections. If omitted or `false`, the database works in local-only mode (no network sync).
+    - `rtc` `{boolean | Object}` – If `true`, enables real-time P2P networking and relay connections.  
+      To customize relays or TURN servers, pass an object:  
+      `{ relayUrls, turnConfig }`
+      - `relayUrls` `{string[]}` – Custom list of secure WebSocket relay URLs (for Nostr), now passed inside the `rtc` object.
+      - `turnConfig` `{Array<Object>}` – Configuration for TURN servers, now passed inside the `rtc` object.
     - `sm` `{boolean | Object}` – If `true`, loads the Security Module with default settings. Can also be an object with specific configuration parameters for the module.
     - `ai` `{boolean}` – If `true`, loads the AIQuery module.
     - `rx` `{boolean}` – If `true`, loads the Radix Index module.
     - `ii` `{boolean}` – If `true`, loads the Inverted Index module.
     - `geo` `{boolean}` – If `true`, loads the Geo module.
     - `password` `{string}` – Optional encryption key.
-    - `relayUrls` `{string[]}` – Optional – Custom list of secure WebSocket relay URLs (for Nostr).
-    - `turnConfig` `{Array<Object>}` – Optional – Configuration for TURN servers. Each object can include:
-      - `urls` `{string | string[]}` – Single URL or array of URLs to access the TURN server.
-      - `username` `{string}` – Username for TURN authentication.
-      - `credential` `{string}` – Password or token for TURN authentication.
     - `saveDelay` `{number}` _(optional)_ – The debounce delay in milliseconds for saving the graph to persistent storage. Higher values reduce disk I/O under heavy write loads but increase the risk of data loss if the browser crashes. Defaults to `200`.
     - `oplogSize` `{number}` _(optional)_ – The maximum number of recent operations to keep in the operation log for delta-based P2P synchronization. Larger values allow peers to sync efficiently after longer disconnections but consume more memory. Defaults to `20`.
 
@@ -77,8 +76,9 @@ To specify custom relays for Nostr when initializing the database:
 
 ```javascript
 const db = await gdb("my-db", {
-  rtc: true,
-  relayUrls: ["wss://relay1.example.com", "wss://relay2.example.com"],
+  rtc: {
+    relayUrls: ["wss://relay1.example.com", "wss://relay2.example.com"]
+  }
 })
 ```
 
@@ -87,16 +87,18 @@ const db = await gdb("my-db", {
 Once you have a TURN server, configure GenosDB with it like this:
 
 ```javascript
-const turnConfig = [
-  {
-    // single string or list of strings of URLs to access TURN server
-    urls: ["turn:your-turn-server.ok:1979"],
-    username: "username",
-    credential: "password",
-  },
-]
-
-const db = await gdb("my-db", { rtc: true, turnConfig })
+const db = await gdb("my-db", {
+  rtc: {
+    turnConfig: [
+      {
+        // single string or list of strings of URLs to access TURN server
+        urls: ["turn:your-turn-server.ok:1979"],
+        username: "username",
+        credential: "password",
+      }
+    ]
+  }
+})
 ```
 
 ---
