@@ -32,7 +32,6 @@ To empower developers to build secure, real-time decentralized applications—fr
 - [ ] Release v1.0 with stable API and SemVer versioning.
 - [x] GenosDB Solved the Distributed Trust Paradox ([See](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318)).
 - [ ] Active community: [Github discussions](https://github.com/estebanrfp/gdb/discussions).
-- [ ] Public API: Explore developer API model ([Inspired by](https://x.ai/api)).
 
 ### Long Term (2026+)
 - [ ] Web3 ecosystem integration: Nostr ([See Nostr](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)).
@@ -47,7 +46,7 @@ Although the source code is private, you can help GenosDB:
 - Write tutorials on Medium/Dev.to.
 
 ## Contact
-- Got ideas or want to collaborate? Reach out at [your-email] or [Discussions](https://github.com/estebanrfp/gdb/discussions).
+- Got ideas or want to collaborate? Reach out at [estebanrfp@gmail.com] or [Discussions](https://github.com/estebanrfp/gdb/discussions).
 - Follow updates on [Medium](https://medium.com/genosdb), Twitter/X (@estebanrfp), and [GenosDB.com](https://genosdb.com).
 
 ## Notes
