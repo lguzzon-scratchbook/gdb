@@ -29,7 +29,7 @@ GenosDB’s architecture is modular and optimized for browser environments, inte
 ### 2.3 Diagram
 ```plaintext
 +-------------------+       +-------------------+       +-------------------+
-|   GDB (Graph DB)  |<----->|  GenosRTC (P2P)   |<----->| Security Module   |
+|   GDB (GenosDB)   |<----->|  GenosRTC (P2P)   |<----->| Security Manager  |
 | put, get, link,   |       | WebRTC, Nostr,    |       | RBAC, WebAuthn,   |
 | map, remove, clear|       | Data Channels     |       | Signing/Verify    |
 +-------------------+       +-------------------+       +-------------------+
@@ -61,7 +61,7 @@ GenosDB’s query system is a cornerstone of its flexibility, supporting both si
 
 **Example (Storing and Querying Nodes)**:
 ```javascript
-const db = await gdb("my-db", { password: "secure-key" });
+const db = await gdb("my-db", { rtc: true, password: "secure-key" });
 const id = await db.put({ name: "Alice", age: 30 });
 await db.link(id, "group1");
 const results = await db.map({ query: { name: { $eq: "Alice" } }, $limit: 10 });
@@ -113,6 +113,7 @@ GenosDB’s extensibility is driven by its modular design, allowing developers t
 **Example (Enabling Modules)**:
 ```javascript
 const db = await gdb("my-db", {
+  rtc: true,
   sm: { superAdmins: ["0x1234..."], customRoles: { editor: { can: ["write"], inherits: ["guest"] } } },
   rx: true,
   audit: { prompt: "detect offensive content or spam" }
@@ -124,7 +125,7 @@ The Radix Indexer enhances query performance by maintaining a Radix Tree index i
 
 **Example (Prefix Search)**:
 ```javascript
-const db = await gdb("my-db", { rx: true });
+const db = await gdb("my-db", { rtc: true, rx: true });
 await db.put("user123", { name: "Alice" });
 const results = await db.searchByPrefix("user"); // Returns nodes with IDs starting with "user"
 ```
@@ -134,7 +135,7 @@ The AI Audit module monitors oplog entries for problematic content (e.g., offens
 
 **Example (Audit Configuration)**:
 ```javascript
-const db = await gdb("my-db", { audit: { prompt: "detect spam or inappropriate content" } });
+const db = await gdb("my-db", { rtc: true, audit: { prompt: "detect spam or inappropriate content" } });
 await db.put("post1", { content: "spam text" }); // Triggers audit
 ```
 
@@ -146,7 +147,7 @@ Named channels allow sending JSON, strings, or binary data to all or specific pe
 
 **Example (Chat Application)**:
 ```javascript
-const db = await gdb("chat-room", { password: "secure-key" });
+const db = await gdb("chat-room", { rtc: true, password: "secure-key" });
 const chatChannel = db.room.channel("messages");
 chatChannel.on("message", (msg, peerId) => {
   console.log(`${peerId}: ${msg.text}`);
@@ -205,7 +206,7 @@ Roles are stored in the graph and synchronized P2P, with `superadmin` addresses 
 
 **Example (Role Assignment)**:
 ```javascript
-const db = await gdb("secure-db", { sm: { superAdmins: ["0x1234..."] } });
+const db = await gdb("secure-db", { rtc: true, sm: { superAdmins: ["0x1234..."] } });
 await db.sm.assignRole("0x5678...", "manager", new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
 await db.sm.executeWithPermission("delete"); // Verifies permission
 ```
@@ -233,7 +234,7 @@ GenosDB uses an oplog for delta synchronization, storing recent operations (defa
 
 **Example (Oplog Sync)**:
 ```javascript
-const db = await gdb("my-db");
+const db = await gdb("my-db", { rtc: true });
 await db.put("node1", { x: 10 }); // Adds to oplog
 // Peers sync delta changes via WebRTC
 ```
@@ -256,7 +257,7 @@ The `resolveConflict` function applies LWW at the object level, with a customiza
 
 **Example (Inventory Query)**:
 ```javascript
-const db = await gdb("inventory", { rx: true });
+const db = await gdb("inventory", { rtc: true, rx: true });
 const id = await db.put({ name: "Laptop", category: "Electronics" });
 await db.link(id, "cat1");
 const electronics = await db.map({ query: { type: "Category", name: "cat1", $edge: { type: "Item" } } });
@@ -305,17 +306,3 @@ GenosDB is a powerful, developer-friendly platform for decentralized Web3 applic
 3. estebanrfp, “How GenosDB Solved the Distributed Trust Paradox,” Medium, 2025. [Link](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318)
 4. estebanrfp, “GenosDB and the Nostr Network,” Medium, 2025. [Link](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)
 5. estebanrfp, “GenosDB v0.4.0: Oplog-Driven Delta Sync,” Medium, 2025. [Link](https://medium.com/genosdb/genosdb-v0-4-0-introducing-oplog-driven-intelligent-delta-sync-and-full-state-fallback-741fe8ff132c)
-
----
-
-### Key Corrections Made
-1. **db.link Parameters**: Corrected `link(from, to, type)` to `link(sourceId, targetId)` in Sections 3.1 and 8.3, as per `GDB-API-Reference.md`, which specifies only two parameters.
-2. **Oplog Size**: Updated the default oplog size from 50 to 20 operations in Section 2.1, aligning with `GDB-API-Reference.md` (`oplogSize` defaults to 20).
-3. **Core Operations**: Added `clear()` to the list of core operations in Section 3.1, as it is a core method in `GDB-API-Reference.md`.
-4. **Security Module Initialization**: Clarified that `sm` can be enabled with `sm: true` or an object with `superAdmins` and `customRoles`, as per `SM-API-Reference.md`.
-5. **WebAuthn Method Names**: Updated `loginWithWebAuthn` to `loginCurrentUserWithWebAuthn` in Section 6.2, matching `SM-API-Reference.md`.
-6. **Oplog Sync Example**: Simplified the oplog sync example in Section 7 to avoid referencing internal `Oplog` class directly, focusing on high-level behavior as per `GDB-API-Reference.md`.
-7. **General Clarity**: Improved code examples and descriptions for consistency with provided documentation, ensuring accurate method signatures and parameters.
-8. **File Transfer Chunking**: Noted the recommendation for chunking files larger than 256KB in Section 5.3, as per `GenosRTC-Guide.md`.
-
-This corrected version aligns with the provided documentation, ensuring technical accuracy while preserving the original structure and intent of the whitepaper. Let me know if you need further refinements or a translated version!
