@@ -24,22 +24,20 @@ To empower developers to build secure, real-time decentralized applications—fr
 ### Short Term (Q3-Q4 2025)
 - [x] Publish practical tutorials on Medium for chat, Kanban, to-do lists, and streaming ([See articles](https://medium.com/genosdb)).
 - [ ] Launch public demo of the 3D metaverse with Babylon.js and GenosDB ([See upcoming article](https://medium.com/genosdb)).
-- [ ] Release a technical whitepaper on GenosDB architecture ([Inspired by](https://medium.com/genosdb/designing-a-next-generation-p2p-protocol-architecture-for-genosdb-4833c1f6e069)).
-- [ ] Add GIFs/videos of demos (including metaverse) to README and docs ([See technical features](https://medium.com/genosdb/technical-features-of-genosdb-gdb-307fe8cc6618)).
-- [ ] Optimize GenosRTC for mobile browsers (iOS/Android).
+- [x] Release a technical whitepaper on GenosDB architecture ([Inspired by](https://github.com/estebanrfp/gdb/blob/main/WHITEPAPER.md)).
+- [x] Add GIFs/videos of demos (including metaverse) to README and docs ([See technical features](https://medium.com/genosdb/technical-features-of-genosdb-gdb-307fe8cc6618)).
+- [x] Optimize GenosRTC for mobile browsers (iOS/Android).
 
 ### Mid Term (Q1-Q2 2026)
 - [ ] Release v1.0 with stable API and SemVer versioning.
-- [ ] Framework integrations: Wrappers for React, Vue, Svelte, and enhanced Babylon.js support ([Inspired by](https://medium.com/genosdb/build-a-kanban-board-in-minutes-with-genosdb-a4ae06a99ac9)).
-- [ ] Smart contract support: RBAC role verification on blockchain ([See](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318)).
-- [ ] Active community: Launch Discord/Telegram and encourage user demos for metaverses and apps.
+- [x] GenosDB Solved the Distributed Trust Paradox ([See](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318)).
+- [ ] Active community: [Github discussions](https://github.com/estebanrfp/gdb/discussions).
 - [ ] Public API: Explore developer API model ([Inspired by](https://x.ai/api)).
 
 ### Long Term (2026+)
 - [ ] Web3 ecosystem integration: IPFS, Filecoin, ENS for metaverses ([See Nostr](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)).
 - [ ] Monetization: Explore premium support or consulting for enterprise metaverses.
-- [ ] Scalability: Support for large P2P clusters and external security audits.
-- [ ] Multi-language SDKs: Python, Go, Rust for metaverses and other apps.
+- [ ] Scalability: Support for large P2P clusters and external security audits fallback nodes.
 
 ## How to Contribute
 Although the source code is private, you can help GenosDB:
