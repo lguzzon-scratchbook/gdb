@@ -1,3 +1,5 @@
+# GenosDB Whitepaper
+[![image](https://i.imgur.com/llWHG9z.jpg)](https://github.com/estebanrfp/gdb)
 # GenosDB: A Decentralized P2P Graph Database for Web3 Applications
 
 ## Abstract
