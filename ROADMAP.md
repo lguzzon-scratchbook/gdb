@@ -1,6 +1,6 @@
 # GenosDB Roadmap
 
-Welcome to the roadmap for **GenosDB**, a decentralized P2P graph database powering modern Web3 applications, including our 3D metaverse built with Babylon.js. This document outlines our vision and next steps. Share your feedback in [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions) or on Twitter/X (@estebanrfp)!
+Welcome to the roadmap for **GenosDB**, a decentralized P2P graph database powering modern Web3 applications, including our 3D metaverse built with Babylon.js. This document outlines our vision and next steps. Share your feedback in [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions) or on Twitter/X ([@estebanrfp](https://github.com/estebanrfp))!
 
 ## Vision
 To empower developers to build secure, real-time decentralized applications—from chats and Kanban boards to immersive 3D metaverses—without relying on centralized servers, with a simple API and a focus on security and performance.
@@ -47,7 +47,7 @@ Although the source code is private, you can help GenosDB:
 
 ## Contact
 - Got ideas or want to collaborate? Reach out at [estebanrfp@gmail.com] or [Discussions](https://github.com/estebanrfp/gdb/discussions).
-- Follow updates on [Medium](https://medium.com/genosdb), Twitter/X (@estebanrfp), and [GenosDB.com](https://genosdb.com).
+- Follow updates on [Medium](https://medium.com/genosdb), Twitter/X ([@estebanrfp](https://x.com/estebanrfp)), and [GenosDB.com](https://genosdb.com).
 
 ## Notes
 - This roadmap will be updated quarterly based on feedback and progress.
