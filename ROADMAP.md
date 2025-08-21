@@ -13,7 +13,7 @@ To empower developers to build secure, real-time decentralized applications—fr
   - Security Module: Role-Based Access Control (RBAC) and WebAuthn authentication ([See RBAC](https://medium.com/genosdb/role-based-access-control-rbac-in-genosdb-bde218a1a0df), [See RBAC overview](https://medium.com/genosdb/rbac-role-based-access-control-cb490b14c426), [See trust paradox](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318)).
   - Delta synchronization with oplog and Nostr ([See article](https://medium.com/genosdb/genosdb-v0-4-0-introducing-oplog-driven-intelligent-delta-sync-and-full-state-fallback-741fe8ff132c), [See Nostr integration](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)).
   - Async engine for high performance ([See article](https://medium.com/genosdb/genosdbs-new-async-engine-unlocking-unparalleled-performance-and-simplicity-in-a-real-time-c666f1a9a5d2)).
-  - Flagship use case: 3D metaverse with Babylon.js, using GenosDB for avatar sync, chat, and object management ([Coming soon on Medium]).
+  - Flagship use case: 3D metaverse with Babylon.js, using GenosDB for avatar sync, chat, and object management ([OVGrid](https://ovgrid.com)).
 - **Available**: Free minified builds via NPM/CDN ([Repo](https://github.com/estebanrfp/gdb)).
 - **Demos**: Examples on JSFiddle/CodePen, including real-time chat ([See tutorial](https://medium.com/genosdb/build-a-realtime-chat-app-in-7-lines-of-javascript-using-genosdb-ff8eb73558a3)), to-do lists ([See tutorial](https://medium.com/genosdb/build-a-to-do-list-in-minutes-with-genosdb-384216b808bb), [See full to-do list](https://medium.com/genosdb/build-a-full-to-do-list-with-genosdb-1605f0d8c0a9)), and Kanban boards ([See tutorial](https://medium.com/genosdb/build-a-kanban-board-in-minutes-with-genosdb-a4ae06a99ac9)).
 - **Competitive analysis**: Comparison with other P2P databases ([See article](https://medium.com/genosdb/most-popular-peer-to-peer-distributed-databases-5668d4869a56)).
@@ -35,7 +35,7 @@ To empower developers to build secure, real-time decentralized applications—fr
 - [ ] Public API: Explore developer API model ([Inspired by](https://x.ai/api)).
 
 ### Long Term (2026+)
-- [ ] Web3 ecosystem integration: IPFS, Filecoin, ENS for metaverses ([See Nostr](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)).
+- [ ] Web3 ecosystem integration: Nostr ([See Nostr](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)).
 - [ ] Monetization: Explore premium support or consulting for enterprise metaverses.
 - [ ] Scalability: Support for large P2P clusters and external security audits fallback nodes.
 
@@ -53,30 +53,3 @@ Although the source code is private, you can help GenosDB:
 ## Notes
 - This roadmap will be updated quarterly based on feedback and progress.
 - Thank you for supporting GenosDB and our decentralized metaverse!
-
-</xaiArtifact>
-
-### Verification of Included Articles
-To ensure I’ve covered all the Medium articles you provided, here’s a list of the links included in the `ROADMAP.md` under the "Current Status" section, mapped to their respective features or demos:
-
-1. [GenosDB’s New Async Engine](https://medium.com/genosdb/genosdbs-new-async-engine-unlocking-unparalleled-performance-and-simplicity-in-a-real-time-c666f1a9a5d2) – Async engine performance.
-2. [Designing a Next-Generation P2P Protocol Architecture](https://medium.com/genosdb/designing-a-next-generation-p2p-protocol-architecture-for-genosdb-4833c1f6e069) – P2P protocol overview.
-3. [Introducing Recursive Graph Traversal Queries](https://medium.com/genosdb/introducing-recursive-graph-traversal-queries-in-genosdb-7a2eff62c5bf) – `$edge` operator.
-4. [How GenosDB Solved the Distributed Trust Paradox](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318) – Security and trust.
-5. [GenosDB v0.4.0: Oplog-Driven Delta Sync](https://medium.com/genosdb/genosdb-v0-4-0-introducing-oplog-driven-intelligent-delta-sync-and-full-state-fallback-741fe8ff132c) – Delta synchronization.
-6. [Understanding Graph Traversal in GenosDB](https://medium.com/genosdb/understanding-graph-traversal-in-genosdb-design-decisions-and-developer-control-5c6be90d2be7) – Graph traversal design.
-7. [Real-Time P2P Video Streaming](https://medium.com/genosdb/real-time-p2p-video-streaming-using-genosdb-and-modern-javascript-809f7e77c2d0) – GenosRTC video streaming.
-8. [Real-Time P2P Audio Streaming](https://medium.com/genosdb/real-time-p2p-audio-streaming-using-genosdb-and-modern-javascript-c5aaa8dbe670) – GenosRTC audio streaming.
-9. [Real-Time P2P File Transfer](https://medium.com/genosdb/real-time-p2p-file-transfer-using-genosdb-and-modern-javascript-a095ee059a47) – GenosRTC file streaming.
-10. [Build a Realtime Chat App in 7 Lines](https://medium.com/genosdb/build-a-realtime-chat-app-in-7-lines-of-javascript-using-genosdb-ff8eb73558a3) – Chat demo.
-11. [Build a Full To-Do List with GenosDB](https://medium.com/genosdb/build-a-full-to-do-list-with-genosdb-1605f0d8c0a9) – To-do list demo (noted as duplicated in your list).
-12. [Build a Kanban Board in Minutes](https://medium.com/genosdb/build-a-kanban-board-in-minutes-with-genosdb-a4ae06a99ac9) – Kanban demo.
-13. [Role-Based Access Control (RBAC) in GenosDB](https://medium.com/genosdb/role-based-access-control-rbac-in-genosdb-bde218a1a0df) – RBAC details.
-14. [Most Popular Peer-to-Peer Distributed Databases](https://medium.com/genosdb/most-popular-peer-to-peer-distributed-databases-5668d4869a56) – Competitive analysis.
-15. [RBAC: Role-Based Access Control](https://medium.com/genosdb/rbac-role-based-access-control-cb490b14c426) – RBAC overview.
-16. [GenosDB: Distributed Graph Database with Module Support](https://medium.com/genosdb/genosdb-distributed-graph-database-with-module-support-a71452d0b472) – General overview.
-17. [GenosDB and the Nostr Network](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7) – Nostr integration.
-18. [GenosDB: Distributed Graph-Based Database](https://medium.com/genosdb/genosdb-distributed-graph-based-database-7f03b878507b) – Core database details.
-19. [Technical Features of GenosDB](https://medium.com/genosdb/technical-features-of-genosdb-gdb-307fe8cc6618) – Technical overview.
-20. [Build a To-Do List in Minutes with GenosDB](https://medium.com/genosdb/build-a-to-do-list-in-minutes-with-genosdb-384216b808bb) – To-do list demo.
-21. [GenosDB Represents Hierarchical and Inheritance Relationships](https://medium.com/genosdb/genosdb-represents-hierarchical-and-inheritance-relationships-6ca66b4dcc24) – Graph hierarchies.
