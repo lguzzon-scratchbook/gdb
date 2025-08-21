@@ -253,7 +253,7 @@
     import { gdb } from "../dist/index.js";
 
     // Initialize GenosDB with AI module enabled
-    const db = await gdb('ultimate-sandbox-db-v3', { rtc: true, ai: true });
+    const db = await gdb('ultimate-sandbox-db-v3', { rtc: false, ai: true });
     const sm = db.sm; // Security manager (sm)
 
     // Check if DB is empty and seed if needed
