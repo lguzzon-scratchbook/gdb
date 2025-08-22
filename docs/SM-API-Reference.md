@@ -82,6 +82,43 @@ initializeApp();
 
 ---
 
+### Silent WebAuthn Resume (no prompt on refresh)
+
+When the Security Module initializes, it will attempt to silently resume a WebAuthn-backed session if all of the following are true:
+
+- A previous session was completed using WebAuthn on this browser/origin (tracked internally via a localStorage flag).
+- WebAuthn registration details exist for this origin (`db.sm.hasExistingWebAuthnRegistration()` returns `true`).
+
+If both conditions are met, the SM decrypts the locally stored Ethereum key material and reactivates the signer without invoking any WebAuthn prompt. This prevents repeated biometric prompts on page reload.
+
+Guidance for apps:
+- Do not auto-call `db.sm.loginCurrentUserWithWebAuthn()` on page load; reserve it for explicit user actions (e.g., clicking “Login with WebAuthn”).
+- Use `db.sm.hasExistingWebAuthnRegistration()` only to decide whether to show the WebAuthn Login button.
+- Call `db.sm.clearSecurity()` to log out and clear the “last session was WebAuthn” flag; subsequent loads will not resume silently until the user logs in again with WebAuthn.
+
+Minimal pattern:
+
+```javascript
+// Initialize GDB with SM enabled (SM will handle silent resume automatically)
+const db = await gdb("my-db", { rtc: true, sm: true });
+
+// Optional: react to state changes for UI
+db.sm.setSecurityStateChangeCallback((state) => updateUI(state));
+
+// Show WebAuthn login button only if hardware is registered
+const showWebAuthn = db.sm.hasExistingWebAuthnRegistration();
+toggleWebAuthnLoginButton(showWebAuthn);
+
+// On user click: perform interactive login (may prompt)
+loginWebAuthnBtn.onclick = async () => {
+  await db.sm.loginCurrentUserWithWebAuthn();
+};
+```
+
+Note: Some example pages explicitly create the Security Context after initialization to ensure the silent resume logic runs immediately. If you enable SM via `{ sm: true }`, the context is automatically set up by the module.
+
+---
+
 ### `db.sm.clearSecurity()`
 
 Logs out the current user. This deactivates local signing capability by removing the active `signer` from GDB's `SoftwareSecurityManager`. It also clears any volatile identity information (like a just-generated mnemonic) and removes WebAuthn session flags from local storage. GDB's `SoftwareSecurityManager` will revert to (or remain in) a verifier-only mode for incoming P2P operations.
