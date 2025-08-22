@@ -7,8 +7,8 @@ In peer-to-peer (P2P) networks, how can peers trust each other when there’s no
 - **Verifiable Actions:** Every operation is digitally signed, ensuring authenticity and integrity.  
 - **Shared Constitution:** Rules (such as roles and permissions) are embedded in the software and are consistent across all nodes.  
 
-## The Software Security Manager (SSM): Local Enforcer of Trust
-Each node runs a Security Manager (SSM) that inspects all incoming operations, verifying them against its internal rulebook. The SSM does not trust any peer by default; it requires cryptographic proof and checks permissions based on its constitution.
+## The Security Manager (SM): Local Enforcer of Trust
+Each node runs a Security Manager (SM) that inspects all incoming operations, verifying them against its internal rulebook. The SM does not trust any peer by default; it requires cryptographic proof and checks permissions based on its constitution.
 
 ## Defense Against Manipulation: The Case of Eve
 - **Scenario A:** Eve, a guest, attempts to promote herself to a manager. Alice’s node:
@@ -21,7 +21,7 @@ This demonstrates that authority is granted through verifiable means, not claime
 
 ## Incorporating Superadmins: Resolving the Trust Paradox
 - Superadmins are statically defined in the initial configuration (`sm: { superAdmins: [...] }`).  
-- The SSM first checks the static superadmin list before consulting the distributed database.  
+- The SM first checks the static superadmin list before consulting the distributed database.  
 - This ensures a secure and verifiable chain of trust.
 
 ## Eventual Consistency and Security Prioritization
@@ -39,5 +39,5 @@ GenosDB achieves trust through distributed verification: rules reside in code, a
 | Step | Key Component             | Primary Function                              |
 |------|---------------------------|-----------------------------------------------|
 | 1    | Identity + Signature      | Ethereum Address + Private Key: ensures authenticity and integrity |
-| 2    | Shared Constitution       | Embedded RBAC in SSM: defines uniform permissions and authority  |
-| 3    | Distributed Security      | Local SSM without default trust: verifies each operation against its own rules |
+| 2    | Shared Constitution       | Embedded RBAC in SM: defines uniform permissions and authority  |
+| 3    | Distributed Security      | Local SM without default trust: verifies each operation against its own rules |
