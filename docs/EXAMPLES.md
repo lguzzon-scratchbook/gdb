@@ -53,7 +53,7 @@ A real-time peer-to-peer video streaming app using GenosDB’s room feature. Sup
 ### [Real-Time File Streaming](https://estebanrfp.github.io/gdb/examples/fileStreaming.html)
 A real-time peer-to-peer File Streaming app using GenosDB’s room feature.
 
-### [Real-Time collaborative rich‑text editor powered by GenosDB](https://estebanrfp.github.io/gdb/gdb/examples/collab.html)
+### [Real-Time collaborative rich‑text editor powered by GenosDB](https://estebanrfp.github.io/gdb/examples/collab.html)
 A real-time collaborative rich‑text editor powered by GenosDB: live typing sync, remote cursors/selections, RBAC + WebAuthn auth, Markdown/HTML split preview with draggable splitter, version history panel, file sharing, and video room.
 
 ---
