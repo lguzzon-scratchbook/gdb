@@ -60,14 +60,12 @@
 
     // Initialize GenosDB using async factory
     const db = await gdb('video-room', { rtc: true });
-    // CORRECCIÓN 1: Usar un canal dedicado para mensajes de control
     const videoControlChannel = db.room.channel("videocontrol");
 
     const peerVideos = {};
     const videoContainer = document.getElementById('videos');
     const selfVideo = document.getElementById('selfVideo');
     let selfStream = null;
-
 
     db.room.on('peer:join', peerId => {
       console.log(`${peerId} joined the room`);
@@ -96,13 +94,20 @@
       }
       video.srcObject = stream;
       peerVideos[peerId] = video;
+      peerVideos[peerId].autoplay = true;
     });
 
-    videoControlChannel.on('message', (data, peerId) => {
+  // Streaming control between peers
+    videoControlChannel.on('message', async (data, peerId) => {
       if (data.action === 'stop_stream' && peerVideos[peerId]) {
         console.log(`Peer ${peerId} stopped streaming. Cleaning up.`);
-        peerVideos[peerId].remove();
-        delete peerVideos[peerId];
+        console.log(data.action)
+
+        await peerVideos[peerId].remove();
+
+        setTimeout(() => {
+          delete peerVideos[peerId];
+        }, 1000);
       }
     });
 
