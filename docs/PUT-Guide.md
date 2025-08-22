@@ -1,4 +1,3 @@
----
 ### **Method: `put(value, id)`**
 
 #### **Description**
