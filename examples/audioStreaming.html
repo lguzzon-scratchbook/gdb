@@ -184,7 +184,9 @@
       if (data.action === 'stop_stream' && peerAudios[peerId]) {
         console.log(`Peer ${peerId} stopped streaming. Cleaning up.`);
         peerAudios[peerId].remove();
-        // delete peerAudios[peerId];
+        setTimeout(() => {
+          delete peerAudios[peerId];
+        }, 1000);
       }
     });
 
