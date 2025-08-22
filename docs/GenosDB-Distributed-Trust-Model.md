@@ -41,3 +41,5 @@ GenosDB achieves trust through distributed verification: rules reside in code, a
 | 1    | Identity + Signature      | Ethereum Address + Private Key: ensures authenticity and integrity |
 | 2    | Shared Constitution       | Embedded RBAC in SM: defines uniform permissions and authority  |
 | 3    | Distributed Security      | Local SM without default trust: verifies each operation against its own rules |
+
+Full document: [Distributed Trust Model](https://github.com/estebanrfp/gdb/wiki/GenosDB-Distributed-Trust-Model)
