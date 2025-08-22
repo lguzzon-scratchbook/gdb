@@ -189,11 +189,13 @@
                 }
             }
         }
+
+        let db = null;
         
         async function initializeApp() {            
             try {
                 updateStatus("Initializing GDB...");
-                const db = await gdb("webAuthnDemoDB_v2", { rtc: true }); // Use a slightly different DB name if testing fresh
+                db = await gdb("webAuthnDemoDB_v2", { rtc: true, sm: true }); // Use a slightly different DB name if testing fresh
   
                 updateStatus("GDB ready. Initializing RBAC Security Context...");
 
