@@ -2,9 +2,9 @@
 
 ## 📥 How to Use
 
-The Security Module (SM) is not imported separately but is activated and attached to your GDB instance during its creation.
+The Security Manager (SM) is not imported separately but is activated and attached to your GDB instance during its creation.
 
-### Enable the Security Module
+### Enable the Security Manager
 
 To use the SM RBAC and identity features, you must enable the `sm` option when you initialize GDB.
 
@@ -33,7 +33,7 @@ console.log("Security context is automatically initialized");
 
 ## 📖 Overview & Core Concepts
 
-The Security Module (SM) for GDB integrates several key security aspects:
+The Security Manager (SM) for GDB integrates several key security aspects:
 
 1.  **Identity Management**: Users are identified by Ethereum addresses. The system supports:
     - **WebAuthn**: Secure, passwordless authentication using biometrics or hardware keys to protect/unseal a user's Ethereum private key.
@@ -65,7 +65,7 @@ The security module is automatically initialized when you create a GDB instance 
 
 ```javascript
 async function initializeApp() {
-  // Initialize GDB with the Security Module enabled and superadmins
+  // Initialize GDB with the Security Manager enabled and superadmins
   const db = await gdb("my-db", { 
     rtc: true,
     sm: {
@@ -84,7 +84,7 @@ initializeApp();
 
 ### Silent WebAuthn Resume (no prompt on refresh)
 
-When the Security Module initializes, it will attempt to silently resume a WebAuthn-backed session if all of the following are true:
+When the Security Manager initializes, it will attempt to silently resume a WebAuthn-backed session if all of the following are true:
 
 - A previous session was completed using WebAuthn on this browser/origin (tracked internally via a localStorage flag).
 - WebAuthn registration details exist for this origin (`db.sm.hasExistingWebAuthnRegistration()` returns `true`).
@@ -472,7 +472,7 @@ These are utility functions for querying the current security state, often used 
 
 ## ⚠️ API Stability
 
-> This Security Module API is under active development. **Breaking changes may occur** in future versions. Always consult the project's CHANGELOG for updates.
+> This Security Manager API is under active development. **Breaking changes may occur** in future versions. Always consult the project's CHANGELOG for updates.
 
 ## Usage Examples
 
