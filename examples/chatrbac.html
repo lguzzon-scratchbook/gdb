@@ -372,9 +372,10 @@
                     hasWebAuthnHardwareRegistration: sm.hasExistingWebAuthnRegistration()
                 };
                 updateUI(initialState);
-                if (sm.hasExistingWebAuthnRegistration() && !sm.isSecurityActive()) {
-                    await sm.loginCurrentUserWithWebAuthn().catch(err => console.warn("Silent WebAuthn login failed or no registration:", err.message));
-                }
+                // Do NOT trigger interactive WebAuthn login here.
+                // The Security Manager will attempt to silently resume a WebAuthn session during its initialization
+                // when the last session used WebAuthn and a valid registration exists on this device.
+                // Keep the "Login with WebAuthn" button so the user can start an interactive login when desired.
             } catch (error) {
                 console.error("Initialization failure:", error);
                 statusBar.textContent = `Error: ${error.message}`;
