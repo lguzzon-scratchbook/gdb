@@ -23,11 +23,6 @@ A lightweight, decentralized graph database designed for modern web applications
 
 [![Liberapay receiving](https://img.shields.io/liberapay/receives/estebanrfp.svg?logo=liberapay)](https://liberapay.com/estebanrfp/donate)
 
-## 🎥 Presentation Video
-
-[![GenosDB Presentation](https://img.youtube.com/vi/Lkw4hQpgt50/0.jpg)](https://www.youtube.com/watch?v=Lkw4hQpgt50)
-
-Watch the full presentation of **GenosDB** on YouTube.
 
 > ✅ GenosDB uses network access by design for real-time P2P synchronization (Socket.dev notice)
 
