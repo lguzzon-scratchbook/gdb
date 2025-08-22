@@ -1812,13 +1812,7 @@
         setAuthUI(initialState);
       } catch { }
 
-      // Auto-login if WebAuthn registration exists and no active session
-      try {
-        if (db.sm.hasExistingWebAuthnRegistration && db.sm.hasExistingWebAuthnRegistration() && !db.sm.isSecurityActive()) {
-          const addr = await db.sm.loginCurrentUserWithWebAuthn();
-          if (addr) showMsg('ok', `Auto WebAuthn login as ${shortAddr(addr)}`);
-        }
-      } catch { }
+      // No auto interactive WebAuthn login on load. The SM performs a silent resume if applicable.
     })();
   </script>
 </body>
