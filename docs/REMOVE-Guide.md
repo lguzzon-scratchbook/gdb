@@ -1,5 +1,3 @@
----
-
 ### **Method: `remove(id)`**
 
 #### **Description**
