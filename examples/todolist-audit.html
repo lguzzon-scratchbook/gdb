@@ -120,7 +120,7 @@
     let db;
     let unsubscribe;
     const currentNodeIds = new Set();
-    let currentPrompt = "detect offensive or inappropriate language, add small closely spaced timestamps or prohibited content";
+    let currentPrompt = "Flag offensive/prohibited content and consecutive entries with timestamps <150ms apart..";
     document.getElementById('promptInput').value = currentPrompt;
 
     // Initialize DB
