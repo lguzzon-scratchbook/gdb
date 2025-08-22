@@ -32,7 +32,7 @@ After:
 
 ```js
 import { gdb } from 'gdb';
-const db = await gdb('my-db');
+const db = await gdb('my-db', { rtc: true }); // rtc: true for realtime comunication
 ```
 
 ### Using `map` (real-time subscription)
@@ -48,7 +48,6 @@ const { unsubscribe } = await db.map(({ id, value, action }) => {
 After (same API; ensure initialization via `await gdb(...)`):
 
 ```js
-const db = await gdb('my-db');
 const { unsubscribe } = await db.map(({ id, value, action }) => {
   // render
 });
@@ -67,7 +66,6 @@ const { unsubscribe } = await db.get(nodeId, (node) => { /* ... */ });
 After (no signature changes):
 
 ```js
-const db = await gdb('my-db');
 const { result } = await db.get(nodeId);
 // or reactive
 const { unsubscribe } = await db.get(nodeId, (node) => { /* ... */ });
@@ -85,7 +83,6 @@ await db.remove(nodeId);
 After (no signature changes):
 
 ```js
-const db = await gdb('my-db');
 await db.put({ text: 'hello' });
 await db.remove(nodeId);
 ```
@@ -97,13 +94,15 @@ await db.remove(nodeId);
 ### Recommended initialization
 
 ```js
-import { gdb } from 'gdb';
+const db = await gdb("my-db", {
+  rtc: true, 
+  sm: {
+    superAdmins: ["0x1...", "0x2..."] // superadmin addresses
+  }
+});
 
-const db = await gdb('app-db', { sm: true });
 const sm = db.sm; // provided by SM module
 
-await sm.createSecurityContext(db, SUPERADMIN_ADDRESSES);
-// sm.setCustomRoles(ROLES) // optional
 ```
 
 Key points:
@@ -131,8 +130,7 @@ await db.remove(id);
 ```html
 <script type="module">
   import { gdb } from "../dist/index.js";
-  const db = await gdb('my-db');
-  // ...
+
   </script>
 ```
 
@@ -140,7 +138,7 @@ await db.remove(id);
 
 ```js
 import { gdb } from 'genosdb';
-const db = await gdb('my-db');
+
 ```
 
 ---
@@ -206,18 +204,10 @@ After:
 ```html
 <script type="module">
   import { gdb } from "../dist/index.js";
-  const db = await gdb('todoList');
+  const db = await gdb('todoList', { rtc: true });
   const { unsubscribe } = await db.map(({ id, value, action }) => { /* ... */ });
 </script>
 ```
-
----
-
-## Useful links
-
-- Migration Guide (Wiki): https://github.com/estebanrfp/gdb/wiki/Migration-Guide
-- Project Wiki: https://github.com/estebanrfp/gdb/wiki
-- Project README: ./README.md
 
 ---
 
