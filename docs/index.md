@@ -41,6 +41,7 @@ Welcome to the official technical documentation for GenosDB.
 
 - [View Roadmap](../ROADMAP.md)
 - [View Whitepaper](../WHITEPAPER.md)
+- [Licenses](../THIRD_PARTY_LICENSES.md)
 
 ## Root Documentation
 
@@ -49,5 +50,3 @@ Welcome to the official technical documentation for GenosDB.
 - [CONTRIBUTING.md](../CONTRIBUTING.md)
 - [MIGRATION.md](../MIGRATION.md)
 - [SECURITY.md](../SECURITY.md)
-- [THIRD_PARTY_LICENSES.md](../THIRD_PARTY_LICENSES.md)
-- [LICENSE](../LICENSE)
