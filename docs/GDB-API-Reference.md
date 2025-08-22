@@ -40,7 +40,7 @@ Creates and configures a database connection.
       `{ relayUrls, turnConfig }`
       - `relayUrls` `{string[]}` – Custom list of secure WebSocket relay URLs (for Nostr), now passed inside the `rtc` object.
       - `turnConfig` `{Array<Object>}` – Configuration for TURN servers, now passed inside the `rtc` object.
-    - `sm` `{boolean | Object}` – If `true`, loads the Security Module with default settings. Can also be an object with specific configuration parameters for the module.
+    - `sm` `{boolean | Object}` – If `true`, loads the Security Manager module with default settings. Can also be an object with specific configuration parameters for the module.
     - `ai` `{boolean}` – If `true`, loads the AIQuery module.
     - `rx` `{boolean}` – If `true`, loads the Radix Index module.
     - `ii` `{boolean}` – If `true`, loads the Inverted Index module.
