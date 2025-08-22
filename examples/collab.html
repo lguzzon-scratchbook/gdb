@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenosDB Collab Doc</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background-color: #1a1a1a;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #0ea5e9;
+        }
+        #toolbar {
+            background-color: #1a1a1a;
+            padding: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            overflow-x: auto;
+        }
+        #toolbar button {
+            background: #0ea5e9;
+            border: none;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #toolbar button:hover {
+            background: #0284c7;
+        }
+    #toolbar select, #toolbar input[type="color"] {
+            background: #0b1220;
+            color: #e5e7eb;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 0.35rem 0.4rem;
+        height: 30px;
+        }
+        #toolbar .icon-btn {
+        width: 30px;
+        height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 0;
+        }
+    #toolbar .icon-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; display: block; }
+    #toolbar .icon-btn .fallback { display: none; font-size: 14px; line-height: 1; }
+        #toolbar .icon-btn strong, #toolbar .icon-btn em, #toolbar .icon-btn u, #toolbar .icon-btn span {
+        font-size: 14px; line-height: 1; display: block;
+        }
+        #toolbar .divider {
+            width: 1px;
+            height: 24px;
+            background: #2a2a2a;
+            margin: 0 6px;
+            align-self: center;
+        }
+        #toolbar .spacer { flex: 1; }
+        /* Orange accent for the last two toolbar buttons */
+        #toolbar #togglePreview,
+        #toolbar #resetSplit {
+            background: #f59e0b; /* amber-500 */
+            color: #fff;
+        }
+        #toolbar #togglePreview:hover,
+        #toolbar #resetSplit:hover {
+            background: #d97706; /* amber-600 */
+        }
+        #toolbar #togglePreview[aria-pressed="true"] {
+            background: #b45309; /* amber-700 */
+        }
+        /* Green accent for file and video buttons */
+        #toolbar #btnFile,
+        #toolbar #startVideo {
+            background: #22c55e; /* green-500 */
+            color: #fff;
+        }
+        #toolbar #btnFile:hover,
+        #toolbar #startVideo:hover {
+            background: #16a34a; /* green-600 */
+        }
+        /* Blue accent for save version button */
+        #toolbar #saveVersion {
+            background: #3b82f6; /* blue-500 */
+            color: #fff;
+        }
+        #toolbar #saveVersion:hover {
+            background: #2563eb; /* blue-600 */
+        }
+        #editorWrap {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            width: 100%;
+        }
+        /* Left vertical toolbar */
+        #sideToolbar {
+            width: 44px;
+            background: #0b0b0b;
+            border-right: 1px solid #1f2937;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 4px;
+            box-sizing: border-box;
+        }
+        #sideToolbar .icon-btn,
+        #sideToolbar button {
+            width: 30px;
+            height: 30px;
+            background: #0ea5e9;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+        }
+        #sideToolbar .icon-btn:hover,
+        #sideToolbar button:hover,
+        #sideToolbar .color-btn:hover { background: #0284c7; }
+        #sideToolbar .icon-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; display: block; }
+        #sideToolbar .icon-btn .fallback { display: none; font-size: 14px; line-height: 1; }
+        #sideToolbar .color-btn {
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: #0ea5e9;
+            border: none;
+            cursor: pointer;
+            position: relative;
+        }
+        #sideToolbar .color-btn input[type="color"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: none;
+            padding: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+        #sideToolbar .icon-btn strong, #sideToolbar .icon-btn em, #sideToolbar .icon-btn u, #sideToolbar .icon-btn span { font-size: 14px; line-height: 1; display: block; }
+        #sideToolbar .color-btn input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        #sideToolbar .color-btn input[type="color"]::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.8); border-radius: 4px; }
+    /* numeric gutter removed */
+        #editor {
+            flex: 1;
+            width: 100%;
+            padding: 1rem;
+            background-color: #0d0d0d;
+            border: none;
+            color: #fff;
+            font-size: 1rem;
+            line-height: 1.5;
+            outline: none;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-y: auto;
+            position: relative; /* needed for absolute overlay positioning */
+        }
+        /* Left editor pane header (mirrors preview header style) */
+        #editorPane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        #editorHeader {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: #111827;
+            border-bottom: 1px solid #1f2937;
+            color: #9ca3af;
+            font-size: 0.85rem;
+            min-height: 42px;
+        }
+        #editorHeader .spacer { flex: 1; }
+        #editorHeader .metric { color: #e5e7eb; }
+        /* Right-side preview */
+        #preview {
+            width: 50%;
+            max-width: none; /* allow JS to set px widths */
+            min-width: 280px;
+            border-left: 1px solid #1f2937;
+            background: #0d0d0d;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Draggable vertical splitter */
+        #splitter {
+            width: 6px;
+            cursor: col-resize;
+            background: #1f2937;
+            flex: 0 0 6px;
+        }
+        #splitter:hover, #splitter.dragging { background: #374151; }
+        #previewHeader {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: #111827;
+            border-bottom: 1px solid #1f2937;
+            color: #9ca3af;
+            font-size: 0.85rem;
+            min-height: 42px;
+        }
+        #previewHeader select {
+            background: #0b1220;
+            color: #e5e7eb;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 0.25rem 0.35rem;
+            height: 30px;
+        }
+        #previewContent {
+            flex: 1;
+            overflow: auto;
+            padding: 1rem;
+            white-space: pre-wrap; /* for Markdown text */
+        }
+        /* Placeholder for contenteditable */
+        #editor:empty:before {
+            content: attr(data-placeholder);
+            color: #6b7280;
+        }
+        #status {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background-color: #1a1a1a;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #9ca3af;
+            display: none;
+        }
+        #status.active {
+            display: block;
+        }
+        #auth {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background-color: #111827;
+            padding: 0.75rem 0.75rem 0.5rem;
+            border-radius: 8px;
+            display: none;
+            width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            border: 1px solid #27272a;
+        }
+        #auth.compact { width: auto; padding: 0.4rem 0.5rem; }
+        #auth .summary {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: #0b0b0b;
+            border: 1px solid #1f2937;
+            border-radius: 6px;
+            color: #e5e7eb;
+            font-size: 0.8rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        #auth .summary:focus { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+        #auth .summary .dot { width: 8px; height: 8px; border-radius: 9999px; background: #22c55e; display: inline-block; }
+        #auth .summary .addr { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        #auth .summary .chev { opacity: 0.8; }
+        #auth.compact #authDetails { display: none; }
+        #auth.compact .summary { display: flex; }
+        #auth .row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: center; }
+        #auth .label { font-size: 0.8rem; color: #9ca3af; }
+        #auth .value { font-size: 0.85rem; color: #e5e7eb; word-break: break-all; }
+        #auth .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        #auth .hint { font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem; }
+        #auth .msg {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            display: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #auth .msg.show { display: block; }
+        #auth .msg.ok { background: #072; color: #d1fae5; border: 1px solid #065f46; }
+        #auth .msg.err { background: #3b0d0d; color: #fecaca; border: 1px solid #7f1d1d; }
+        #auth .badge { display: inline-block; padding: 0.15rem 0.4rem; border-radius: 9999px; font-size: 0.7rem; background: #27272a; color: #e5e7eb; border: 1px solid #3f3f46; }
+        #auth .input, #auth .textarea {
+            width: 100%;
+            background: #0b1220;
+            border: 1px solid #334155;
+            color: #e5e7eb;
+            border-radius: 6px;
+            padding: 0.4rem 0.5rem;
+            box-sizing: border-box;
+        }
+        #auth .textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.75rem; }
+        #auth .btn, #fileInput, #saveVersion, #startVideo {
+            background: #0ea5e9;
+            border: none;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 0.5rem;
+        }
+        #auth .btn:hover, #fileInput:hover, #saveVersion:hover, #startVideo:hover {
+            background: #0284c7;
+        }
+        #auth .btn.secondary { background: #374151; }
+        #auth .btn.secondary:hover { background: #4b5563; }
+        #auth .btn.ghost { background: transparent; border: 1px solid #374151; }
+        #auth .btn.ghost:hover { background: #111827; }
+        #videoContainer {
+            position: fixed;
+            bottom: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        #videoContainer video {
+            width: 150px;
+            border-radius: 4px;
+        }
+    #versionsPanel #versionList a, #versionsPanel #versionList button {
+            color: #0ea5e9;
+            text-decoration: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: block;
+            margin: 0.2rem 0.1rem;
+            padding: 0.2rem 0;
+            text-align: left;
+        }
+    #versionsPanel #versionList a.file-item { color: #22c55e; } /* green for files */
+        /* Floating green dot button (versions toggle) */
+        #versionsToggleBtn {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            width: 18px; height: 18px;
+            border-radius: 9999px;
+            background: #22c55e; /* green-500 */
+            border: 2px solid #16a34a; /* green-600 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            cursor: pointer;
+            z-index: 1200;
+        }
+        #versionsToggleBtn:hover { background: #16a34a; }
+        #versionsToggleBtn:focus { outline: 2px solid #86efac; outline-offset: 2px; }
+        /* Versions panel (hidden by default) */
+        #versionsPanel[hidden] { display: none; }
+        #versionsPanel {
+            position: fixed;
+            right: 1rem;
+            bottom: 2.8rem; /* sit above the toggle */
+            width: 280px;
+            max-height: 240px;
+            background: #0b0b0b;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.55);
+            padding: 0.5rem;
+            z-index: 1200;
+        }
+        #versionsPanel #versionList {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .cursor {
+            position: absolute;
+            width: 2px;
+            height: 1.5rem;
+            background-color: #0ea5e9;
+            opacity: 0.8;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .selection-rect {
+            position: absolute;
+            background-color: rgba(14,165,233,0.25); /* default; overridden per-peer */
+            border-radius: 2px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        @media (max-width: 600px) {
+            #editor { font-size: 0.9rem; }
+            #status, #auth { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>GenosDB Collab Doc</h1>
+    </header>
+    <div id="toolbar">
+        <button id="btnBold" class="icon-btn" title="Bold" aria-label="Bold"><strong>B</strong></button>
+        <button id="btnItalic" class="icon-btn" title="Italic" aria-label="Italic"><em>I</em></button>
+        <button id="btnUnderline" class="icon-btn" title="Underline" aria-label="Underline"><u>U</u></button>
+    <button id="btnStrike" class="icon-btn" title="Strikethrough" aria-label="Strikethrough"><span style="text-decoration: line-through; font-weight:600;">S</span></button>
+        <select id="blockFormat" title="Block style" aria-label="Block style" style="margin-left:4px;">
+            <option value="P">Paragraph</option>
+            <option value="H1">Heading 1</option>
+            <option value="H2">Heading 2</option>
+            <option value="H3">Heading 3</option>
+            <option value="BLOCKQUOTE">Quote</option>
+            <option value="PRE">Code block</option>
+        </select>
+    <span class="divider" role="separator" aria-orientation="vertical"></span>
+    <button id="btnFile" class="icon-btn" title="Share file" aria-label="Share file">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Feather paperclip -->
+                <path d="M21.44 11.05l-8.49 8.49a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66l-9.19 9.19a2 2 0 1 1-2.83-2.83l8.49-8.49" />
+            </svg>
+            <span class="fallback" aria-hidden="true">📎</span>
+        </button>
+        <input type="file" id="fileInput" style="display:none">
+        <button id="startVideo" class="icon-btn" title="Start video" aria-label="Start video">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Feather video -->
+                <rect x="2" y="7" width="14" height="10" rx="2" ry="2"></rect>
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+            </svg>
+            <span class="fallback" aria-hidden="true">🎥</span>
+        </button>
+        <button id="saveVersion" class="icon-btn" title="Save version" aria-label="Save version">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Feather clock -->
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="fallback" aria-hidden="true">⏱</span>
+        </button>
+        <button id="togglePreview" class="icon-btn" title="Toggle preview" aria-label="Toggle preview" aria-pressed="false">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- two columns icon -->
+                <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+            </svg>
+            <span class="fallback" aria-hidden="true">🗂️</span>
+        </button>
+        <button id="resetSplit" class="icon-btn" title="Reset split 50/50" aria-label="Reset split 50/50">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- arrows left-right with center mark -->
+                <polyline points="8 12 4 12 6 10"></polyline>
+                <polyline points="16 12 20 12 18 14"></polyline>
+                <line x1="12" y1="6" x2="12" y2="18"></line>
+            </svg>
+            <span class="fallback" aria-hidden="true">↔️</span>
+        </button>
+    </div>
+    <div id="editorWrap">
+        <div id="sideToolbar" aria-label="Formatting tools">
+            <button class="color-btn" title="Text color" aria-label="Text color">
+                <input id="colorPicker" type="color" value="#ffffff" aria-label="Pick text color" />
+            </button>
+            <button id="btnLink" class="icon-btn" title="Insert link" aria-label="Insert link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 1 7 0l1 1a5 5 0 1 1-7 7l-1-1" />
+                    <path d="M14 11a5 5 0 0 1-7 0l-1-1a5 5 0 1 1 7-7l1 1" />
+                </svg>
+                <span class="fallback" aria-hidden="true">🔗</span>
+            </button>
+            <button id="btnUnlink" class="icon-btn" title="Remove link" aria-label="Remove link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9.17 14.83L4 20" />
+                    <path d="M15 8h1a5 5 0 0 1 3.54 8.54l-1 1" />
+                    <path d="M8 15h-1a5 5 0 0 1-3.54-8.54l1-1" />
+                </svg>
+                <span class="fallback" aria-hidden="true">❌</span>
+            </button>
+            <button id="btnUl" class="icon-btn" title="Bulleted list" aria-label="Bulleted list">•</button>
+            <button id="btnOl" class="icon-btn" title="Numbered list" aria-label="Numbered list">1.</button>
+            <button id="btnLeft" class="icon-btn" title="Align left" aria-label="Align left">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"/><path d="M3 12h12"/><path d="M3 18h18"/>
+                </svg>
+                <span class="fallback" aria-hidden="true">⬅️</span>
+            </button>
+            <button id="btnCenter" class="icon-btn" title="Align center" aria-label="Align center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 6h12"/><path d="M3 12h18"/><path d="M6 18h12"/>
+                </svg>
+                <span class="fallback" aria-hidden="true">↔️</span>
+            </button>
+            <button id="btnRight" class="icon-btn" title="Align right" aria-label="Align right">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"/><path d="M9 12h12"/><path d="M3 18h18"/>
+                </svg>
+                <span class="fallback" aria-hidden="true">➡️</span>
+            </button>
+            <button id="btnUndo" class="icon-btn" title="Undo" aria-label="Undo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 14 4 9 9 4"></polyline>
+                    <path d="M20 20a9 9 0 0 0-16-6"></path>
+                </svg>
+                <span class="fallback" aria-hidden="true">↩️</span>
+            </button>
+            <button id="btnRedo" class="icon-btn" title="Redo" aria-label="Redo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 14 20 9 15 4"></polyline>
+                    <path d="M4 20a9 9 0 0 1 16-6"></path>
+                </svg>
+                <span class="fallback" aria-hidden="true">↪️</span>
+            </button>
+            <button id="btnClear" class="icon-btn" title="Clear formatting" aria-label="Clear formatting">⨂</button>
+        </div>
+    <div id="editorPane">
+            <div id="editorHeader">
+                <span>Editor</span>
+                <span class="spacer"></span>
+                <span id="wordCount" class="metric" title="Word count">0 words</span>
+            </div>
+            <div id="editor" contenteditable="true" data-placeholder="Start typing... Collaborative editing powered by GenosDB P2P."></div>
+        </div>
+    <div id="splitter" role="separator" aria-label="Resize panels" aria-orientation="vertical" aria-valuemin="280" aria-valuemax="1200" aria-valuenow="0" tabindex="0"></div>
+        <div id="preview" aria-label="Preview pane">
+            <div id="previewHeader">
+                <span>Preview</span>
+                <select id="previewMode" aria-label="Preview mode">
+                    <option value="markdown" selected>Markdown</option>
+                    <option value="html">HTML</option>
+                </select>
+            </div>
+            <div id="previewContent" aria-live="polite"></div>
+        </div>
+    </div>
+    <div id="status">Connected peers: 0</div>
+    <!-- Floating versions toggle and panel -->
+    <button id="versionsToggleBtn" title="Show versions" aria-label="Show versions"></button>
+    <div id="versionsPanel" hidden aria-label="Saved versions">
+        <div id="versionList"></div>
+    </div>
+    <div id="auth">
+        <div id="authSummary" class="summary" role="button" tabindex="0" title="Show account options" aria-expanded="false" style="display:none;">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="authSummaryAddr" class="addr">—</span>
+            <span class="chev" aria-hidden="true">▾</span>
+        </div>
+    <div id="authDetails">
+        <div id="authMsg" class="msg"></div>
+
+        <div class="actions" style="margin-top: 0.5rem;">
+            <button id="signupWebAuthn" class="btn">Create identity</button>
+            <button id="protectWebAuthn" class="btn secondary" disabled>Protect with WebAuthn</button>
+            <button id="loginWebAuthn" class="btn">WebAuthn Login</button>
+            <button id="logoutBtn" class="btn ghost" style="margin-left:auto; display:none;">Sign out</button>
+        </div>
+
+    <div id="mnemonicBlock" style="display:none; margin-top:0.5rem;">
+            <div class="label">Mnemonic (store it safely)</div>
+            <textarea id="mnemonicInput" class="textarea" rows="3" readonly></textarea>
+            <div class="actions" style="margin-top:0.4rem;">
+                <button id="copyMnemonic" class="btn secondary">Copy</button>
+                <button id="downloadMnemonic" class="btn secondary">Download .txt</button>
+                <button id="hideMnemonic" class="btn ghost">Hide</button>
+            </div>
+            <div class="hint">Tip: after creating/recovering an identity, protect it with WebAuthn for passwordless login.</div>
+        </div>
+
+        <div style="margin-top:0.5rem;">
+            <input id="mnemonicLoginInput" class="input" type="text" placeholder="Paste your mnemonic to sign in" />
+            <div class="actions" style="margin-top:0.4rem;">
+                <button id="loginMnemonic" class="btn secondary">Sign in with Mnemonic</button>
+            </div>
+    </div>
+    </div>
+    </div>
+    
+    <div id="videoContainer"></div>
+
+    <script type="module">
+        import { gdb } from "../dist/index.js";
+        (async () => {
+            // Initialize GenosDB with P2P and Security Module
+            const db = await gdb("collab-doc", {
+                rtc: true,
+                sm: {
+                    superAdmins: ["0x62c48827e883f114821211673Dc309a29Aae7e6A", "0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+                    customRoles: {
+                        // Allow everyone to write initially via 'guest'
+                        guest: { can: ["read", "sync", "write"] },
+                        viewer: { can: ["read", "sync", "write"] },
+                        editor: { can: ["write", "sync"], inherits: ["viewer"] },
+                        superadmin: { can: ["write", "sync"], inherits: ["viewer"] }
+                    }
+                }
+            });
+            const room = db.room;
+            const docChannel = room.channel("docUpdates");
+            const cursorChannel = room.channel("cursorPos");
+            const fileChannel = room.channel("fileTransfer");
+            const editor = document.getElementById('editor');
+            const wordCountEl = document.getElementById('wordCount');
+            const previewModeSel = document.getElementById('previewMode');
+            const previewContent = document.getElementById('previewContent');
+            const editorPane = document.getElementById('editorPane');
+            const previewPane = document.getElementById('preview');
+            const splitter = document.getElementById('splitter');
+            const editorWrap = document.getElementById('editorWrap');
+            const togglePreviewBtn = document.getElementById('togglePreview');
+            const resetSplitBtn = document.getElementById('resetSplit');
+            const status = document.getElementById('status');
+            const authDiv = document.getElementById('auth');
+            const authSummary = document.getElementById('authSummary');
+            const authSummaryAddr = document.getElementById('authSummaryAddr');
+            const authDetails = document.getElementById('authDetails');
+            const loginWebAuthnBtn = document.getElementById('loginWebAuthn');
+            const signupWebAuthnBtn = document.getElementById('signupWebAuthn');
+            const protectWebAuthnBtn = document.getElementById('protectWebAuthn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const authMsg = document.getElementById('authMsg');
+            const mnemonicBlock = document.getElementById('mnemonicBlock');
+            const mnemonicInput = document.getElementById('mnemonicInput');
+            const copyMnemonicBtn = document.getElementById('copyMnemonic');
+            const downloadMnemonicBtn = document.getElementById('downloadMnemonic');
+            const hideMnemonicBtn = document.getElementById('hideMnemonic');
+            const mnemonicLoginInput = document.getElementById('mnemonicLoginInput');
+            const mnemonicLoginSection = mnemonicLoginInput ? mnemonicLoginInput.parentElement : null;
+            const loginMnemonicBtn = document.getElementById('loginMnemonic');
+            const fileInput = document.getElementById('fileInput');
+            const saveVersionBtn = document.getElementById('saveVersion');
+            const startVideoBtn = document.getElementById('startVideo');
+            const btnFile = document.getElementById('btnFile');
+            // File button triggers hidden input
+            btnFile.addEventListener('click', () => fileInput.click());
+            const btnBold = document.getElementById('btnBold');
+            const btnItalic = document.getElementById('btnItalic');
+            const btnUnderline = document.getElementById('btnUnderline');
+            const btnStrike = document.getElementById('btnStrike');
+            const colorPicker = document.getElementById('colorPicker');
+            const btnLink = document.getElementById('btnLink');
+            const btnUnlink = document.getElementById('btnUnlink');
+            const blockFormat = document.getElementById('blockFormat');
+            const btnUl = document.getElementById('btnUl');
+            const btnOl = document.getElementById('btnOl');
+            const btnLeft = document.getElementById('btnLeft');
+            const btnCenter = document.getElementById('btnCenter');
+            const btnRight = document.getElementById('btnRight');
+            const btnUndo = document.getElementById('btnUndo');
+            const btnRedo = document.getElementById('btnRedo');
+            const btnClear = document.getElementById('btnClear');
+            const fileList = document.getElementById('fileList');
+            const versionList = document.getElementById('versionList');
+            const versionsToggleBtn = document.getElementById('versionsToggleBtn');
+            const versionsPanel = document.getElementById('versionsPanel');
+            const videoContainer = document.getElementById('videoContainer');
+            const docId = 'main-doc';
+            let peerCount = 0;
+            let isSaving = false;
+            let lastTimestamp = 0;
+            // Live typing throttle + save debounce
+            let liveThrottleMs = 80; // ~12.5 fps for real-time feel
+            let lastLiveSent = 0;
+            let liveScheduled = null;
+            let pendingContent = '';
+            let saveDebounceTimer;
+            let guestWriteNoticeShown = false;
+            let showSavedUntil = 0;
+            let savedFlashTimer = null;
+            const cursorMap = {};
+            const peerVideos = {};
+
+            // Helper: shorten Ethereum address for UI
+            const shortAddr = (addr) => {
+                if (!addr || typeof addr !== 'string') return addr || '';
+                const a = addr.trim();
+                return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+            };
+
+            // Helpers for contenteditable
+            const getEditorHTML = () => editor.innerHTML;
+            const setEditorHTML = (html) => { editor.innerHTML = html || ''; };
+            const focusEditor = () => { editor.focus(); };
+            // line numbers removed
+
+            // Live word count
+            const updateWordCount = () => {
+                if (!wordCountEl) return;
+                try {
+                    const text = (editor.innerText || '').trim();
+                    const words = text ? (text.match(/\S+/g) || []).length : 0;
+                    wordCountEl.textContent = `${words} ${words === 1 ? 'word' : 'words'}`;
+                } catch {}
+            };
+
+            // Lightweight HTML -> Markdown converter (best-effort; not 100% accurate)
+            const htmlToMarkdown = (html) => {
+                try {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = html || '';
+                    // <br> to newline
+                    tmp.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+                    // Bold/Strong
+                    tmp.querySelectorAll('b,strong').forEach(el => el.replaceWith(`**${el.textContent}**`));
+                    // Italic/Em
+                    tmp.querySelectorAll('i,em').forEach(el => el.replaceWith(`*${el.textContent}*`));
+                    // Underline (approximation)
+                    tmp.querySelectorAll('u').forEach(el => el.replaceWith(`_${el.textContent}_`));
+                    // Strikethrough
+                    tmp.querySelectorAll('s,strike,del').forEach(el => el.replaceWith(`~~${el.textContent}~~`));
+                    // Inline code
+                    tmp.querySelectorAll('code').forEach(el => el.replaceWith('`' + el.textContent + '`'));
+                    // Code blocks
+                    tmp.querySelectorAll('pre').forEach(el => el.replaceWith('\n\n```\n' + el.textContent + '\n```\n\n'));
+                    // Links
+                    tmp.querySelectorAll('a').forEach(a => a.replaceWith('[' + (a.textContent||'') + '](' + (a.getAttribute('href')||'') + ')'));
+                    // Headings
+                    for (let i=1;i<=6;i++) {
+                        tmp.querySelectorAll('h'+i).forEach(h => h.replaceWith('\n\n' + '#'.repeat(i) + ' ' + h.textContent + '\n\n'));
+                    }
+                    // Blockquotes
+                    tmp.querySelectorAll('blockquote').forEach(q => {
+                        const lines = (q.textContent||'').split(/\n/).map(l => '> ' + l).join('\n');
+                        q.replaceWith('\n\n' + lines + '\n\n');
+                    });
+                    // Lists
+                    tmp.querySelectorAll('ul').forEach(ul => {
+                        const lines = Array.from(ul.querySelectorAll(':scope > li')).map(li => '- ' + li.textContent).join('\n');
+                        ul.replaceWith('\n' + lines + '\n');
+                    });
+                    tmp.querySelectorAll('ol').forEach(ol => {
+                        const items = Array.from(ol.querySelectorAll(':scope > li')).map((li,i) => (i+1) + '. ' + li.textContent).join('\n');
+                        ol.replaceWith('\n' + items + '\n');
+                    });
+                    // Paragraphs
+                    tmp.querySelectorAll('p').forEach(p => p.replaceWith('\n\n' + p.textContent + '\n\n'));
+                    // Collapse excessive newlines
+                    return (tmp.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+                } catch {
+                    return html || '';
+                }
+            };
+
+            const updatePreview = () => {
+                if (!previewContent) return;
+                const html = getEditorHTML();
+                const mode = previewModeSel && previewModeSel.value ? previewModeSel.value : 'markdown';
+                if (mode === 'html') {
+                    previewContent.style.whiteSpace = 'pre-wrap';
+                    previewContent.textContent = html;
+                } else {
+                    previewContent.style.whiteSpace = 'pre-wrap';
+                    previewContent.textContent = htmlToMarkdown(html);
+                }
+            };
+            if (previewModeSel) previewModeSel.addEventListener('change', updatePreview);
+
+            // Splitter logic: mouse/touch drag + keyboard
+            const MIN_LEFT = 280; // px
+            const MIN_RIGHT = 280; // px
+            const saveSplit = (px) => {
+                try { localStorage.setItem('collab2.split.leftWidth', String(px)); } catch {}
+            };
+            const loadSplit = () => {
+                try { const v = parseInt(localStorage.getItem('collab2.split.leftWidth') || '', 10); return isFinite(v) ? v : null; } catch { return null; }
+            };
+            const saveHidden = (hidden) => {
+                try { localStorage.setItem('collab2.preview.hidden', hidden ? '1' : '0'); } catch {}
+            };
+            const loadHidden = () => {
+                try { return localStorage.getItem('collab2.preview.hidden') === '1'; } catch { return false; }
+            };
+            const applySplit = (leftPx) => {
+                const total = editorWrap.clientWidth; // global from DOM
+                const clamped = Math.max(MIN_LEFT, Math.min(total - MIN_RIGHT - splitter.offsetWidth, leftPx));
+                editorPane.style.width = clamped + 'px';
+                previewPane.style.width = (total - clamped - splitter.offsetWidth) + 'px';
+                splitter.setAttribute('aria-valuenow', String(clamped));
+            };
+            let dragging = false;
+            const onMove = (clientX) => {
+                const rect = editorWrap.getBoundingClientRect();
+                const leftPx = clientX - rect.left;
+                applySplit(leftPx);
+            };
+            if (splitter) {
+                splitter.addEventListener('mousedown', (e) => { dragging = true; splitter.classList.add('dragging'); e.preventDefault(); });
+                window.addEventListener('mousemove', (e) => { if (!dragging) return; onMove(e.clientX); });
+                window.addEventListener('mouseup', () => { if (!dragging) return; dragging = false; splitter.classList.remove('dragging'); saveSplit(parseInt(editorPane.style.width || '0',10)); });
+                // Touch
+                splitter.addEventListener('touchstart', (e) => { dragging = true; splitter.classList.add('dragging'); });
+                window.addEventListener('touchmove', (e) => { if (!dragging) return; const t = e.touches[0]; onMove(t.clientX); });
+                window.addEventListener('touchend', () => { if (!dragging) return; dragging = false; splitter.classList.remove('dragging'); saveSplit(parseInt(editorPane.style.width || '0',10)); });
+                // Keyboard arrows
+                splitter.addEventListener('keydown', (e) => {
+                    const step = (e.shiftKey ? 50 : 10);
+                    const total = editorWrap.clientWidth;
+                    const current = parseInt(editorPane.style.width || String(Math.floor(total/2)), 10);
+                    if (e.key === 'ArrowLeft') { applySplit(current - step); saveSplit(parseInt(editorPane.style.width || '0',10)); e.preventDefault(); }
+                    if (e.key === 'ArrowRight') { applySplit(current + step); saveSplit(parseInt(editorPane.style.width || '0',10)); e.preventDefault(); }
+                });
+            }
+            // Apply saved split on load
+            const saved = loadSplit();
+            if (saved) applySplit(saved);
+            // Apply hidden state
+            let previewHidden = loadHidden();
+            let lastLeftBeforeHide = null;
+            const setPreviewHidden = (hidden) => {
+                previewHidden = hidden;
+                if (hidden) {
+                    // store current left width to restore later
+                    lastLeftBeforeHide = parseInt(editorPane.style.width || '0', 10) || Math.floor(editorWrap.clientWidth * 0.5);
+                    previewPane.style.display = 'none';
+                    splitter.style.display = 'none';
+                    editorPane.style.width = '100%';
+                    togglePreviewBtn?.setAttribute('aria-pressed', 'true');
+                } else {
+                    previewPane.style.display = 'flex';
+                    splitter.style.display = 'block';
+                    const base = saved || lastLeftBeforeHide || Math.floor(editorWrap.clientWidth * 0.5);
+                    applySplit(base);
+                    togglePreviewBtn?.setAttribute('aria-pressed', 'false');
+                }
+                saveHidden(hidden);
+            };
+            setPreviewHidden(previewHidden);
+            window.addEventListener('resize', () => {
+                const total = editorWrap.clientWidth;
+                const current = parseInt(editorPane.style.width || String(Math.floor(total/2)), 10);
+                applySplit(current);
+            });
+
+            // Button handlers
+            togglePreviewBtn?.addEventListener('click', () => setPreviewHidden(!previewHidden));
+            resetSplitBtn?.addEventListener('click', () => {
+                if (previewHidden) setPreviewHidden(false);
+                const total = editorWrap.clientWidth;
+                const fifty = Math.floor(total / 2);
+                applySplit(fifty);
+                saveSplit(fifty);
+            });
+
+            // Selection helpers to ensure toolbar actions apply to intended text
+            let savedRange = null;
+            const saveSelection = () => {
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
+            };
+            const restoreSelection = () => {
+                if (!savedRange) return;
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(savedRange);
+            };
+            // Save selection when interacting with toolbar
+            document.getElementById('toolbar').addEventListener('mousedown', (e) => {
+                // Don't steal drag from selecting text in editor
+                if (!editor.contains(e.target)) saveSelection();
+            });
+            const sideTb = document.getElementById('sideToolbar');
+            if (sideTb) {
+                sideTb.addEventListener('mousedown', (e) => {
+                    if (!editor.contains(e.target)) saveSelection();
+                });
+            }
+
+            // Ensure icons visible: if SVG not supported/rendered, show fallback emoji
+            const ensureIconsVisible = () => {
+                document.querySelectorAll('#toolbar .icon-btn, #sideToolbar .icon-btn').forEach(btn => {
+                    const svg = btn.querySelector('svg');
+                    const fb = btn.querySelector('.fallback');
+                    try {
+                        const ok = !!(svg && svg.getBBox && svg.getBBox().width > 0);
+                        if (!ok && fb) {
+                            svg && (svg.style.display = 'none');
+                            fb.style.display = 'block';
+                        }
+                    } catch {
+                        if (svg) svg.style.display = 'none';
+                        if (fb) fb.style.display = 'block';
+                    }
+                });
+            };
+
+            // Update status
+            const updateStatus = () => {
+                const savedSuffix = Date.now() < showSavedUntil ? ' | Saved' : '';
+                status.textContent = `Connected peers: ${peerCount}${savedSuffix}`;
+            };
+            // Versions panel toggle
+            const setVersionsOpen = (open) => {
+                if (open) {
+                    versionsPanel.removeAttribute('hidden');
+                    versionsToggleBtn.setAttribute('aria-expanded', 'true');
+                } else {
+                    versionsPanel.setAttribute('hidden', '');
+                    versionsToggleBtn.setAttribute('aria-expanded', 'false');
+                }
+                try { localStorage.setItem('collab2.versions.open', open ? '1' : '0'); } catch {}
+            };
+            const initialOpen = (() => { try { return localStorage.getItem('collab2.versions.open') === '1'; } catch { return false; }})();
+            setVersionsOpen(initialOpen);
+            versionsToggleBtn.addEventListener('click', () => {
+                const isOpen = !versionsPanel.hasAttribute('hidden');
+                setVersionsOpen(!isOpen);
+            });
+
+            // UI helpers
+            const showMsg = (type, text) => {
+                const t = String(text || '');
+                // Suppress centered success messages for version saves; use minimalist status flash instead
+                if (type === 'ok' && /(version|saved)/i.test(t)) {
+                    try {
+                        showSavedUntil = Date.now() + 1500;
+                        updateStatus();
+                        if (savedFlashTimer) clearTimeout(savedFlashTimer);
+                        savedFlashTimer = setTimeout(() => { updateStatus(); }, 1600);
+                    } catch {}
+                    return;
+                }
+                authMsg.className = 'msg show ' + (type === 'ok' ? 'ok' : 'err');
+                authMsg.textContent = t;
+            };
+            const clearMsg = () => {
+                authMsg.className = 'msg';
+                authMsg.textContent = '';
+            };
+            const updateMnemonicBlock = () => {
+                try {
+                    const m = db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery?.();
+                    if (m) {
+                        mnemonicInput.value = m;
+                        mnemonicBlock.style.display = 'block';
+                        protectWebAuthnBtn.disabled = false;
+                    } else {
+                        mnemonicBlock.style.display = 'none';
+                    }
+                } catch {}
+            };
+    const setAuthUI = (state) => {
+                authDiv.style.display = 'block';
+                if (state.isActive) {
+            // summary compact mode
+            authDiv.classList.add('compact');
+            authSummary.style.display = 'flex';
+            authSummaryAddr.textContent = state.activeAddress || '—';
+            authSummary.setAttribute('aria-expanded', 'false');
+                    logoutBtn.style.display = 'inline-block';
+            protectWebAuthnBtn.disabled = !!state.isWebAuthnProtected;
+            // Hide sign-up/login controls
+            signupWebAuthnBtn.style.display = 'none';
+            loginWebAuthnBtn.style.display = 'none';
+            if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'none';
+            // Show protect if not protected yet; otherwise hide it
+            protectWebAuthnBtn.style.display = state.isWebAuthnProtected ? 'none' : 'inline-block';
+            // Hide mnemonic block to declutter when signed in
+            mnemonicBlock.style.display = 'none';
+            editor.disabled = false;
+                } else {
+            // no compact when signed out
+            authDiv.classList.remove('compact');
+            authSummary.style.display = 'none';
+            authSummaryAddr.textContent = '—';
+            authSummary.setAttribute('aria-expanded', 'false');
+                    logoutBtn.style.display = 'none';
+            protectWebAuthnBtn.disabled = true;
+            // keep editor enabled for guest write demo
+            editor.disabled = false;
+            // Show sign-up/login controls again
+            signupWebAuthnBtn.style.display = 'inline-block';
+            loginWebAuthnBtn.style.display = state.hasWebAuthnHardwareRegistration ? 'inline-block' : 'none';
+            if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'block';
+            protectWebAuthnBtn.style.display = 'inline-block';
+                }
+                updateMnemonicBlock();
+            };
+        // Security state change callback
+            db.sm.setSecurityStateChangeCallback((state) => setAuthUI(state));
+
+            // Toggle details when clicking/pressing on summary
+            const toggleAuthDetails = () => {
+                const isCompact = authDiv.classList.contains('compact');
+                if (isCompact) {
+                    authDiv.classList.remove('compact');
+                    authSummary.setAttribute('aria-expanded', 'true');
+                } else if (db.sm.isSecurityActive && db.sm.isSecurityActive()) {
+                    // Only auto-compact when signed in
+                    authDiv.classList.add('compact');
+                    authSummary.setAttribute('aria-expanded', 'false');
+                }
+            };
+            if (authSummary) {
+                authSummary.addEventListener('click', toggleAuthDetails);
+                authSummary.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAuthDetails(); }
+                });
+            }
+
+            // Ensure we have an active temporary identity for demo (signed ops)
+            const ensureActiveGuestIdentity = async () => {
+                if (db.sm.isSecurityActive && db.sm.isSecurityActive()) return true;
+                try {
+                    const temp = await db.sm.startNewUserRegistration();
+                    if (temp?.mnemonic) {
+                        const identity = await db.sm.loginOrRecoverUserWithMnemonic(temp.mnemonic);
+                        if (identity?.address) {
+                            setAuthUI({
+                                isActive: true,
+                                activeAddress: identity.address,
+                                isWebAuthnProtected: false,
+                                hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration ? db.sm.hasExistingWebAuthnRegistration() : false
+                            });
+                            return true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not auto-activate temporary identity', e);
+                }
+                return false;
+            };
+
+        // WebAuthn login
+            loginWebAuthnBtn.addEventListener('click', async () => {
+                try {
+                    clearMsg();
+                    const address = await db.sm.loginCurrentUserWithWebAuthn();
+            if (address) showMsg('ok', `Signed in as ${shortAddr(address)}`);
+            else showMsg('err', 'WebAuthn login failed');
+                } catch (error) {
+            showMsg('err', 'WebAuthn login error: ' + (error?.message || error));
+                }
+            });
+
+            // WebAuthn signup
+            signupWebAuthnBtn.addEventListener('click', async () => {
+                try {
+                    clearMsg();
+                    const newIdentity = await db.sm.startNewUserRegistration();
+                    if (newIdentity) {
+                        mnemonicInput.value = newIdentity.mnemonic;
+                        mnemonicBlock.style.display = 'block';
+                        protectWebAuthnBtn.disabled = false;
+                        showMsg('ok', 'Identity created. Save your mnemonic, then protect it with WebAuthn.');
+                    } else {
+                        showMsg('err', 'Could not create identity');
+                    }
+                } catch (error) {
+                    showMsg('err', 'Error creating identity: ' + (error?.message || error));
+                }
+            });
+
+            // Protect current/volatile identity with WebAuthn
+            protectWebAuthnBtn.addEventListener('click', async () => {
+                try {
+                    clearMsg();
+                    const pk = undefined; // usa la identidad volátil si existe
+                    const address = await db.sm.protectCurrentIdentityWithWebAuthn(pk);
+                    if (address) {
+                        showMsg('ok', `Identity ${shortAddr(address)} protected with WebAuthn`);
+                        mnemonicBlock.style.display = 'none';
+                    } else {
+                        showMsg('err', 'Could not protect identity');
+                    }
+                } catch (error) {
+                    showMsg('err', 'Error protecting identity: ' + (error?.message || error));
+                }
+            });
+
+            // Mnemonic login
+            loginMnemonicBtn.addEventListener('click', async () => {
+                const mnemonic = mnemonicLoginInput.value.trim();
+                if (mnemonic) {
+                    try {
+                        clearMsg();
+                        const identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
+                        if (identity) {
+                            mnemonicInput.value = identity.mnemonic || mnemonic;
+                            // Clean UI to highlight logged-in state
+                            mnemonicBlock.style.display = 'none';
+                            if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'none';
+                            signupWebAuthnBtn.style.display = 'none';
+                            loginWebAuthnBtn.style.display = 'none';
+                            protectWebAuthnBtn.disabled = false;
+                            protectWebAuthnBtn.style.display = 'inline-block';
+                            showMsg('ok', `Signed in as ${shortAddr(identity.address)}. Protect it with WebAuthn to secure this device.`);
+                        } else {
+                            showMsg('err', 'Invalid mnemonic');
+                        }
+                    } catch (error) {
+                        showMsg('err', 'Mnemonic login error: ' + (error?.message || error));
+                    }
+                }
+            });
+
+            // Copy/Download/Hide mnemonic
+            copyMnemonicBtn.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(mnemonicInput.value);
+                    // Also prefill the login field and focus it
+                    if (mnemonicLoginInput) {
+                        mnemonicLoginInput.value = mnemonicInput.value;
+                        mnemonicLoginInput.focus();
+                        // optionally select it for quick replace if needed
+                        try { mnemonicLoginInput.select?.(); } catch {}
+                    }
+                    showMsg('ok', 'Mnemonic copied and filled into the login field');
+                } catch { showMsg('err', 'Could not copy'); }
+            });
+            downloadMnemonicBtn.addEventListener('click', () => {
+                try {
+                    const blob = new Blob([mnemonicInput.value + "\n"], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'mnemonic.txt'; a.click();
+                    URL.revokeObjectURL(url);
+                } catch {}
+            });
+            hideMnemonicBtn.addEventListener('click', () => { mnemonicBlock.style.display = 'none'; });
+
+            // Logout
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    clearMsg();
+                    await db.sm.clearSecurity();
+                    showMsg('ok', 'Signed out');
+                } catch (e) { showMsg('err', 'Could not sign out'); }
+            });
+
+            // Handle peer joins/leaves
+            room.on('peer:join', (peerId) => {
+                peerCount++;
+                updateStatus();
+                // Send current doc to the new peer to quickly sync their view
+                const current = getEditorHTML();
+                if (current) {
+                    docChannel.send({ content: current, ts: lastTimestamp }, peerId);
+                }
+            });
+            room.on('peer:leave', (peerId) => {
+                peerCount--;
+                updateStatus();
+                if (cursorMap[peerId]) {
+                    cursorMap[peerId].remove();
+                    delete cursorMap[peerId];
+                }
+                if (peerVideos[peerId]) {
+                    peerVideos[peerId].remove();
+                    delete peerVideos[peerId];
+                }
+            });
+
+            // Handle document updates via channel
+        docChannel.on('message', (data, fromPeerId) => {
+                if (data.ts > lastTimestamp) {
+                    lastTimestamp = data.ts;
+            setEditorHTML(data.content);
+            updatePreview();
+            updateWordCount();
+                }
+            });
+
+            // Video chat
+            startVideoBtn.addEventListener('click', async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    db.room.addStream(stream);
+                    startVideoBtn.style.display = 'none';
+                } catch (error) {
+                    showMsg('err', 'Could not access camera/microphone: ' + (error?.message || error));
+                }
+            });
+
+            db.room.on('stream:add', (stream, peerId) => {
+                if (!peerVideos[peerId] && stream.getVideoTracks().length > 0) {
+                    const video = document.createElement('video');
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.srcObject = stream;
+                    videoContainer.appendChild(video);
+                    peerVideos[peerId] = video;
+                }
+            });
+
+            // Check document existence
+            const { result: initialDoc } = await db.get(docId);
+            if (!initialDoc) {
+                await db.put({ content: '' }, docId);
+            } else {
+                setEditorHTML(initialDoc.value.content || '');
+                lastTimestamp = initialDoc.timestamp ? initialDoc.timestamp.physical : Date.now();
+            }
+            // Ensure preview is correct on load
+            updateWordCount();
+            updatePreview();
+            ensureIconsVisible();
+
+            // Real-time document updates from DB
+            const { unsubscribe } = await db.map({
+                query: { id: docId }
+            }, ({ id, value, action }) => {
+                if (action === 'updated' && id === docId) {
+                    const newTs = value.timestamp ? value.timestamp.physical : Date.now();
+                    if (newTs > lastTimestamp) {
+                        lastTimestamp = newTs;
+                        setEditorHTML(value.content || '');
+                        updateWordCount();
+                    }
+                }
+            });
+
+            // Live broadcast while typing (throttled) + save when user stops (debounced)
+            editor.addEventListener('input', async () => {
+                const now = Date.now();
+                pendingContent = getEditorHTML();
+                // line numbers removed
+                updateWordCount();
+                updatePreview();
+
+                // Live send (no RBAC requirement for demo; peers see changes immediately)
+                const sendLive = () => {
+                    const ts = Date.now();
+                    if (ts > lastTimestamp) lastTimestamp = ts;
+                    docChannel.send({ content: pendingContent, ts });
+                    lastLiveSent = ts;
+                    liveScheduled = null;
+                };
+
+                if (now - lastLiveSent >= liveThrottleMs) {
+                    sendLive();
+                } else if (!liveScheduled) {
+                    liveScheduled = setTimeout(sendLive, liveThrottleMs - (now - lastLiveSent));
+                }
+
+                // Debounced persistent save
+                clearTimeout(saveDebounceTimer);
+                isSaving = true; // indicate intent to save soon
+                updateStatus();
+                saveDebounceTimer = setTimeout(async () => {
+                    try {
+                        // Make sure operations will be signed and accepted by peers
+                        await ensureActiveGuestIdentity();
+                        await db.sm.executeWithPermission("write");
+                    } catch (e) {
+                        // As a last resort, attempt to persist locally
+                        if (!guestWriteNoticeShown) {
+                            showMsg('ok', 'Temporary identity in use for demo.');
+                            guestWriteNoticeShown = true;
+                        }
+                    }
+                    try {
+                        const ts = Date.now();
+                        if (ts > lastTimestamp) lastTimestamp = ts;
+                        await db.put({ content: pendingContent }, docId);
+                    } finally {
+                        isSaving = false;
+                        // Show 'Saved' briefly, then revert
+                        showSavedUntil = Date.now() + 1500;
+                        updateStatus();
+                        if (savedFlashTimer) clearTimeout(savedFlashTimer);
+                        savedFlashTimer = setTimeout(() => {
+                            updateStatus();
+                        }, 1600);
+                    }
+                }, 600);
+            });
+
+            // line numbers and gutter scroll sync removed
+
+            // Formatting buttons
+            const execCmd = (cmd) => {
+                restoreSelection();
+                document.execCommand(cmd, false, null);
+                focusEditor();
+            };
+            btnBold.addEventListener('click', () => execCmd('bold'));
+            btnItalic.addEventListener('click', () => execCmd('italic'));
+            btnUnderline.addEventListener('click', () => execCmd('underline'));
+            btnStrike.addEventListener('click', () => execCmd('strikethrough'));
+
+            // Color picker
+            colorPicker.addEventListener('change', () => {
+                restoreSelection();
+                document.execCommand('foreColor', false, colorPicker.value);
+                focusEditor();
+            });
+
+            // Link insertion
+            btnLink.addEventListener('click', () => {
+                restoreSelection();
+                const sel = window.getSelection();
+                const hasSelection = sel && !sel.isCollapsed;
+                let url = prompt('Enter URL', 'https://');
+                if (!url) return;
+                if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                if (hasSelection) {
+                    document.execCommand('createLink', false, url);
+                } else {
+                    const text = prompt('Text to display', url) || url;
+                    document.execCommand('insertHTML', false, `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`);
+                }
+                focusEditor();
+            });
+            btnUnlink.addEventListener('click', () => execCmd('unlink'));
+
+            // Block formatting
+            blockFormat.addEventListener('change', () => {
+                restoreSelection();
+                const val = blockFormat.value;
+                document.execCommand('formatBlock', false, val);
+                focusEditor();
+            });
+
+            // (font size selector removed)
+
+            // Lists
+            btnUl.addEventListener('click', () => execCmd('insertUnorderedList'));
+            btnOl.addEventListener('click', () => execCmd('insertOrderedList'));
+
+            // Alignment
+            btnLeft.addEventListener('click', () => execCmd('justifyLeft'));
+            btnCenter.addEventListener('click', () => execCmd('justifyCenter'));
+            btnRight.addEventListener('click', () => execCmd('justifyRight'));
+
+            // History
+            btnUndo.addEventListener('click', () => execCmd('undo'));
+            btnRedo.addEventListener('click', () => execCmd('redo'));
+
+            // Clear formatting (keeps links unless selection includes them)
+            btnClear.addEventListener('click', () => execCmd('removeFormat'));
+
+            // Cursor + selection tracking
+            const peerStyles = {};
+            const ensurePeerStyle = (peerId) => {
+                if (peerStyles[peerId]) return peerStyles[peerId];
+                const color = `#${Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')}`;
+                peerStyles[peerId] = { color };
+                return peerStyles[peerId];
+            };
+            const sendCursorPos = () => {
+                try {
+                    const sel = window.getSelection();
+                    if (!sel || sel.rangeCount === 0) return;
+                    const range = sel.getRangeAt(0);
+                    const collapsed = range.collapsed;
+                    // Cursor position
+                    const caretRange = range.cloneRange();
+                    caretRange.collapse(true);
+                    const caretRect = caretRange.getBoundingClientRect();
+                    const hostRect = editor.getBoundingClientRect();
+                    const left = Math.max(0, caretRect.left - hostRect.left + editor.scrollLeft);
+                    const top = Math.max(0, caretRect.top - hostRect.top + editor.scrollTop);
+                    // Selection rects
+                    let rects = [];
+                    if (!collapsed) {
+                        const r = range.cloneRange();
+                        const clientRects = Array.from(r.getClientRects());
+                        rects = clientRects.map(cr => ({
+                            left: Math.max(0, cr.left - hostRect.left + editor.scrollLeft),
+                            top: Math.max(0, cr.top - hostRect.top + editor.scrollTop),
+                            width: cr.width,
+                            height: cr.height
+                        }));
+                    }
+                    cursorChannel.send({ left, top, rects, ts: Date.now() });
+                } catch {}
+            };
+            editor.addEventListener('keyup', sendCursorPos);
+            editor.addEventListener('mouseup', sendCursorPos);
+            editor.addEventListener('input', sendCursorPos);
+
+            cursorChannel.on('message', (data, peerId) => {
+                const { color } = ensurePeerStyle(peerId);
+                // Cursor element
+                if (!cursorMap[peerId]) {
+                    const cursor = document.createElement('div');
+                    cursor.className = 'cursor';
+                    cursor.style.backgroundColor = color;
+                    editor.appendChild(cursor);
+                    cursorMap[peerId] = { cursor, rects: [] };
+                }
+                const entry = cursorMap[peerId];
+                entry.cursor.style.left = `${data.left}px`;
+                entry.cursor.style.top = `${data.top}px`;
+                // Clear old selection rects
+                if (entry.rects && entry.rects.length) {
+                    entry.rects.forEach(el => el.remove());
+                }
+                entry.rects = [];
+                // Draw new selection rects
+                if (Array.isArray(data.rects)) {
+                    data.rects.forEach(r => {
+                        const el = document.createElement('div');
+                        el.className = 'selection-rect';
+                        el.style.left = `${r.left}px`;
+                        el.style.top = `${r.top}px`;
+                        el.style.width = `${r.width}px`;
+                        el.style.height = `${r.height}px`;
+                        el.style.backgroundColor = color + '40'; // hex with transparency approx
+                        editor.appendChild(el);
+                        entry.rects.push(el);
+                    });
+                }
+            });
+
+            // File sharing
+            // Append file items into the same versions panel, styled in green
+            const appendWithRollingLimit = (container, element, limit) => {
+                container.insertBefore(element, container.firstChild);
+                while (container.children.length > limit) {
+                    container.removeChild(container.lastChild);
+                }
+            };
+            const MAX_HISTORY_ITEMS = 30; // rolling limit suggestion
+            fileChannel.on('message', (message, peerId) => {
+                const { metadata, payload } = message;
+                const blob = new Blob([payload], { type: metadata.type });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = metadata.name;
+                link.textContent = `File from ${peerId}: ${metadata.name}`;
+                link.className = 'file-item';
+                appendWithRollingLimit(versionList, link, MAX_HISTORY_ITEMS);
+            });
+
+        fileInput.addEventListener('change', async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                try {
+            await ensureActiveGuestIdentity();
+            await db.sm.executeWithPermission("write");
+                    const buffer = await file.arrayBuffer();
+                    const message = {
+                        metadata: { name: file.name, type: file.type, id: `file-${Date.now()}` },
+                        payload: buffer
+                    };
+                    fileChannel.send(message);
+                } catch (error) {
+                    showMsg('err', 'Error sharing file: ' + (error?.message || error));
+                }
+            });
+
+            // Version history
+        saveVersionBtn.addEventListener('click', async () => {
+                try {
+            await ensureActiveGuestIdentity();
+            await db.sm.executeWithPermission("write");
+                    const versionId = `version-${Date.now()}`;
+                    await db.put({ content: getEditorHTML(), timestamp: new Date().toISOString() }, versionId);
+                    await db.link(docId, versionId);
+                    const tsIso = new Date().toISOString();
+                    const btn = document.createElement('button');
+                    btn.textContent = `Version ${tsIso}`;
+                    btn.addEventListener('click', async () => {
+                        try {
+                            const { result: node } = await db.get(versionId);
+                            if (node && node.value) {
+                                setEditorHTML(node.value.content || '');
+                                updateWordCount();
+                                updatePreview();
+                                const ts = Date.now();
+                                if (ts > lastTimestamp) lastTimestamp = ts;
+                                docChannel.send({ content: getEditorHTML(), ts });
+                            }
+                        } catch {}
+                    });
+                    // Prepend newest first and enforce rolling limit
+                    if (versionList.firstChild) versionList.insertBefore(btn, versionList.firstChild);
+                    else versionList.appendChild(btn);
+                    while (versionList.children.length > MAX_HISTORY_ITEMS) versionList.removeChild(versionList.lastChild);
+                    // Minimalist status flash like typing-save: show "Saved" near Connected peers
+                    showSavedUntil = Date.now() + 1500;
+                    updateStatus();
+                    if (savedFlashTimer) clearTimeout(savedFlashTimer);
+                    savedFlashTimer = setTimeout(() => { updateStatus(); }, 1600);
+                } catch (error) {
+                    showMsg('err', 'Error saving version: ' + (error?.message || error));
+                }
+            });
+
+            const { results } = await db.map({
+                query: { $edge: { id: docId } }
+            });
+    results.forEach(node => {
+                const btn = document.createElement('button');
+                btn.textContent = `Version ${node.value.timestamp}`;
+                btn.addEventListener('click', () => {
+                    setEditorHTML(node.value.content || '');
+                    updateWordCount();
+                    updatePreview();
+                    const ts = Date.now();
+                    if (ts > lastTimestamp) lastTimestamp = ts;
+                    docChannel.send({ content: getEditorHTML(), ts });
+                });
+        // Append older items at the end; overall list will be trimmed by subsequent insertions
+        versionList.appendChild(btn);
+            });
+
+            
+
+            // Initial status
+            updateStatus();
+            status.classList.add('active');
+
+        // Initial auth state
+            try {
+                const initialState = {
+                    isActive: db.sm.isSecurityActive(),
+                    activeAddress: db.sm.getActiveEthAddress ? db.sm.getActiveEthAddress() : null,
+                    isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn ? db.sm.isCurrentSessionProtectedByWebAuthn() : false,
+                    hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration ? db.sm.hasExistingWebAuthnRegistration() : false
+                };
+                setAuthUI(initialState);
+            } catch {}
+
+        // Auto-login if WebAuthn registration exists and no active session
+            try {
+                if (db.sm.hasExistingWebAuthnRegistration && db.sm.hasExistingWebAuthnRegistration() && !db.sm.isSecurityActive()) {
+                    const addr = await db.sm.loginCurrentUserWithWebAuthn();
+            if (addr) showMsg('ok', `Auto WebAuthn login as ${shortAddr(addr)}`);
+                }
+            } catch {}
+        })();
+    </script>
+</body>
+</html>
