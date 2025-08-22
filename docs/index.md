@@ -5,7 +5,7 @@ Welcome to the official technical documentation for GenosDB.
 ## API Reference & Advanced Documentation 
 
   - [GDB API Reference](GDB-API-Reference.md)
-  - [GenosDB Trust Model](GenosDB-Trust-Model.md)
+  - [Distributed Trust Model](GenosDB-Distributed-Trust-Model.md)
   - [GenosDB Examples](EXAMPLES.md)
   - [GenosDB Features](GenosDB-Features.md)
   - [Cursor-Based-Pagination](Cursor-Based-Pagination.md)
