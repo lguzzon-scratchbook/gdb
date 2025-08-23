@@ -40,6 +40,8 @@ Welcome to the official technical documentation for GenosDB.
 
   - 🔄 [GenosDB Hybrid Delta Protocol](genosdb-hybrid-delta-protocol.md) (Details the dual-mode engine ensuring real-time speed via delta updates and reliability via a full-state fallback.)
 
+  - 🕰️ [GenosDB Hybrid Logical Clock (HLC)](genosdb-hybrid-logical-clock.md) (An advanced timestamping system that blends physical time with a logical counter to ensure causal event ordering and enable robust, deterministic conflict resolution.)
+
   - 🧯 [GenosDB Fallback Server](genosdb-fallback-server.md) (Optional superpeer Node.js service to improve availability)
 
 
