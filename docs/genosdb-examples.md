@@ -53,6 +53,10 @@ A real-time peer-to-peer video streaming app using GenosDB’s room feature. Sup
 ### [Real-Time File Streaming](https://estebanrfp.github.io/gdb/examples/file-streaming.html)
 A real-time peer-to-peer File Streaming app using GenosDB’s room feature.
 
+### [Real-time location sharing](https://estebanrfp.github.io/gdb/examples/share-locations.html)
+An interactive example that enables multiple users to share their live location on a map in real time, using Leaflet for visualization and GenosRTC as the P2P transport layer.
+Each participant can start or stop location sharing, track their own path, and follow other connected users’ movements live.
+
 ### [Real-Time collaborative rich‑text editor powered by GenosDB](https://estebanrfp.github.io/gdb/examples/collab.html)
 A real-time collaborative rich‑text editor powered by GenosDB: live typing sync, remote cursors/selections, RBAC + WebAuthn auth, Markdown/HTML split preview with draggable splitter, version history panel, file sharing, and video room.
 
