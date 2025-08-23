@@ -1,9 +1,4 @@
 # 📘 API Reference
-<div align="center">
-  <a href="https://www.youtube.com/watch?v=Lkw4hQpgt50">
-    <img src="https://img.youtube.com/vi/Lkw4hQpgt50/0.jpg" alt="GenosDB Presentation" width="100%" />
-  </a>
-</div>
 
 > Minimalist Graph Database with P2P support and real-time querying.
 
