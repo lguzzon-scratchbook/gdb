@@ -60,20 +60,20 @@ A real-time collaborative rich‑text editor powered by GenosDB: live typing syn
 
 ## RBAC Security Examples
 
-### [SM RBAC + Security (WebAuthn Example)](https://estebanrfp.github.io/gdb/examples/rbac.html)
-Experimental Role-Based Access Control (RBAC) API + WebAuthn Security.
+### [Security Manager (SM Testbed)](https://estebanrfp.github.io/gdb/examples/sm-testbed.html)
+Security Manager + Role-Based Access Control (RBAC) + WebAuthn Security.
 
 ### [SM RBAC Chat (WebAuthn Example)](https://estebanrfp.github.io/gdb/examples/chatrbac.html)
-Experimental RBAC Chat with WebAuthn Security.
+RBAC Chat with WebAuthn Security.
 
 ### [SM RBAC WebAuthn Example](https://estebanrfp.github.io/gdb/examples/WebAuthn.html)
-Experimental RBAC Simple WebAuthn Security.
+RBAC Simple WebAuthn Security.
 
-### [SM RBAC Encryption Example](https://estebanrfp.github.io/gdb/examples/Encryption.html)
-Experimental RBAC Encryption & Decryption Demo
+### [SM Encryption Example](https://estebanrfp.github.io/gdb/examples/Encryption.html)
+SM Encryption & Decryption Example
 
 ### [GenosDB Security Bed (v2)](https://estebanrfp.github.io/gdb/examples/audit.html)
-Experimental SM RBAC Security Audit Demo
+SM RBAC Security Audit Example
 
 ### [AI-powered Oplog Audit Module](https://estebanrfp.github.io/gdb/examples/todolist-audit.html)
 Provides real-time auditing of oplog entries using AI to detect patterns, prohibited content, and support data
