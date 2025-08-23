@@ -68,7 +68,7 @@ GenosDB is in active beta and soon will deliver its first stable release, v1.0.0
 - **Pending Features**:
   - No major features are currently pending. The project has entered a hardening phase with a focus on rigorous testing and stability improvements.
 
-> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [changelog](CHANGELOG.md) before upgrading.
+> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [CHANGELOG](CHANGELOG.md) before upgrading.
 
 ### ✅ **Role Based Access Control (RBAC)**
 
