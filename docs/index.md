@@ -28,7 +28,7 @@ Welcome to the official technical documentation for GenosDB.
   ---
 
   - 🧭 [GenosRTC Guide (rtc)](genosrtc-guide.md) (Tutorials for data channels and media streaming)
-  - 🌳 [Radix Tree (rx)](radix-tree.md) (Prefix index with $startsWith and searchByPrefix)
+  - 🌳 [Radix Tree (rx)](rx-radix-tree.md) (Prefix index with $startsWith and searchByPrefix)
   - 🕵️ [AI Audit Option (audit)](ai-audit.md) (Asynchronous AI moderation of the oplog with custom prompt)
   - 🤖 [AI Query Module (ai)](ai-module.md) (AI-powered transformations in db.map using prompts)
   - 📍 [GEO Query Module (geo)](geo-module.md) (Geo queries with $near and $bbox operators)
@@ -37,8 +37,10 @@ Welcome to the official technical documentation for GenosDB.
 
 
   - ⚙️ [GenosDB Worker Architecture](genosdb-worker-architecture.md) (Technical overview of the persistence worker, covering its tiered storage strategy and data integrity mechanisms.)
-  
-  - 🧯 [GenosDB Fallback Server](genosdb-falback-server.md) (Optional superpeer Node.js service to improve availability)
+
+  - 🔄 [GenosDB Hybrid Delta Protocol](genosdb-hybrid-delta-protocol.md) (Details the dual-mode engine ensuring real-time speed via delta updates and reliability via a full-state fallback.)
+
+  - 🧯 [GenosDB Fallback Server](genosdb-fallback-server.md) (Optional superpeer Node.js service to improve availability)
 
 
 ## Roadmap & Whitepaper
