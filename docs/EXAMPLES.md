@@ -78,8 +78,8 @@ Experimental SM RBAC Security Audit Demo
 ### [AI-powered Oplog Audit Module](https://estebanrfp.github.io/gdb/examples/todolist-audit.html)
 Provides real-time auditing of oplog entries using AI to detect patterns, prohibited content, and support data
 
-### [SM RBAC P2P Secure Notes Demo](https://estebanrfp.github.io/gdb/examples/rbac-p2p-notes-demo.html)
-A single-page HTML application demonstrating secure, real-time, peer-to-peer note sharing. It utilizes GenosDB and its RBAC module for identity management, implicit client-side encryption of notes, and secure P2P data synchronization.
+### [SM Secure Notes](https://estebanrfp.github.io/gdb/examples/sm-secure-notes.html)
+A single-page HTML application demonstrating secure, real-time, peer-to-peer note sharing. It utilizes GenosDB and its SM module for identity management, implicit client-side encryption of notes, and secure P2P data synchronization.
 
 ---
 
