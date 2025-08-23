@@ -4,38 +4,38 @@ Welcome to the official technical documentation for GenosDB.
 
 ## API Reference & Advanced Documentation 
 
-  - [GDB API Reference](GDB-API-Reference.md)
-  - [Distributed Trust Model](GenosDB-Distributed-Trust-Model.md)
-  - [GenosDB Examples](EXAMPLES.md)
-  - [GenosDB Features](GenosDB-Features.md)
-  - [Cursor-Based-Pagination](Cursor-Based-Pagination.md)
-  - [Resources](RESOURCES.md)
+  - [GDB API Reference](genosdb-api-reference.md)
+  - [Distributed Trust Model](genosdb-distributed-trust-model.md)
+  - [GenosDB Examples](genosdb-examples.md)
+  - [GenosDB Features](genosdb-features.md)
+  - [Cursor-Based-Pagination](cursor‐based-pagination.md)
+  - [Resources](genosdb-resources.md)
 
 ---
 
-  - [CRUD Operation Guide](CRUD-Operation-Guide.md)
-  - [PUT Guide](PUT-Guide.md)
-  - [GET Guide](GET-Guide.md)
-  - [MAP Guide](MAP-Guide.md)
-  - [REMOVE Guide](REMOVE-Guide.md)
-  - [LINK Guide](MAP-Guide.md)
+  - [CRUD Operation Guide](crud-operations-guide.md)
+  - [PUT Guide](put-guide.md)
+  - [GET Guide](get-guide.md)
+  - [MAP Guide](map-guide.md)
+  - [REMOVE Guide](remove-guide.md)
+  - [LINK Guide](link-guide.md)
 
 ## API Reference (Modules)
 
-  - [Security Module (SM) API Reference](SM-API-Reference.md)
-  - [GenosRTC API Reference](GenosRTC-API-Reference.md)
+  - [Security Module (SM) API Reference](sm-api-reference.md)
+  - [GenosRTC API Reference](genosrtc-api-reference.md)
 
   ---
 
-  - [GenosRTC Guide (rtc)](GenosRTC-Guide.md)
-  - [Radix Tree (rx)](Radix-Tree.md)
-  - [AI Audit Option (audit)](AI-Audit.md)
-  - [AI Query Module (ai)](AI-Module.md)
-  - [GEO Query Module (geo)](GEO-Module.md)
+  - [GenosRTC Guide (rtc)](genosrtc-guide.md)
+  - [Radix Tree (rx)](radix-tree.md)
+  - [AI Audit Option (audit)](ai-audit.md)
+  - [AI Query Module (ai)](ai-module.md)
+  - [GEO Query Module (geo)](geo-module.md)
 
   ---
   
-  - [GenosDB Fallback Server](GenosDB-Fallback-Server.md)
+  - [GenosDB Fallback Server](genosdb-falback-server.md)
 
 
 ## Roadmap & Whitepaper

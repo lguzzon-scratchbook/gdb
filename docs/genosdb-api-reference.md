@@ -147,7 +147,7 @@ const id = await db.put({ type: "User", name: "Ana" })
 await db.put({ name: "Ana B" }, id)
 ```
 
-> **More examples**: See [PUT Guide](PUT-Guide.md).
+> **More examples**: See [PUT Guide](put-guide.md).
 
 ---
 
@@ -166,7 +166,7 @@ Retrieves a node by its ID. If a `callback` is provided, it enters reactive mode
 const { result } = await db.get(id)
 ```
 
-> **More examples**: See [GET Guide](GET-Guide.md).
+> **More examples**: See [GET Guide](get-guide.md).
 
 ---
 
@@ -336,7 +336,7 @@ const { unsubscribe } = await db.map(({ id, value, action }) => {
 // making the code cleaner and easier to maintain.
 ```
 
-> **More examples**: See - [MAP Guide](MAP-Guide.md) for logical operators and pagination.
+> **More examples**: See - [MAP Guide](map-guide.md) for logical operators and pagination.
 
 ---
 

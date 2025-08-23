@@ -5,11 +5,11 @@ GenosDB is a distributed, modular, P2P graph database developed by **Esteban Fus
 
 🛠 [Roadmap](https://github.com/estebanrfp/gdb/blob/main/ROADMAP.md) (planned features and future updates)
 
-💡 [Examples](https://github.com/estebanrfp/gdb/blob/main/docs/EXAMPLES.md) (code snippets and usage demos)
+💡 [Examples](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-examples.md) (code snippets and usage demos)
 
 📖 [Documentation](https://github.com/estebanrfp/gdb/blob/main/docs/index.md) (full reference guide)
 
-🔍 [API Reference](https://github.com/estebanrfp/gdb/blob/main/docs/GDB-API-Reference.md) (detailed API methods)
+🔍 [API Reference](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-api-reference.md) (detailed API methods)
 
 📚 [Wiki](https://github.com/estebanrfp/gdb/wiki) (additional notes and guides)
 

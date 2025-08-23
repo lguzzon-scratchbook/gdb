@@ -136,7 +136,7 @@ For interactive, AI-assisted GenosDB documentation:
 
 We’ve created a collection of interactive examples to help you understand how GDB works in real-world scenarios. These examples cover everything from basic setup to advanced features like RBAC and P2P synchronization.
 
-👉 [Explore /docs/Examples.md](https://github.com/estebanrfp/gdb/blob/main/docs/EXAMPLES.md)
+👉 [Explore /docs/Examples](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-examples.md)
 
 ## Roadmap & Whitepaper
 

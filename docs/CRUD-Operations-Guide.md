@@ -14,8 +14,8 @@
 
 ---
 
-- [PUT Guide](PUT-Guide.md)
-- [GET Guide](GET-Guide.md)
-- [MAP Guide](MAP-Guide.md)
-- [REMOVE Guide](REMOVE-Guide.md)
-- [LINK Guide](LINK-Guide.md)
+- [PUT Guide](put-guide.md)
+- [GET Guide](get-guide.md)
+- [MAP Guide](map-guide.md)
+- [REMOVE Guide](remove-guide.md)
+- [LINK Guide](link-guide.md)
