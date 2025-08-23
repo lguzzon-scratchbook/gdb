@@ -24,7 +24,7 @@ A lightweight, decentralized graph database designed for modern web applications
 [![Liberapay receiving](https://img.shields.io/liberapay/receives/estebanrfp.svg?logo=liberapay)](https://liberapay.com/estebanrfp/donate)
 
 
-> ✅ GenosDB uses network access by design for real-time P2P synchronization (Socket.dev notice)
+> ✅ GenosDB uses network access by design for real-time P2P synchronization 👉 { rtc: true }
 
 > ⚠️ Migration Guide: The class-based API `new GDB()` has been removed. Please migrate to the async factory function. See the guide: [MIGRATION.md](./MIGRATION.md)
 
@@ -83,7 +83,7 @@ GenosDB is in active beta and soon will deliver its first stable release, v1.0.0
 - Digital signature of critical operations
 - Real-time permission validation
 - Secure storage of roles in internal graph
-- [Security Manager (SM API Reference)](https://github.com/estebanrfp/gdb/blob/main/docs/sm-api-reference.md)
+- [Security Manager (SM Architecture)](https://github.com/estebanrfp/gdb/blob/main/docs/sm-architecture.md)
 
 > **Important Notice**: This project has progressed from its active development phase and is now in the beta stage. While it is functional and stable in controlled environments, it is recommended to evaluate its suitability for production based on the specific needs of your environment. For more details, please refer to the [Project Status](#project-status)
 
