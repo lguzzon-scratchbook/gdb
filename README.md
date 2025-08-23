@@ -190,6 +190,14 @@ The project includes an interactive visualization of the repository's history an
 
 This graphical view is especially useful for new contributors or anyone looking to gain deeper insight into the project’s evolution and structure, providing a clear and visual understanding of the workflow.
 
+## Presentation Video
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=Lkw4hQpgt50">
+    <img src="https://img.youtube.com/vi/Lkw4hQpgt50/0.jpg" alt="GenosDB Presentation" width="100%" />
+  </a>
+</div>
+
 ## Contributing
 
 We welcome contributions to improve this project! Please read our [Contribution Guidelines](CONTRIBUTING.md) for details on how to get started.
