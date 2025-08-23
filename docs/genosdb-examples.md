@@ -44,13 +44,13 @@ A textarea that syncs content in real-time with GenosDB.
 ### [Tic Tac Toe Game](https://estebanrfp.github.io/gdb/examples/tictactoc.html)
 A Tic Tac Toe game using GenosDB for real-time player synchronization.
 
-### [Real-Time Audio Room](https://estebanrfp.github.io/gdb/examples/audioStreaming.html)
+### [Real-Time Audio Room](https://estebanrfp.github.io/gdb/examples/audio-streaming.html)
 A real-time peer-to-peer audio streaming app using GenosDB’s room feature. Supports microphone broadcasting, automatic peer discovery, and live audio playback between multiple users in the same session. Includes real-time voice activity detection to visually indicate when a peer is speaking.
 
-### [Real-Time Video Room](https://estebanrfp.github.io/gdb/examples/videoStreaming.html)
+### [Real-Time Video Room](https://estebanrfp.github.io/gdb/examples/video-streaming.html)
 A real-time peer-to-peer video streaming app using GenosDB’s room feature. Supports webcam broadcasting, automatic peer discovery, and live video playback between multiple users in the same session.
 
-### [Real-Time File Streaming](https://estebanrfp.github.io/gdb/examples/fileStreaming.html)
+### [Real-Time File Streaming](https://estebanrfp.github.io/gdb/examples/file-streaming.html)
 A real-time peer-to-peer File Streaming app using GenosDB’s room feature.
 
 ### [Real-Time collaborative rich‑text editor powered by GenosDB](https://estebanrfp.github.io/gdb/examples/collab.html)
@@ -66,10 +66,10 @@ Security Manager + Role-Based Access Control (RBAC) + WebAuthn Security.
 ### [SM RBAC Chat (WebAuthn Example)](https://estebanrfp.github.io/gdb/examples/chatrbac.html)
 RBAC Chat with WebAuthn Security.
 
-### [SM RBAC WebAuthn Example](https://estebanrfp.github.io/gdb/examples/WebAuthn.html)
+### [SM RBAC WebAuthn Example](https://estebanrfp.github.io/gdb/examples/webauthn.html)
 RBAC Simple WebAuthn Security.
 
-### [SM Encryption Example](https://estebanrfp.github.io/gdb/examples/Encryption.html)
+### [SM Encryption Example](https://estebanrfp.github.io/gdb/examples/encryption.html)
 SM Encryption & Decryption Example
 
 ### [GenosDB Security Bed (v2)](https://estebanrfp.github.io/gdb/examples/audit.html)
