@@ -22,7 +22,7 @@ Welcome to the official technical documentation for GenosDB.
 
 ## API Reference (Modules)
 
-  - [Security Module (SM) API Reference](sm-api-reference.md)
+  - [Security Manager (SM API Reference)](sm-api-reference.md)
   - [GenosRTC API Reference](genosrtc-api-reference.md)
 
   ---

@@ -83,7 +83,7 @@ GenosDB is in active beta and soon will deliver its first stable release, v1.0.0
 - Digital signature of critical operations
 - Real-time permission validation
 - Secure storage of roles in internal graph
-- [Security Implementation](https://github.com/estebanrfp/gdb/wiki/RBAC-Security)
+- [Security Manager (SM API Reference)](https://github.com/estebanrfp/gdb/blob/main/docs/sm-api-reference.md)
 
 > **Important Notice**: This project has progressed from its active development phase and is now in the beta stage. While it is functional and stable in controlled environments, it is recommended to evaluate its suitability for production based on the specific needs of your environment. For more details, please refer to the [Project Status](#project-status)
 
