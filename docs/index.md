@@ -34,6 +34,9 @@ Welcome to the official technical documentation for GenosDB.
   - 📍 [GEO Query Module (geo)](geo-module.md) (Geo queries with $near and $bbox operators)
 
   ---
+
+
+  - ⚙️ [GenosDB Worker Architecture](genosdb-worker-architecture.md) (Technical overview of the persistence worker, covering its tiered storage strategy and data integrity mechanisms.)
   
   - 🧯 [GenosDB Fallback Server](genosdb-falback-server.md) (Optional superpeer Node.js service to improve availability)
 
