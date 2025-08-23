@@ -298,7 +298,7 @@ GenosDB is a powerful, developer-friendly platform for decentralized Web3 applic
 
 **Get Started**:
 - Repository: [github.com/estebanrfp/gdb](https://github.com/estebanrfp/gdb)
-- Documentation: [/docs](https://github.com/estebanrfp/gdb/tree/main/docs)
+- Documentation: [/docs](https://github.com/estebanrfp/gdb/blob/main/docs/index.md)
 - Tutorials: [Medium](https://medium.com/genosdb)
 - Community: [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions), [Twitter/X @estebanrfp](https://twitter.com/estebanrfp)
 
