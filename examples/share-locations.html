@@ -1,338 +1,242 @@
 <!DOCTYPE html>
-<html lang="es">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-    <title>Navi</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok Location Share - P2P Real-Time Tracking</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- GenosDB CDN -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body,
-        html {
-            height: 100%;
+        /* Grok-inspired style: Dark theme, futuristic tech look with neon accents */
+        body {
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        #app {
+            font-family: 'Arial', sans-serif;
+            background-color: #0a0a0a; /* Deep black background */
+            color: #ffffff; /* White text for contrast */
             display: flex;
             flex-direction: column;
-            height: 100%;
-        }
-
-        header {
-            background-color: #007AFF;
-            color: white;
-            text-align: center;
-            padding: 1rem;
-            flex-shrink: 0;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.2rem;
-            font-weight: 600;
+            height: 100vh;
+            overflow: hidden;
         }
 
         #map {
-            flex-grow: 1;
-            width: 100%;
+            flex: 1;
+            border: 2px solid #00ffcc; /* Neon cyan border */
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.5); /* Glowing effect */
         }
 
-        #shareLocation {
+        #controls {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #007AFF;
-            color: white;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background-color: rgba(10, 10, 10, 0.8); /* Semi-transparent dark panel */
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); /* Neon glow */
+        }
+
+        button {
+            background-color: #00ffcc; /* Neon cyan */
+            color: #0a0a0a;
             border: none;
             padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
-            font-weight: 500;
-            z-index: 1000;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        button:hover {
+            background-color: #00cc99; /* Darker neon on hover */
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.7);
+        }
+
+        button:disabled {
+            background-color: #333333;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #00ffcc; /* Neon text */
+        }
+
+        #peer-list {
+            margin-top: 10px;
+            font-size: 12px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .peer-item {
+            margin: 5px 0;
+            color: #ffffff;
+        }
+
+        /* Custom marker styles for tech feel */
+        .leaflet-marker-icon {
+            filter: drop-shadow(0 0 5px #00ffcc); /* Neon glow on markers */
         }
     </style>
 </head>
-
 <body>
-    <div id="app">
-        <header>
-            <h1>Navi</h1>
-        </header>
-        <main>
-            <div id="map"></div>
-            <button id="shareLocation">Share Location</button>
-        </main>
+    <div id="map"></div>
+    <div id="controls">
+        <button id="startSharing">Start Sharing Location</button>
+        <button id="stopSharing" disabled>Stop Sharing Location</button>
+        <div id="status">Status: Not sharing</div>
+        <div id="peer-list">Connected Peers: None</div>
     </div>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script type="module">
+        // Initialize GenosDB with RTC for P2P
         import { gdb } from "../dist/index.js";
+        const db = await gdb('grok-location-room', { rtc: true });
+        const room = db.room;
 
-        const db = await gdb('search-db', { rtc: true });
+        // Initialize Leaflet Map
+        const map = L.map('map').setView([0, 0], 2); // Default view
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-        // Use the current GenosRTC API: create a data channel for position updates
-        const positionChannel = db.room.channel('nodePosition');
+        // Data structures
+        const peers = new Map(); // peerId -> { marker, route: [] }
+        let myLocationWatcher = null;
+        let myRoute = []; // Array of [lat, lng] for own route
+        let myMarker = null;
+        let myPolyline = null;
+        const locationChannel = room.channel('shareloc');
 
-        // Listen for peer lifecycle events using the new event names
-        db.room.on('peer:join', (peerId) => console.log(`${peerId} joined`));
-        db.room.on('peer:leave', (peerId) => {
-            console.log(`${peerId} left`);
-            // Cleanup remote trajectory when a peer leaves
-            if (remoteTrajectories[peerId]) {
-                if (remoteTrajectories[peerId].marker) {
-                    map.removeLayer(remoteTrajectories[peerId].marker);
-                }
-                if (remoteTrajectories[peerId].polyline) {
-                    map.removeLayer(remoteTrajectories[peerId].polyline);
-                }
-                delete remoteTrajectories[peerId];
-            }
-        });
+        // UI Elements
+        const startBtn = document.getElementById('startSharing');
+        const stopBtn = document.getElementById('stopSharing');
+        const statusDiv = document.getElementById('status');
+        const peerListDiv = document.getElementById('peer-list');
 
-        let map, userMarker, userCircle, followingUser = true, sharingLocation = false, watchId;
-
-        let trajectoryPolyline;
-        let trajectoryPoints = [];
-        let remoteTrajectories = {};
-
-        async function initMap() {
-            map = L.map('map', {
-                zoomControl: false,
-                attributionControl: false
-            })
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(map);
-
-            L.control.zoom({
-                position: 'bottomright'
-            }).addTo(map);
-
-            try {
-                const position = await getCurrentPosition();
-                const { latitude, longitude } = position.coords;
-                map.setView([latitude, longitude], 15);
-                updateMap(latitude, longitude, position.coords.accuracy);
-            } catch (error) {
-                console.error("Error getting initial location:", error);
-                map.setView([0, 0], 2);
-            }
-        }
-
-        const btn = document.querySelector('#shareLocation');
-    btn.innerHTML = 'Share location'; // Initial button text
-
-        btn.onclick = async function () {
-            if (sharingLocation) {
-                await stopSharingLocation();
-                sharingLocation = false;
-                btn.innerHTML = 'Share location';
-            } else {
-                sharingLocation = true;
-                btn.innerHTML = 'Stop sharing';
-                await shareLocation();
-            }
-        };
-
-        function getCurrentPosition(options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }) {
-            return new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        // Helper to update peer list UI
+        function updatePeerList() {
+            peerListDiv.innerHTML = 'Connected Peers:<br>';
+            peers.forEach((data, peerId) => {
+                const div = document.createElement('div');
+                div.className = 'peer-item';
+                div.textContent = `Peer ${peerId.slice(0, 8)}...`;
+                peerListDiv.appendChild(div);
             });
-        }
-
-        async function shareLocation() {
-            try {
-                const position = await getCurrentPosition();
-                const { latitude, longitude, accuracy } = position.coords;
-                updateMap(latitude, longitude, accuracy);
-                await sendLocation(latitude, longitude);
-                watchId = startWatchingPosition();
-            } catch (error) {
-                console.error("Error getting location:", error);
+            if (peers.size === 0) {
+                peerListDiv.innerHTML = 'Connected Peers: None';
             }
         }
 
-        function startWatchingPosition() {
-            // Start a geolocation watch to continuously broadcast position changes
-            return navigator.geolocation.watchPosition(async (position) => {
-                const { latitude, longitude, accuracy } = position.coords;
-                updateMap(latitude, longitude, accuracy);
-                await sendLocation(latitude, longitude);
-            }, (error) => {
-                console.error("Error watching position:", error);
-            }, {
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0
-            });
-        }
-
-        function removeUserMarker() {
-            if (userMarker) {
-                map.removeLayer(userMarker);
-                userMarker = null;
-            }
-
-            if (userCircle) {
-                map.removeLayer(userCircle);
-                userCircle = null;
-            }
-
-            if (trajectoryPolyline) {
-                map.removeLayer(trajectoryPolyline);
-                trajectoryPolyline = null;
-                trajectoryPoints = [];
-            }
-        }
-
-
-        async function stopSharingLocation() {
-            if (watchId != null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-                removeUserMarker();
-                await sendStopSharingSignal();
-            }
-        }
-
-        // Send a signal through the channel indicating sharing has stopped
-        async function sendStopSharingSignal() {
-            const event = {
-                kind: 1,
-                created_at: Math.floor(Date.now() / 1000),
-                tags: [],
-                content: JSON.stringify({ action: 'stopSharing' })
-            };
-
-            // Broadcast to all peers via the data channel
-            positionChannel.send(event);
-            // db.room.leave(); // Optional: leave room if desired
-        }
-
-        function updateMap(latitude, longitude, accuracy) {
-            if (!userMarker) {
-                userMarker = L.marker([latitude, longitude], {
-                    icon: L.divIcon({
-                        className: 'user-marker',
-                        html: '<div style="background-color: blue; width: 10px; height: 10px; border-radius: 50%;"></div>'
-                    })
-                }).addTo(map).bindPopup(`yo`);
-                userCircle = L.circle([latitude, longitude], {
-                    color: 'blue',
-                    fillColor: '#3388ff',
-                    fillOpacity: 0.2,
-                    radius: Math.max(accuracy, 50)
-                }).addTo(map);
-
-                // Initialize the local trajectory polyline
-                trajectoryPoints = [[latitude, longitude]];
-                trajectoryPolyline = L.polyline(trajectoryPoints, {
-                    color: 'blue'
-                }).addTo(map);
-
-            } else {
-                userMarker.setLatLng([latitude, longitude]);
-                userCircle.setLatLng([latitude, longitude]);
-                userCircle.setRadius(Math.max(accuracy, 50));
-
-                // Append new point to the local trajectory and update the polyline
-                trajectoryPoints.push([latitude, longitude]);
-                trajectoryPolyline.setLatLngs(trajectoryPoints);
-            }
-
-            if (followingUser) {
-                map.setView([latitude, longitude], 19);
-            }
-
-            userCircle.bringToBack();
-        }
-
-        // Send current location to peers via the data channel
-        async function sendLocation(latitude, longitude) {
-            const event = {
-                kind: 1,
-                created_at: Math.floor(Date.now() / 1000),
-                tags: [],
-                content: JSON.stringify({ latitude, longitude })
-            };
-
-            // Broadcast to all peers via the data channel
-            positionChannel.send(event);
-        }
-
-        // Handle incoming location messages from peers
-        positionChannel.on('message', (data, peerId) => {
-            const content = JSON.parse(data.content);
-
-            if (content.action === 'stopSharing') {
-                // If the remote user stopped sharing, remove their trajectory
-                if (remoteTrajectories[peerId]) {
-                    if (remoteTrajectories[peerId].marker) {
-                        map.removeLayer(remoteTrajectories[peerId].marker);
-                    }
-                    if (remoteTrajectories[peerId].polyline) {
-                        map.removeLayer(remoteTrajectories[peerId].polyline);
-                    }
-                    delete remoteTrajectories[peerId];
-                }
-                return;
-            }
-
-            const { latitude, longitude } = content;
-
-            // Create or update the remote user's marker
-            let remoteMarker = remoteTrajectories[peerId]?.marker;
-            if (!remoteMarker) {
-                remoteMarker = L.circleMarker([latitude, longitude], {
-                    color: 'red',
-                    fillColor: '#f03',
-                    fillOpacity: 0.2,
-                    radius: 5
-                }).addTo(map).bindPopup(`Usuario: ${peerId}`);
-            } else {
-                remoteMarker.setLatLng([latitude, longitude]);
-            }
-
-            // Create or update the polyline of the remote user's trajectory
-            if (!remoteTrajectories[peerId]) {
-                remoteTrajectories[peerId] = {
-                    marker: remoteMarker,
-                    polyline: L.polyline([], { color: 'red' }).addTo(map),
-                    points: []
-                };
-            }
-
-            // Append new point to the remote trajectory and update the polyline
-            remoteTrajectories[peerId].points.push([latitude, longitude]);
-            remoteTrajectories[peerId].polyline.setLatLngs(remoteTrajectories[peerId].points);
+        // Handle peer join
+        room.on('peer:join', (peerId) => {
+            console.log(`Peer ${peerId} joined.`);
+            peers.set(peerId, { marker: null, route: [] });
+            updatePeerList();
         });
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await initMap();
-            // document.getElementById('shareLocation').addEventListener('click', shareLocation);
-
-            // Adjust the map size dynamically
-            function resizeMap() {
-                const mapElement = document.getElementById('map');
-                const headerHeight = document.querySelector('header').offsetHeight;
-                const windowHeight = window.innerHeight;
-                mapElement.style.height = `${windowHeight - headerHeight}px`;
-                map.invalidateSize();
+        // Handle peer leave
+        room.on('peer:leave', (peerId) => {
+            console.log(`Peer ${peerId} left.`);
+            const data = peers.get(peerId);
+            if (data) {
+                if (data.marker) map.removeLayer(data.marker);
+                if (data.polyline) map.removeLayer(data.polyline);
+                peers.delete(peerId);
             }
-
-            resizeMap();
-            window.addEventListener('resize', resizeMap);
+            updatePeerList();
         });
 
+        // Receive location updates from peers
+        locationChannel.on('message', (data, peerId) => {
+            const { lat, lng } = data;
+            let peerData = peers.get(peerId);
+            if (!peerData) {
+                peerData = { marker: null, route: [], polyline: null };
+                peers.set(peerId, peerData);
+            }
+
+            // Update marker
+            if (peerData.marker) {
+                peerData.marker.setLatLng([lat, lng]);
+            } else {
+                peerData.marker = L.marker([lat, lng], {
+                    icon: L.divIcon({ className: 'peer-marker', html: '<div style="background-color: #00ffcc; width: 20px; height: 20px; border-radius: 50%;"></div>' })
+                }).addTo(map).bindPopup(`Peer ${peerId.slice(0, 8)}`);
+            }
+
+            // Update route
+            peerData.route.push([lat, lng]);
+            if (peerData.polyline) {
+                peerData.polyline.setLatLngs(peerData.route);
+            } else {
+                peerData.polyline = L.polyline(peerData.route, { color: '#00ffcc', dashArray: '5, 5' }).addTo(map);
+            }
+
+            // Pan to the new location if needed (optional)
+            // map.panTo([lat, lng]);
+        });
+
+        // Start sharing location
+        startBtn.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                myLocationWatcher = navigator.geolocation.watchPosition(
+                    (position) => {
+                        const { latitude: lat, longitude: lng } = position.coords;
+
+                        // Update own marker and route
+                        if (myMarker) {
+                            myMarker.setLatLng([lat, lng]);
+                        } else {
+                            myMarker = L.marker([lat, lng], {
+                                icon: L.divIcon({ className: 'my-marker', html: '<div style="background-color: #ff00cc; width: 20px; height: 20px; border-radius: 50%;"></div>' })
+                            }).addTo(map).bindPopup('You');
+                        }
+
+                        myRoute.push([lat, lng]);
+                        if (myPolyline) {
+                            myPolyline.setLatLngs(myRoute);
+                        } else {
+                            myPolyline = L.polyline(myRoute, { color: '#ff00cc' }).addTo(map);
+                        }
+
+                        // Center map on own location
+                        map.setView([lat, lng], 15);
+
+                        // Send to peers
+                        locationChannel.send({ lat, lng });
+
+                        statusDiv.textContent = 'Status: Sharing location';
+                    },
+                    (error) => console.error('Geolocation error:', error),
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } else {
+                alert('Geolocation not supported.');
+            }
+        });
+
+        // Stop sharing location
+        stopBtn.addEventListener('click', () => {
+            if (myLocationWatcher) {
+                navigator.geolocation.clearWatch(myLocationWatcher);
+                myLocationWatcher = null;
+            }
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            statusDiv.textContent = 'Status: Not sharing';
+        });
     </script>
-
 </body>
-
 </html>
