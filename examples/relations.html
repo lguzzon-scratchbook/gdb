@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDB relations in realtime</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
+  <style>
+    /* --- Base Styles --- */
+    html {
+      box-sizing: border-box;
+      /* Better sizing calculations */
+    }
+
+    *,
+    *:before,
+    *:after {
+      box-sizing: inherit;
+    }
+
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      /* Prioritize Roboto if available */
+      margin: 0;
+      padding: 0;
+      display: grid;
+      /* Use CSS Grid for layout */
+      grid-template-columns: 280px 1fr;
+      /* Thin sidebar, rest for graph */
+      grid-template-rows: 1fr;
+      /* Single row taking full height */
+      min-height: 100vh;
+      /* Ensure body takes at least full viewport height */
+      background-color: #f4f4f4;
+      /* Light background for the page */
+    }
+
+    /* --- Controls Sidebar (#controls) --- */
+    #controls {
+      grid-column: 1 / 2;
+      /* Place in the first column */
+      background-color: #ffffff;
+      /* White background for sidebar */
+      padding: 25px 20px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #e0e0e0;
+      /* Subtle separator */
+      overflow-y: auto;
+      /* Add scroll if content overflows */
+    }
+
+    #controls h2 {
+      text-align: center;
+      color: #67b0f4;
+      margin-top: 0;
+      margin-bottom: 25px;
+      font-weight: 500;
+      /* Material-like font weight */
+    }
+
+    /* --- Graph Area (#cy) --- */
+    #cy {
+      grid-column: 2 / 3;
+      /* Place in the second column */
+      width: 100%;
+      /* Height will be controlled by the grid row (1fr) */
+      height: 100%;
+      /* Override potential fixed height */
+      min-height: 400px;
+      /* Ensure a minimum height */
+      border: none;
+      /* Remove the original border */
+      background-color: #ffffff;
+      /* White background for graph area */
+      /* Add some padding *around* the graph area */
+      padding: 15px;
+      position: relative;
+      /* Needed for cytoscape rendering */
+    }
+
+
+    /* --- Material Design Inspired Input/Button Styles --- */
+    input[type="text"] {
+      margin: 0 0 15px 0;
+      /* Consistent bottom margin */
+      padding: 12px 8px;
+      font-size: 16px;
+      border: none;
+      /* border-bottom: 1px solid #ccc; */
+      background-color: #f9f9f9;
+      /* Slightly off-white */
+      border-radius: 4px 4px 0 0;
+      /* Slight rounding at top */
+      transition: border-color 0.3s ease, background-color 0.3s ease;
+      width: 100%;
+      /* Make inputs fill sidebar width */
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-bottom: 2px solid #3f51b5;
+      /* Material Indigo focus */
+      background-color: #fff;
+    }
+
+    button {
+      margin: 5px 0 15px 0;
+      /* Top/bottom margin */
+      padding: 12px 15px;
+      font-size: 14px;
+      /* Slightly smaller button text */
+      background-color: #67b0f4;
+      /* Material Indigo */
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-transform: uppercase;
+      /* Standard for Material buttons */
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+      transition: background-color 0.3s ease, box-shadow 0.2s ease;
+      width: 100%;
+      /* Make buttons fill sidebar width */
+    }
+
+    button:hover {
+      background-color: #303f9f;
+      /* Darker Indigo on hover */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    button:active {
+      background-color: #1a237e;
+      /* Even darker on click */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Style the breaks for spacing between control groups */
+    #controls br {
+      display: block;
+      /* Make <br> take space */
+      content: "";
+      /* Required for display: block */
+      margin-top: 10px;
+      /* Add space after button before next input */
+    }
+
+    /* --- Responsive Adjustments --- */
+    @media (max-width: 768px) {
+      body {
+        grid-template-columns: 1fr;
+        /* Stack elements vertically */
+        grid-template-rows: auto 1fr;
+        /* Controls auto height, graph takes rest */
+        height: auto;
+        /* Allow body height to adjust */
+        min-height: 100vh;
+        /* Still ensure full viewport minimum */
+      }
+
+      #controls {
+        grid-column: 1 / 2;
+        /* Take the single column */
+        grid-row: 1 / 2;
+        /* Take the first row */
+        border-right: none;
+        /* Remove side border */
+        border-bottom: 1px solid #e0e0e0;
+        /* Add bottom border */
+        max-height: 45vh;
+        /* Limit controls height, enable scroll */
+        overflow-y: auto;
+        padding: 15px;
+        /* Adjust padding */
+      }
+
+      #cy {
+        grid-column: 1 / 2;
+        /* Take the single column */
+        grid-row: 2 / 3;
+        /* Take the second row */
+        /* Explicit height might be needed if 1fr doesn't work perfectly */
+        /* Trying to calculate remaining height minus potential safe areas and controls height */
+        height: calc(100vh - 45vh - 1px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+        min-height: 250px;
+        /* Smaller min-height on mobile */
+        padding: 10px 5px;
+        /* Adjust padding */
+      }
+
+      input[type="text"],
+      button {
+        font-size: 15px;
+        /* Slightly smaller fonts on mobile */
+        padding: 10px 8px;
+      }
+    }
+
+    #instructions {
+      background: #e9f0fe;
+      border: 1px solid #67b0f4;
+      border-radius: 6px;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #2c3e50;
+    }
+
+    #instructions h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #345eaa;
+      font-size: 16px;
+    }
+
+    #instructions ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style-type: disc;
+    }
+
+    /* --- Cytoscape Node/Edge Styles (Defined in JS below - Untouched CSS-wise here) --- */
+    /* The styles within the <script> tag's cytoscape initialization take precedence */
+  </style>
+</head>
+
+<body>
+  <!-- Controls Sidebar -->
+  <div id="controls">
+    <h2>Interactive GDB</h2>
+
+    <div id="instructions">
+      <h3>Instructions</h3>
+      <ul>
+        <li><strong>Create node:</strong> Type text in the first input and press <kbd>Enter</kbd>.</li>
+        <li><strong>Edit node:</strong> Select a node by clicking it, edit the text in the second input, then press
+          <kbd>Enter</kbd>.
+        </li>
+        <li><strong>Connect nodes:</strong> Click a node to select it, then hold <kbd>Shift</kbd> and click another
+          node.</li>
+        <li><strong>Delete node:</strong> Double-click a node and confirm.</li>
+      </ul>
+    </div>
+
+    <input type="text" id="nodeText" placeholder="Enter node text" />
+    <!-- <button onclick="insertNode()">Insert Node</button> -->
+    <br>
+    <input type="text" id="updateText" placeholder="New text" />
+    <!-- <button onclick="updateNode()">Update Selected Node</button> -->
+    <br>
+  </div>
+
+  <!-- Graph Display Area -->
+  <div id="cy"></div>
+
+  <!-- JAVASCRIPT - ORIGINAL VERSION - COMPLETELY UNTOUCHED -->
+  <script type="module">
+    // Import GDB
+    import { gdb } from "../dist/index.js";
+
+    const db = await gdb("testGraph", { rtc: true });
+
+    // Initialize Cytoscape with 'cose' layout settings
+    let cy = cytoscape({
+      container: document.getElementById("cy"),
+      elements: [],
+      style: [ // Using slightly enhanced styles for better visuals, but functionally same
+        { selector: "node", style: { "label": "data(text)", "background-color": "#67B0F4", "color": "#67B0F4", "border-width": 3, "border-color": "#00ffe9" } },
+        { selector: "node:selected", style: { "background-color": "#3fb589", "text-outline-color": "#FF6347", "border-width": 3, "border-color": "#00ff14" } }, // Added selected style for feedback
+        { selector: "edge", style: { "width": 1, "line-color": "#00ff14", "target-arrow-color": "#67B0F4", "target-arrow-shape": "triangle", "curve-style": "bezier" } }
+      ],
+      layout: {
+        name: "cose",
+        animate: true,
+        refresh: 20,
+        maxSimulationTime: 4000,
+        fit: true,
+        padding: 30,
+        nodeRepulsion: 4000,
+        edgeElasticity: 100,
+        nestingFactor: 0.1,
+        gravity: 80,
+        randomize: false
+      }
+    })
+
+    // Variable to store the selected node
+    let selectedNodeId = null;
+
+    // Variable to track if Shift is pressed
+    let isShiftPressed = false;
+
+    // Function to load all nodes and edges from the DB
+    async function updateGraph({ id, value, edges, action }) { // Manteniendo la firma original
+      try {
+        console.log('>', action)
+
+        // --- Manejo de Nodos (Exactamente como en tu original) ---
+        if (action === 'initial') {
+          // Evitar añadir duplicados si 'initial' se llama varias veces
+          if (!cy.getElementById(id).length) {
+            cy.add({ group: "nodes", data: { id: id, text: value } });
+          }
+        }
+        if (action === 'added') {
+          // Evitar añadir duplicados si 'added' se llama varias veces
+          if (!cy.getElementById(id).length) {
+            cy.add({ group: "nodes", data: { id, text: value } });
+          }
+        }
+        if (action === 'updated') {
+          // Usando selectedNodeId como en tu original (aunque sea propenso a bugs)
+          const node = cy.getElementById(id);
+          node.data("text", value);
+        }
+        if (action === 'removed') {
+          // Usando selectedNodeId como en tu original (aunque sea propenso a bugs)
+          const node = cy.getElementById(id);
+          if (node && node.length) { // Añadido .length para verificar que se encontró
+            node.remove();
+          }
+          // Clear selection after removing (como en tu original)
+          selectedNodeId = null;
+        }
+
+
+        // --- Manejo de Aristas ---
+        const edges2 = await edges.map(edgeId => ({ source: id, target: edgeId })); // Mapeo original
+        edges2.forEach(edge => {
+          console.log(edge); // Log original
+          cy.add({ group: "edges", data: { id: `${edge.source}-${edge.target}`, source: edge.source, target: edge.target } });
+        });
+
+        // --- Layout (Exactamente como en tu original) ---
+        cy.layout({
+          name: "cose",
+          animate: false,
+          refresh: 20,
+          maxSimulationTime: 4000,
+          fit: true,
+          padding: 130,
+          nodeRepulsion: 4000,
+          edgeElasticity: 100,
+          nestingFactor: 2.1,
+          gravity: 80,
+          randomize: false
+        }).run();
+
+      } catch (error) {
+        // Manejo de errores original, ahora debería capturar menos errores de 'nonexistant target'
+        console.error("Error processing graph update:", error);
+      }
+    }
+
+    // Insert a node
+    window.insertNode = async function () {
+      const text = document.getElementById("nodeText").value.trim();
+      if (!text) return alert("Please enter node text!");
+      try {
+        const id = await db.put(text);
+        console.log("Node inserted with ID:", id);
+        document.getElementById("nodeText").value = '' // Limpiar el input después de insertar
+      } catch (error) {
+        console.error("Error inserting node:", error);
+      }
+    };
+
+    // Update a node
+    window.updateNode = async function () {
+      const newText = document.getElementById("updateText").value.trim();
+      if (!selectedNodeId || !newText) {
+        return alert("Please select a node and enter new text!");
+      }
+      try {
+        await db.put(newText, selectedNodeId);
+        console.log("Node updated:", selectedNodeId);
+      } catch (error) {
+        console.error("Error updating node:", error);
+      }
+    };
+
+    // Remove a node
+    window.removeNode = async function () {
+      if (!selectedNodeId) {
+        return alert("Please select a node to remove!");
+      }
+      try {
+        await db.remove(selectedNodeId);
+        console.log("Node removed:", selectedNodeId);
+        // Nota: La limpieza de selectedNodeId está ahora en updateGraph if action==='removed'
+      } catch (error) {
+        console.error("Error removing node:", error);
+      }
+    };
+
+    // Listen for global keyboard events to detect Shift
+    window.addEventListener("keydown", (event) => { if (event.key === "Shift") isShiftPressed = true; });
+    window.addEventListener("keyup", (event) => { if (event.key === "Shift") isShiftPressed = false; });
+
+    // Add event listener to update input for Enter key
+    document.getElementById("updateText").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        updateNode();
+      }
+    });
+
+    // Add event listener to insert input for Enter key
+    document.getElementById("nodeText").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        insertNode();
+      }
+    });
+
+    // // Agregar un event listener global para detectar la tecla "Delete"
+    // document.addEventListener("keydown", function (event) {
+    //   if (event.key === "Backspace") {
+    //     event.preventDefault(); // Evitar comportamiento predeterminado
+    //     removeNode(); // Llamar a la función para eliminar el nodo seleccionado
+    //   }
+    // });
+
+    // Eliminar nodo con doble clic
+    cy.on("dblclick", "node", async function (event) {
+      const nodeId = event.target.id();
+      const confirmDelete = confirm(`Do you want to delete node "${nodeId}"?`);
+      if (!confirmDelete) return;
+
+      try {
+        await db.remove(nodeId);
+        console.log("Node removed via double-click:", nodeId);
+      } catch (error) {
+        console.error("Error removing node:", error);
+      }
+    });
+
+    // Handle clicks on nodes to link or select
+    cy.on("tap", "node", function (event) {
+      const nodeId = event.target.id();
+      const nodeData = event.target.data(); // Obtenemos los datos del nodo
+
+      if (isShiftPressed) {
+        handleLinkWithShift(event, nodeId); // Pasando event como en el original
+      } else {
+        if (selectedNodeId === nodeId) {
+          selectedNodeId = null;
+          console.log("Node deselected.");
+        } else {
+          selectedNodeId = nodeId;
+          console.log(`Node selected: ${nodeId}`);
+
+          // Mostrar el texto del nodo seleccionado en el input de actualización
+          document.getElementById("updateText").value = nodeData.text;
+        }
+      }
+    });
+
+    // Function to handle linking with Shift
+    async function handleLinkWithShift(event, targetNodeId) { // Firma original
+      // Check if there is a previously selected node
+      if (!selectedNodeId) {
+        // *** Cambio Mínimo Opcional: Mensaje más claro ***
+        alert("Click on the source node first (without Shift), then Shift+Click on the target node.");
+        return;
+      }
+      if (selectedNodeId === targetNodeId) { alert("You cannot link a node to itself."); return; }
+
+
+      // Keep original logic
+      const sourceId = selectedNodeId;
+      try {
+        await db.link(sourceId, targetNodeId);
+        console.log(`Link created between ${sourceId} and ${targetNodeId}`);
+        cy.add({ group: "edges", data: { id: `${sourceId}-${targetNodeId}`, source: sourceId, target: targetNodeId } });
+        selectedNodeId = null;
+        cy.$id(sourceId).unselect();
+      } catch (error) {
+        console.error("Error creating link:", error);
+      }
+    }
+
+    // Initial load, real-time updates
+    await db.map(updateGraph);
+
+  </script>
+</body>
+
+</html>

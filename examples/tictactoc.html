@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe with GDB</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+      margin: 20px auto;
+      width: 320px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      border: 2px solid black;
+      cursor: pointer;
+      background-color: lightgray;
+    }
+
+    .cell.taken {
+      cursor: not-allowed;
+    }
+
+    #role-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 20px auto;
+    }
+
+    #role-selection button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Tic Tac Toe with GDB</h1>
+  <div id="role-selection">
+    <p>Select your role:</p>
+    <button id="select-x">X</button>
+    <button id="select-o">O</button>
+  </div>
+  <div class="board" id="board"></div>
+  <p id="status">Waiting for players...</p>
+  <button id="reset-button">Reset</button>
+  <script type="module">
+    import { gdb } from "../dist/index.js";
+
+    // Initialize GenosDB using async factory
+    const db = await gdb('tic-tac-toe', { rtc: true });
+    const gameChannel = db.room.channel("gamesync");
+    const boardElement = document.getElementById('board');
+    const statusElement = document.getElementById('status');
+    const roleSelection = document.getElementById('role-selection');
+    const selectXButton = document.getElementById('select-x');
+    const selectOButton = document.getElementById('select-o');
+
+    let boardState = Array(9).fill(null);
+    let player = null; // Player role (X or O)
+    let currentPlayer = 'X'; // Current player
+
+    // Show role selection menu at start
+    roleSelection.style.display = 'block';
+
+    // Handle role selection
+    selectXButton.addEventListener('click', () => {
+      player = 'X';
+      startGame();
+    });
+
+    selectOButton.addEventListener('click', () => {
+      player = 'O';
+      startGame();
+    });
+
+    function startGame() {
+      roleSelection.style.display = 'none'; // Hide role selection menu
+      statusElement.textContent = `You are player ${player}`;
+      sendData({ role: player }); // Notify other players about the selected role
+    }
+
+    db.room.on('peer:join', peerId => {
+      const peers = db.room.getPeers();
+      const count = Object.keys(peers).length;
+
+      if (count === 2 && !player) {
+        alert("Waiting for the other player to select their role...");
+      }
+    });
+
+    db.room.on('peer:leave', peerId => {
+      resetGame();
+    });
+
+    function createBoard() {
+      boardElement.innerHTML = '';
+      boardState.forEach((mark, index) => {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        if (mark) {
+          cell.textContent = mark;
+          cell.classList.add('taken');
+        }
+        cell.addEventListener('click', () => makeMove(index));
+        boardElement.appendChild(cell);
+      });
+    }
+
+    function checkWinner() {
+      const winningCombos = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+        [0, 4, 8], [2, 4, 6] // Diagonals
+      ];
+      for (let combo of winningCombos) {
+        const [a, b, c] = combo;
+        if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+          return boardState[a];
+        }
+      }
+      return boardState.includes(null) ? null : 'T'; // 'T' for Tie
+    }
+
+    function makeMove(index) {
+      // Check if the cell is already taken or if it's not the current player's turn
+      if (boardState[index] || currentPlayer !== player) return;
+
+      // Update the board state
+      boardState[index] = player;
+
+      // Visually update the board for the current player
+      createBoard();
+
+      currentPlayer = player === 'X' ? 'O' : 'X';
+      // Notify other players about the move
+      const winner = checkWinner();
+      if (winner) {
+        gameChannel.send({ board: JSON.stringify(boardState), winner });
+      } else {
+        gameChannel.send({ board: JSON.stringify(boardState), turn: currentPlayer });
+      }
+    }
+
+    gameChannel.on('message', data => {
+      if (data.role) {
+        const peers = db.room.getPeers();
+        const count = Object.keys(peers).length;
+
+        // If there are two players, assign roles automatically if not selected
+        if (count === 2 && !player) {
+          player = data.role === 'X' ? 'O' : 'X';
+          statusElement.textContent = `You are player ${player}`;
+        }
+      }
+
+      if (data.board) boardState = JSON.parse(data.board);
+      if (data.turn) currentPlayer = data.turn;
+      if (data.winner) {
+        statusElement.textContent = data.winner === 'T' ? "It's a Tie!" : `${data.winner} has won!`;
+        showRestartButton();
+      } else {
+        createBoard();
+        statusElement.textContent = `Turn: ${currentPlayer}`;
+      }
+    })
+
+    function showRestartButton() {
+      const restartButton = document.createElement('button');
+      restartButton.textContent = "Play again";
+      restartButton.id = 'reset-button';
+      restartButton.addEventListener('click', resetGame);
+      document.body.appendChild(restartButton);
+    }
+
+    function resetGame() {
+      boardState = Array(9).fill(null);
+      currentPlayer = 'X';
+      sendData({ board: JSON.stringify(boardState), turn: 'X', winner: null });
+      document.querySelectorAll("button").forEach(btn => btn.remove());
+      createBoard();
+    }
+
+    document.getElementById('reset-button').addEventListener('click', resetGame);
+    createBoard();
+  </script>
+</body>
+
+</html>

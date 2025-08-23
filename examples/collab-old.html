@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collab Doc - Powered by GenosDB & Grok Style</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background-color: #1a1a1a;
+      padding: 1rem;
+      text-align: center;
+      border-bottom: 1px solid #333;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: #0ea5e9;
+      /* Grok-inspired blue accent */
+    }
+
+    #editor {
+      flex: 1;
+      width: 100%;
+      padding: 1rem;
+      background-color: #0d0d0d;
+      border: none;
+      color: #fff;
+      font-size: 1rem;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    #status {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background-color: #1a1a1a;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      color: #9ca3af;
+      display: none;
+    }
+
+    #status.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Collab Doc</h1>
+  </header>
+  <textarea id="editor" placeholder="Start typing... Collaborative editing powered by GenosDB P2P."></textarea>
+  <div id="status">Connected peers: 0 | Saving...</div>
+
+  <script type="module">
+    import { gdb } from "../dist/index.js";
+    (async () => {
+      // Initialize GenosDB with P2P enabled
+      const db = await gdb("collab-doc", { rtc: true });
+      const room = db.room;
+      const docChannel = room.channel("doc-updates");
+      const editor = document.getElementById('editor');
+      const status = document.getElementById('status');
+      const docId = 'main-doc'; // Fixed ID for the document node
+      let peerCount = 0;
+      let isSaving = false;
+      let debounceTimer;
+      let lastTimestamp = 0;
+
+      // Function to update status
+      const updateStatus = () => {
+        status.textContent = `Connected peers: ${peerCount} ${isSaving ? '| Saving...' : ''}`;
+      };
+
+      // Handle peer joins/leaves
+      room.on('peer:join', (peerId) => {
+        peerCount++;
+        updateStatus();
+        // Send current document state to the new peer
+        if (editor.value) {
+          docChannel.send({ content: editor.value, ts: lastTimestamp }, peerId);
+        }
+      });
+      room.on('peer:leave', (peerId) => {
+        peerCount--;
+        updateStatus();
+      });
+
+      // Handle incoming document updates via channel
+      docChannel.on('message', (data, fromPeerId) => {
+        if (data.ts > lastTimestamp) {
+          lastTimestamp = data.ts;
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          editor.value = data.content;
+          editor.selectionStart = start;
+          editor.selectionEnd = end;
+        }
+      });
+
+      // Check if document exists, create if not
+      const { result: initialDoc } = await db.get(docId);
+      if (!initialDoc) {
+        await db.put({ content: '' }, docId);
+      } else {
+        editor.value = initialDoc.value.content || '';
+        lastTimestamp = initialDoc.timestamp ? initialDoc.timestamp.physical : Date.now();
+      }
+
+      // Real-time listener for document updates from DB (for persistence sync)
+      const { unsubscribe } = await db.map({
+        query: { id: docId }
+      }, ({ id, value, action }) => {
+        if (action === 'updated' && id === docId) {
+          const newTs = value.timestamp ? value.timestamp.physical : Date.now();
+          if (newTs > lastTimestamp) {
+            lastTimestamp = newTs;
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            editor.value = value.content || '';
+            editor.selectionStart = start;
+            editor.selectionEnd = end;
+          }
+        }
+      });
+
+      // Debounce save and broadcast on input (every 500ms)
+      editor.addEventListener('input', () => {
+        isSaving = true;
+        updateStatus();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          const ts = Date.now();
+          if (ts > lastTimestamp) {
+            lastTimestamp = ts;
+            const content = editor.value;
+            // Broadcast to peers via channel
+            docChannel.send({ content, ts });
+            // Save to DB for persistence
+            await db.put({ content }, docId);
+          }
+          isSaving = false;
+          updateStatus();
+        }, 500);
+      });
+
+      // Initial status update
+      updateStatus();
+      status.classList.add('active');
+    })();
+  </script>
+</body>
+
+</html>

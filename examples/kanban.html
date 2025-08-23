@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban / GDB</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f9;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .column {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      overflow-y: auto;
+      max-height: 80vh;
+    }
+
+    .column-header {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .task {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 10px;
+      cursor: move;
+      position: relative;
+      transition: transform 0.2s;
+    }
+
+    .task:hover {
+      transform: scale(1.02);
+    }
+
+    .task .delete-button {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .tasks {
+      min-height: 50px;
+    }
+
+    .add-task {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .add-task input {
+      width: calc(100% - 20px);
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .kanban-board {
+        grid-template-columns: 1fr;
+      }
+
+      .column {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Kanban Board</h1>
+  <div class="kanban-board" id="kanbanBoard"></div>
+  <script type="module">
+  import { gdb } from "../dist/index.js";
+
+  const db = await gdb("kanbanGraph", { rtc: true });
+  
+    const columns = ["To Do", "In Progress", "Done"];
+    const kanbanBoard = document.getElementById("kanbanBoard");
+
+    // Object to track rendered tasks
+    const renderedNodes = {};
+
+    // Function to clean up deleted tasks from the DOM
+    function cleanUpTasks(nodes) {
+      const currentIds = new Set(nodes.map(node => node.id));
+      document.querySelectorAll(".task").forEach(taskElement => {
+        const id = taskElement.getAttribute("data-id");
+        if (!currentIds.has(id)) {
+          taskElement.remove();
+          delete renderedNodes[id];
+        }
+      });
+    }
+
+    // Function to render a task in a specific column
+    function renderTask(column, id, text) {
+      const columnElement = document.querySelector(`[data-column="${column}"] .tasks`);
+      const existingTask = document.querySelector(`[data-id="${id}"]`);
+
+      if (existingTask) {
+        // If the task already exists, update its content
+        const taskTextSpan = existingTask.querySelector("span");
+        taskTextSpan.textContent = text;
+
+        // Move the task to the correct container if necessary
+        if (!columnElement.contains(existingTask)) {
+          columnElement.appendChild(existingTask);
+        }
+      } else {
+        // If the task does not exist, create a new element
+        const taskDiv = document.createElement("div");
+        taskDiv.className = "task";
+        taskDiv.setAttribute("data-id", id);
+        taskDiv.setAttribute("draggable", true);
+        taskDiv.innerHTML = `
+          <span>${text}</span>
+          <button class="delete-button" onclick="deleteTask('${id}')">×</button>
+        `;
+        taskDiv.addEventListener("dragstart", (e) => handleDragStart(e, id));
+        columnElement.appendChild(taskDiv);
+
+        // Mark the task as rendered
+        renderedNodes[id] = true;
+      }
+    }
+
+
+    // Load tasks from the database
+    async function init() {
+      await db.map(({id, value, action}) => {
+        if (action === 'removed') {
+          const taskElement = document.querySelector(`[data-id="${id}"]`);
+          if (!taskElement) {
+            console.error(`Task with ID '${id}' not found in the DOM.`);
+            return;
+          }
+
+          // Remove the task from the database
+          // Remove the task from the DOM
+          taskElement.remove();
+
+          // Remove the task from local tracking
+          delete renderedNodes[id];
+        }
+        if (value && value.column && value.text) {
+          renderTask(value.column, id, value.text);
+        }
+      });
+    }
+
+
+    // Add a new task
+    window.addTask = async (column, text) => {
+      if (!text) return;
+      const task = { column, text };
+      const id = await db.put(task);
+      renderTask(column, id, text);
+    };
+
+    // Move a task between columns
+    window.moveTask = async (id, newColumn) => {
+      const taskElement = document.querySelector(`[data-id="${id}"]`);
+      if (!taskElement) return;
+
+      // Extract the task text from the DOM
+      const taskTextSpan = taskElement.querySelector("span");
+      const text = taskTextSpan.textContent;
+
+      // Update the value in the database
+      const updatedTask = { column: newColumn, text };
+      await db.put(updatedTask, id);
+
+      // Update the task in the DOM without deleting or recreating it
+      const newColumnElement = document.querySelector(`[data-column="${newColumn}"] .tasks`);
+      taskTextSpan.textContent = text;
+
+      // Move the task to the correct container if necessary
+      if (!newColumnElement.contains(taskElement)) {
+        newColumnElement.appendChild(taskElement);
+      }
+    };
+
+    // Delete a task
+    window.deleteTask = async (id) => {
+      await db.remove(id);
+    };
+
+    // Handle the start of a drag
+    function handleDragStart(event, taskId) {
+      event.dataTransfer.setData("text/plain", taskId);
+    }
+
+    // Handle the drop of a task
+    function handleDrop(event, targetColumn) {
+      event.preventDefault();
+      const taskId = event.dataTransfer.getData("text/plain");
+      moveTask(taskId, targetColumn);
+    }
+
+    // Render the initial columns
+    function renderColumns() {
+      kanbanBoard.innerHTML = "";
+      columns.forEach((column) => {
+        const columnDiv = document.createElement("div");
+        columnDiv.className = "column";
+        columnDiv.setAttribute("data-column", column);
+        columnDiv.draggable = true;
+        columnDiv.innerHTML = `
+          <div class="column-header">${column}</div>
+          <div class="tasks" data-column="${column}"></div>
+          <div class="add-task">
+            <input type="text" placeholder="New task" />
+          </div>
+        `;
+        kanbanBoard.appendChild(columnDiv);
+
+        // Configure drag events
+        columnDiv.addEventListener("dragover", (e) => e.preventDefault());
+        columnDiv.addEventListener("drop", (e) => handleDrop(e, column));
+
+        // Listen for Enter to add tasks
+        const input = columnDiv.querySelector("input");
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            addTask(column, input.value.trim());
+            input.value = "";
+          }
+        });
+      });
+      init();
+    }
+
+    // Initialize the board
+    renderColumns();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>File Streaming App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    #fileInput {
+      margin-bottom: 20px;
+    }
+
+    #progressContainer {
+      margin-top: 20px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background-color: #f3f3f3;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background-color: #4caf50;
+      width: 0%;
+      transition: width 0.1s ease;
+    }
+
+    .file-label {
+      margin-bottom: 5px;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+      color: green;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>File Streaming App</h1>
+  <p>Select a file to send to other peers in the room.</p>
+
+  <!-- File input -->
+  <input type="file" id="fileInput" />
+
+  <!-- Progress container -->
+  <div id="progressContainer"></div>
+
+  <!-- Status message -->
+  <div id="status">Status: Idle</div>
+
+  <script type="module">
+    import { gdb } from "../dist/index.js";
+
+    const db = await gdb('file-room', { rtc: true });
+
+    const fileChannel = db.room.channel('file');
+
+    const progressContainer = document.getElementById('progressContainer');
+    const loadingBars = {};
+
+    fileChannel.on('message', (data, peerId, metadata) => {
+      console.log(`Received a file (${metadata.filename}) from ${peerId} with type ${metadata.type}`);
+
+      const blob = new Blob([data], { type: metadata.type });
+      const url = URL.createObjectURL(blob);
+
+      const container = document.createElement('div');
+      // container.style.marginTop = '5px';
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = metadata.filename;
+      downloadLink.textContent = 'Download';
+      downloadLink.style.display = 'inline-block';
+      downloadLink.style.marginTop = '5px';
+
+      container.appendChild(downloadLink);
+      progressContainer.appendChild(container);
+
+      document.getElementById('status').textContent = 'Status: Idle';
+    });
+
+    fileChannel.on('progress', (percent, peerId, metadata) => {
+      const key = `${peerId}-${metadata.filename}`;
+      let bar = loadingBars[key];
+      if (!bar) {
+        const container = document.createElement('div');
+        const label = document.createElement('div');
+        label.className = 'file-label';
+        label.textContent = metadata.filename;
+        const progressBar = document.createElement('div');
+        progressBar.className = 'progress-bar';
+        const progressBarFill = document.createElement('div');
+        progressBarFill.className = 'progress-bar-fill';
+        progressBar.appendChild(progressBarFill);
+        container.appendChild(label);
+        container.appendChild(progressBar);
+        progressContainer.appendChild(container);
+        loadingBars[key] = progressBarFill;
+        bar = progressBarFill;
+      }
+      bar.style.width = `${percent * 100}%`;
+      document.getElementById('status').textContent = 'Status: Receiving...';
+    });
+
+    document.getElementById('fileInput').addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const buffer = await file.arrayBuffer();
+
+      document.getElementById('status').textContent = 'Status: Sending...';
+
+      const peers = db.room.getPeers();
+
+      for (const peerId in peers) {
+        const key = `${peerId}-${file.name}`;
+        const container = document.createElement('div');
+
+        const label = document.createElement('div');
+        label.className = 'file-label';
+        label.textContent = file.name;
+
+        const progressBar = document.createElement('div');
+        progressBar.className = 'progress-bar';
+
+        const progressBarFill = document.createElement('div');
+        progressBarFill.className = 'progress-bar-fill';
+
+        progressBar.appendChild(progressBarFill);
+        container.appendChild(label);
+        container.appendChild(progressBar);
+        progressContainer.appendChild(container);
+
+        loadingBars[key] = progressBarFill;
+      }
+
+      try {
+        await fileChannel.send(
+          buffer,
+          null,
+          { filename: file.name, type: file.type },
+          (percent, peerId) => {
+            const key = `${peerId}-${file.name}`;
+            if (loadingBars[key]) {
+              loadingBars[key].style.width = `${percent * 100}%`;
+            }
+          }
+        );
+
+        document.getElementById('status').textContent = 'Status: File sent!';
+      } catch (error) {
+        console.error('Error sending file:', error);
+        document.getElementById('status').textContent = 'Status: Error sending file';
+      }
+    });
+  </script>
+</body>
+
+</html>

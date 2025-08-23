@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real-Time Video Streaming</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+
+    #videos {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    video {
+      width: 300px;
+      height: 200px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background-color: black;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+      color: green;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Real-Time Video Streaming App</h1>
+  <p>Join the room and start streaming your webcam video to other peers.</p>
+
+  <button id="startButton">Start Streaming</button>
+  <button id="stopButton" disabled>Stop Streaming</button>
+
+  <div id="status">Status: Idle</div>
+
+  <video id="selfVideo" autoplay muted playsinline></video>
+  <div id="videos"></div>
+
+  <script type="module">
+    import { gdb } from "../dist/index.js";
+
+    // Initialize GenosDB using async factory
+    const db = await gdb('video-room', { rtc: true });
+    const videoControlChannel = db.room.channel("videocontrol");
+
+    const peerVideos = {};
+    const videoContainer = document.getElementById('videos');
+    const selfVideo = document.getElementById('selfVideo');
+    let selfStream = null;
+
+    db.room.on('peer:join', peerId => {
+      console.log(`${peerId} joined the room`);
+      if (selfStream) {
+        db.room.addStream(selfStream, peerId);
+      }
+    });
+
+    db.room.on('peer:leave', peerId => {
+      console.log(`${peerId} left the room`);
+      if (peerVideos[peerId]) {
+        peerVideos[peerId].remove();
+        delete peerVideos[peerId];
+      }
+    });
+
+    db.room.on('stream:add', (stream, peerId) => {
+      console.log(`Received stream from peer ${peerId}`);
+      let video = peerVideos[peerId];
+      if (!video) {
+        video = document.createElement('video');
+        video.autoplay = true;
+        video.playsInline = true;
+        video.id = `video-${peerId}`;
+        videoContainer.appendChild(video);
+      }
+      video.srcObject = stream;
+      peerVideos[peerId] = video;
+      peerVideos[peerId].autoplay = true;
+    });
+
+  // Streaming control between peers
+    videoControlChannel.on('message', async (data, peerId) => {
+      if (data.action === 'stop_stream' && peerVideos[peerId]) {
+        console.log(`Peer ${peerId} stopped streaming. Cleaning up.`);
+        console.log(data.action)
+
+        await peerVideos[peerId].remove();
+
+        setTimeout(() => {
+          delete peerVideos[peerId];
+        }, 1000);
+      }
+    });
+
+    document.getElementById('startButton').addEventListener('click', async () => {
+      try {
+        selfStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        selfVideo.srcObject = selfStream;
+        selfVideo.play();
+
+        db.room.addStream(selfStream);
+
+        document.getElementById('status').textContent = 'Status: Streaming';
+        document.getElementById('startButton').disabled = true;
+        document.getElementById('stopButton').disabled = false;
+      } catch (error) {
+        console.error('Error accessing webcam:', error);
+        alert('Unable to access the webcam. Please check permissions.');
+      }
+    });
+
+    document.getElementById('stopButton').addEventListener('click', () => {
+      if (selfStream) {
+        db.room.removeStream(selfStream);
+
+        videoControlChannel.send({ action: 'stop_stream' });
+
+        selfStream.getTracks().forEach(track => track.stop());
+        selfVideo.srcObject = null;
+        selfStream = null;
+
+        document.getElementById('status').textContent = 'Status: Stopped';
+        document.getElementById('startButton').disabled = false;
+        document.getElementById('stopButton').disabled = true;
+      }
+    });
+  </script>
+</body>
+
+</html>

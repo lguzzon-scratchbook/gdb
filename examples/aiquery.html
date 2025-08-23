@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Mantener los mismos estilos CSS */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      display: grid;
+      height: 100vh;
+      grid-template-rows: 1fr auto;
+      grid-template-columns: 350px 1fr;
+    }
+    .sidebar {
+      background: white;
+      border-right: .5rem solid #ddd;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .query-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    .query-item {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      background: #f8f9fa;
+      color: #444;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
+    .query-item:hover {
+      background: #e9ecef;
+    }
+    .query-item.active {
+      background: #007bff;
+      color: white;
+    }
+    .query-item strong {
+      pointer-events: none;
+    }
+    .query-item br {
+      display: none;
+    }
+    .main-content {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 20px;
+      padding: 20px;
+      overflow: hidden;
+    }
+    .query-display {
+      border: 0;
+      border-radius: 8px;
+      font-family: 'Consolas', monospace;
+      padding: 1rem;
+      resize: none;
+      outline: none;
+      height: 250px;
+      background: #f8f9fa;
+      color: #444;
+      white-space: pre-wrap;
+    }
+    .results-panel {
+      display: grid;
+      border-radius: 10px;
+      overflow-y: auto;
+    }
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .result-item {
+      background: #027bff;
+      color: white;
+      border-radius: 5px;
+      padding: 10px;
+      text-align: left;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .result-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    input,
+    button,
+    select {
+      padding: 10px;
+      margin: 5px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s ease-in-out;
+      position: relative;
+      overflow: hidden;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    button.loading {
+      background: cyan;
+      animation: blink 1s infinite alternate ease-in-out;
+    }
+    @keyframes blink {
+      0% {
+        background: cyan;
+      }
+      100% {
+        background: #00ffff80;
+      }
+    }
+    .status-bar {
+      border-top: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      color: #444;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <ul class="query-list" id="queryList">
+  <!-- Example queries for posts -->
+      <li class="query-item" data-query='{"prompt": "Get post id 5"}'>
+        <strong>Get post id 5</strong><br>
+        Searches for posts id 5.
+      </li>
+      <li class="query-item" data-query='{"prompt": "Get posts id 4, 5, 8, 10"}'>
+        <strong>Get posts id 4, 5, 8, 10</strong><br>
+        Get posts id 4, 5, 8, 10.
+      </li>
+      <li class="query-item" data-query='{"prompt": "Get posts id between 4, 10"}'>
+        <strong>Get posts ids betwen 4, 10</strong><br>
+        Get posts id between 4, 10
+      </li>
+      <li class="query-item" data-query='{"prompt": "Searches for posts whose body contains the word: And"}'>
+        <strong>title contain the word: And</strong><br>
+          Searches for posts whose title contains in the title the word: "And".
+      </li>
+    </ul>
+  </div>
+  <div class="main-content">
+    <div class="panel">
+      <button id="insertButton" onclick="insertRandomPosts()">Insert Random Posts (50)</button>
+      <button onclick="resetDatabase()">Reset Database</button>
+    </div>
+    <textarea class="query-display" id="queryDisplay"
+      placeholder="Edit the query here and press Enter to execute..."></textarea>
+    <div class="results-panel">
+      <div class="results-grid" id="results"></div>
+    </div>
+    <div class="status-bar" id="statusBar">Ready</div>
+  </div>
+  <script type="module">
+  import { gdb } from "../dist/index.js";
+
+  // Create a GDB instance using the async factory with AI module
+  const db = await gdb('posts-db2', { rtc: true, ai: true });
+
+  // Function to insert posts from DummyJSON API
+    window.insertRandomPosts = async () => {
+      const insertButton = document.getElementById('insertButton');
+      insertButton.classList.add('loading');
+      insertButton.disabled = true;
+      try {
+        const response = await fetch('https://dummyjson.com/posts');
+        const data = await response.json();
+  const posts = data.posts.slice(0, 50); // Take only 50 posts
+        for (const post of posts) {
+          await db.put(post);
+        }
+        checkDatabaseStatus();
+      } catch (error) {
+        console.error('Error fetching random posts:', error);
+        alert('Failed to fetch and insert random posts.');
+      } finally {
+        insertButton.classList.remove('loading');
+        insertButton.disabled = false;
+      }
+    };
+
+  // Function to reset the database
+    window.resetDatabase = async () => {
+      try {
+        await db.clear();
+        checkDatabaseStatus();
+      } catch (error) {
+        console.error('Error resetting database:', error);
+        alert('Failed to reset the database.');
+      }
+    };
+
+  // Function to execute a query and display results
+    async function executeQuery(obj) {
+      let { results } = await db.map(obj);
+      const resultsDiv = document.getElementById('results');
+      const statusBar = document.getElementById('statusBar');
+      resultsDiv.innerHTML = '';
+      if (results.length > 0) {
+        results.forEach(result => {
+          const item = document.createElement('div');
+          item.className = 'result-item';
+          item.innerHTML = `
+            <strong>Post ID: ${result.value.id}</strong><br>
+            <strong>Title:</strong> ${result.value.title}<br>
+            <strong>Body:</strong> ${result.value.body}<br>
+            <strong>User ID:</strong> ${result.value.userId}
+          `;
+          resultsDiv.appendChild(item);
+        });
+        statusBar.textContent = `Query completed: ${results.length} results found`;
+      } else {
+        statusBar.textContent = 'No results found';
+      }
+    }
+
+  // Event listener for query list items
+    document.getElementById('queryList').addEventListener('click', async (event) => {
+      if (event.target.classList.contains('query-item')) {
+        document.querySelectorAll('.query-item').forEach(item => item.classList.remove('active'));
+        event.target.classList.add('active');
+        const query = JSON.parse(event.target.getAttribute('data-query'));
+        const queryDisplay = document.getElementById('queryDisplay');
+        queryDisplay.value = JSON.stringify(query, null, 2);
+        await executeQuery(query);
+      }
+    });
+
+  // Event listener for editing the query
+    document.getElementById('queryDisplay').addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        const queryDisplay = document.getElementById('queryDisplay');
+        try {
+          const query = JSON.parse(queryDisplay.value);
+          await executeQuery(query);
+        } catch (error) {
+          alert('Invalid JSON format. Please correct the query.');
+        }
+      }
+    });
+
+  // Function to check the database status
+    async function checkDatabaseStatus() {
+      const { results } = await db.map({});
+      const insertButton = document.getElementById('insertButton');
+  insertButton.disabled = results.length > 0; // Disable if there are records
+    }
+
+  // Check the initial database status when loading the page
+    checkDatabaseStatus();
+  </script>
+</body>
+</html>

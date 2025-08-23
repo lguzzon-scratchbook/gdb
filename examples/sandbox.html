@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>GenosDB - Query Playground</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      display: grid;
+      height: 100vh;
+      grid-template-rows: 1fr auto;
+      grid-template-columns: 350px 1fr;
+    }
+
+    .sidebar {
+      background: white;
+      border-right: .5rem solid #ddd;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .query-list {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .query-item {
+      display: flex;
+      flex-direction: column;
+      background: #f8f9fa;
+      color: #444;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
+
+    .query-item:hover {
+      background: #e9ecef;
+    }
+
+    .query-item.active {
+      background: #007bff;
+      color: white;
+    }
+
+    .query-item strong {
+      pointer-events: none;
+      font-size: 0.9em;
+    }
+
+    .query-item small {
+      pointer-events: none;
+      font-size: 0.8em;
+      opacity: 0.7;
+      margin-top: 4px;
+      display: block;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 20px;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .query-display {
+      border: 0;
+      font-family: 'Consolas', monospace;
+      padding: 1rem;
+      resize: none;
+      outline: none;
+      height: 250px;
+      background: #f8f9fa;
+      color: #444;
+      white-space: pre-wrap;
+    }
+
+    .results-panel {
+      display: grid;
+      overflow-y: auto;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .result-item {
+      color: #333;
+      padding: 15px;
+      border-left: 0.5rem solid #007bff;
+      background: #f8f9fa;
+    }
+
+    .result-item strong {
+      color: #0056b3;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .result-item pre {
+      color: #000000;
+      font-size: 0.8em;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .controls button {
+      background: #dc3545;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .controls button:hover {
+      background: #c82333;
+    }
+
+    .status-bar {
+      border-top: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      color: #444;
+    }
+
+    h3 {
+      margin: 20px 0 10px;
+      color: #6c757d;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="sidebar">
+    <ul class="query-list" id="queryList">
+      <h3>Graph Traversal ($edge)</h3>
+      <li class="query-item"
+        data-query='{"query": {"type":"Company", "name":"Innovate Inc.", "$edge": {"type":"Employee"}}}'>
+        <strong>All Employees of a Company</strong>
+        <small>Uses $edge to find Innovate Inc. and return all its Employee descendants.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"type":"Company", "$edge": {"role":"Developer", "isActive":true}}}'>
+        <strong>All Active Developers</strong>
+        <small>Uses $edge to find all active developers across all companies.</small>
+      </li>
+      <li class="query-item"
+        data-query='{"query": {"type":"Company", "$edge": {"role":"Developer", "$edge": {"name":"Bob"}}}}'>
+        <strong>Find by Hierarchy (Nested)</strong>
+        <small>Finds a Company, then finds a Developer descendant, then finds that Developer's descendant named
+          "Bob".</small>
+      </li>
+      <li class="query-item"
+        data-query='{"query": {"type":"Company", "name":"Data Corp", "$edge": {"age":{"$gte":38}}}}'>
+        <strong>Employees >= 38 in Data Corp</strong>
+        <small>Uses $edge to find employees in Data Corp who are 38 or older.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"type":"Company", "$edge": {"tags":{"$in":["JavaScript"]}}}}'>
+        <strong>Employees with 'JavaScript' tag</strong>
+        <small>Uses $edge to find all employees who have "JavaScript" in their tags array.</small>
+      </li>
+
+      <h3>Conditional Operators</h3>
+      <li class="query-item" data-query='{"query": {"name": {"$eq": "Alice"}}}'>
+        <strong>$eq: Name is "Alice"</strong>
+        <small>Finds the employee with the exact name "Alice".</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"age": {"$gte": 35}}}'>
+        <strong>$gte: Age >= 35</strong>
+        <small>Finds all employees aged 35 or older.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"age": {"$between": [30, 40]}}}'>
+        <strong>$between: Age between 30 and 40</strong>
+        <small>Finds employees whose age is between 30 and 40.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"level": {"$in": ["Senior", "Lead"]}}}'>
+        <strong>$in: Level is 'Senior' or 'Lead'</strong>
+        <small>Finds employees who are either 'Senior' or 'Lead'.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"email": {"$exists": true}}}'>
+        <strong>$exists: Has an email address</strong>
+        <small>Finds all employees who have an email property.</small>
+      </li>
+
+      <h3>Logical Operators</h3>
+      <li class="query-item" data-query='{"query": {"$and": [{"role": "Developer"}, {"country": "USA"}]}}'>
+        <strong>$and: Is a Developer AND from the USA</strong>
+        <small>Finds employees who are both developers and from the USA.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"$or": [{"isActive": false}, {"age": {"$gt": 40}}]}}'>
+        <strong>$or: Is Inactive OR older than 40</strong>
+        <small>Finds employees who are inactive OR are older than 40.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"country": {"$not": {"$eq": "USA"}}}}'>
+        <strong>$not: Country is NOT USA</strong>
+        <small>Finds all employees who are not from the USA.</small>
+      </li>
+
+      <h3>Text Search Operators</h3>
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "^B"}}}'>
+        <strong>$regex: Name starts with "B"</strong>
+        <small>Uses a regular expression to find names starting with 'B'.</small>
+      </li>
+      <li class="query-item" data-query='{"query": {"name": {"$regex": "an"}}}'>
+        <strong>$regex: Name contains "an"</strong>
+        <small>Finds names containing the substring "an".</small>
+      </li>
+      <h3>Search using (IA Prompt)</h3>
+      <li class="query-item"
+        data-query='{"prompt": "Finds a Company, then finds a Developer descendant, then finds that Developers descendant named Bob."}'>
+        <strong>Find by Hierarchy (IA Prompt)</strong>
+        <small>Finds a Company, then finds a Developer descendant, then finds that Developer's descendant named
+          "Bob".</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Finds only Companies"}'>
+        <strong>Finds only Companies (IA Prompt)</strong>
+        <small>Finds all Companies.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "finds descendant Developers"}'>
+        <strong>finds descendant Developers (IA Prompt)</strong>
+        <small>finds descendant Developers.</small>
+      </li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    <div class="controls">
+      <button id="resetButton">Reset & Re-seed Database</button>
+    </div>
+    <textarea class="query-display" id="queryDisplay"
+      placeholder="Select a query from the left, or edit your own and press Enter..."></textarea>
+    <div class="results-panel">
+      <div class="results-grid" id="results"></div>
+    </div>
+    <div class="status-bar" id="statusBar">Ready</div>
+  </div>
+
+  <script type="module">
+    import { gdb } from "../dist/index.js";
+
+    // Initialize GenosDB with AI module enabled
+    const db = await gdb('ultimate-sandbox-db-v3', { rtc: false, ai: true });
+    const sm = db.sm; // Security manager (sm)
+
+    // Check if DB is empty and seed if needed
+    const { results } = await db.map({ $limit: 1 });
+
+    const resetButton = document.getElementById('resetButton');
+    const queryDisplay = document.getElementById('queryDisplay');
+    const resultsDiv = document.getElementById('results');
+    const statusBar = document.getElementById('statusBar');
+    const resultsPanel = document.querySelector('.results-panel');
+
+    statusBar.textContent = 'Checking database status...';
+
+    if (results.length === 0) {
+      await seedData();
+    } else {
+      statusBar.textContent = 'Existing data found. Ready to query.';
+    }
+
+
+    async function seedData() {
+      statusBar.textContent = 'Seeding data...';
+      await db.clear();
+
+      // Create sample companies
+      const company1Id = await db.put({ type: 'Company', name: 'Innovate Inc.', country: 'USA' });
+      const company2Id = await db.put({ type: 'Company', name: 'Data Corp', country: 'Canada' });
+
+      // Create sample employees
+      const emp1Id = await db.put({ type: 'Employee', name: 'Alice', role: 'Developer', level: 'Senior', age: 32, country: 'USA', isActive: true, hireDate: '2020-01-15T00:00:00Z', tags: ['JavaScript', 'React', 'CSS'] });
+      const emp2Id = await db.put({ type: 'Employee', name: 'Bob', role: 'Developer', level: 'Mid', age: 28, country: 'USA', isActive: true, hireDate: '2021-06-20T00:00:00Z', tags: ['JavaScript', 'Node.js'] });
+      const emp3Id = await db.put({ type: 'Employee', name: 'Charlie', role: 'Designer', level: 'Senior', age: 35, country: 'Canada', isActive: false, hireDate: '2019-03-10T00:00:00Z', tags: ['Figma', 'UX'] });
+      const emp4Id = await db.put({ type: 'Employee', name: 'Diana', role: 'Developer', level: 'Senior', age: 41, country: 'USA', isActive: true, hireDate: '2018-11-01T00:00:00Z', tags: ['Java', 'Spring'], email: 'diana@example.com' });
+      const emp5Id = await db.put({ type: 'Employee', name: 'Frank', role: 'Data Scientist', level: 'Lead', age: 38, country: 'Canada', isActive: true, hireDate: '2019-08-22T00:00:00Z', tags: ['Python', 'AI'], email: 'frank@example.com' });
+      const emp6Id = await db.put({ type: 'Employee', name: 'Grace', role: 'Product Manager', level: 'Senior', age: 39, country: 'USA', isActive: true, hireDate: '2017-05-12T00:00:00Z', tags: ['Agile', 'Roadmap'] });
+      const emp7Id = await db.put({ type: 'Employee', name: 'Henry', role: 'Developer', level: 'Junior', age: 24, country: 'USA', isActive: true, hireDate: '2023-01-30T00:00:00Z', tags: ['JavaScript', 'HTML'] });
+      const emp8Id = await db.put({ type: 'Employee', name: 'Ivy', role: 'QA Engineer', level: 'Mid', age: 29, country: 'Canada', isActive: true, hireDate: '2021-09-01T00:00:00Z', tags: ['Cypress', 'Testing'] });
+      const emp9Id = await db.put({ type: 'Employee', name: 'Jack', role: 'DevOps', level: 'Senior', age: 45, country: 'USA', isActive: false, hireDate: '2016-07-18T00:00:00Z', tags: ['AWS', 'Docker'], email: 'jack@example.com' });
+      const emp10Id = await db.put({ type: 'Employee', name: 'Karen', role: 'Data Analyst', level: 'Mid', age: 31, country: 'Canada', isActive: true, hireDate: '2022-02-14T00:00:00Z', tags: ['SQL', 'Tableau'] });
+      const emp11Id = await db.put({ type: 'Employee', name: 'Leo', role: 'Developer', level: 'Lead', age: 36, country: 'USA', isActive: true, hireDate: '2018-10-10T00:00:00Z', tags: ['JavaScript', 'Architecture'] });
+      const emp12Id = await db.put({ type: 'Employee', name: 'Mona', role: 'HR', level: 'Manager', age: 42, country: 'Canada', isActive: true, hireDate: '2017-12-01T00:00:00Z', tags: ['Recruiting', 'People Ops'], email: 'mona@example.com' });
+
+      // Link employees to companies
+      await db.link(company1Id, emp1Id);
+      await db.link(company1Id, emp2Id);
+      await db.link(company1Id, emp4Id);
+      await db.link(company2Id, emp3Id);
+      await db.link(company2Id, emp5Id);
+      await db.link(company1Id, emp7Id);
+      await db.link(emp1Id, emp2Id);
+
+      statusBar.textContent = 'Data seeded successfully.';
+      console.log('Sample data seeded.');
+    }
+
+    async function executeQuery(queryObj) {
+      // Log the query object
+      console.log('Executing query:', queryObj);
+      resultsDiv.innerHTML = '';
+      statusBar.textContent = 'Executing query...';
+
+      try {
+        const { results } = await db.map(queryObj);
+        resultsPanel.scrollTop = 0;
+        if (results.length > 0) {
+          results.forEach(result => {
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            const valueContent = JSON.stringify(result.value, null, 2);
+            item.innerHTML = `<pre>${valueContent}</pre>`;
+            resultsDiv.appendChild(item);
+          });
+          statusBar.textContent = `Query completed: ${results.length} results found`;
+          const lastElement = resultsDiv.lastElementChild;
+          if (lastElement) {
+            lastElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          }
+        } else {
+          resultsDiv.innerHTML = '<p style="text-align:center; color: #6c757d;">No results found.</p>';
+          statusBar.textContent = 'No results found';
+        }
+        console.log(`Query results:`, results);
+      } catch (error) {
+        statusBar.textContent = `Error executing query: ${error.message}`;
+        console.error(`Query Error:`, error);
+      }
+    }
+
+    resetButton.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear and re-seed the database?')) {
+        seedData();
+      }
+    });
+
+    document.getElementById('queryList').addEventListener('click', async (event) => {
+      const queryItem = event.target.closest('.query-item');
+      if (queryItem) {
+        document.querySelectorAll('.query-item').forEach(item => item.classList.remove('active'));
+        queryItem.classList.add('active');
+        const queryStr = queryItem.getAttribute('data-query');
+        queryDisplay.value = JSON.stringify(JSON.parse(queryStr), null, 2);
+        await executeQuery(JSON.parse(queryStr));
+      }
+    });
+
+    queryDisplay.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        try {
+          const query = JSON.parse(queryDisplay.value);
+          await executeQuery(query);
+        } catch (error) {
+          statusBar.textContent = 'Invalid JSON format.';
+          alert('Invalid JSON format. Please correct the query.');
+        }
+      }
+    });
+
+  </script>
+</body>
+
+</html>

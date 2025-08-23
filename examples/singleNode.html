@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDB - Real-Time Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    input {
+      padding: 10px;
+      width: 80%;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .output {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GDB - Real-Time Example</h1>
+    <p>Update the record value and observe the changes in real time.</p>
+
+    <!-- Text input -->
+    <input type="text" id="valueInput" placeholder="Enter a new value">
+
+    <!-- Update button -->
+    <button id="updateButton">Update Record</button>
+
+    <!-- Real-time output -->
+    <div class="output">
+      <strong>Current Value:</strong> <span id="currentValue">(No value)</span>
+    </div>
+  </div>
+
+  <!-- Import GDB -->
+  <script type="module">
+    // Import the async factory
+    import { gdb } from "../dist/index.js";
+    // import { withRadixIndex } from "../dist/radixIndex.min.js";
+
+    // Create an instance of GDB (async)
+    const db = await gdb('singleNode-db', { rtc: true });
+
+    // Unique record ID
+    const recordId = 'unique-record-id';
+
+    // Function to load the initial value
+    async function loadInitialValue() {
+      await db.get(recordId, (node) => {
+        document.getElementById('currentValue').textContent = node ? node.value : '(No value)';
+      });
+    }
+    
+    // Load the initial value on startup
+    loadInitialValue();
+
+    // Shared update logic
+    async function updateRecord() {
+      const inputEl = document.getElementById('valueInput');
+      const newValue = inputEl.value.trim();
+      if (!newValue) {
+        alert('Please, enter a value.');
+        return;
+      }
+      await db.put(newValue, recordId);
+      inputEl.value = '';
+    }
+
+    // Handle click on the update button
+    document.getElementById('updateButton').addEventListener('click', async () => {
+      await updateRecord();
+    });
+
+    // Handle Enter key on the input
+    document.getElementById('valueInput').addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        await updateRecord();
+      }
+    });
+  </script>
+</body>
+</html>
