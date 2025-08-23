@@ -34,4 +34,4 @@ Import directly from the package:
 ```js
 import { gdb } from "genosdb";
 
-const db = await gdb("myDatabase");
+const db = await gdb("my-db", { rtc: true });
