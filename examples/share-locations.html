@@ -65,21 +65,35 @@
         </header>
         <main>
             <div id="map"></div>
-            <button id="shareLocation">Compartir ubicación</button>
+            <button id="shareLocation">Share Location</button>
         </main>
     </div>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script type="module">
-        import { GDB } from "../dist/index.js";
+        import { gdb } from "../dist/index.js";
 
-        const db = new GDB('search-db', { rtc: true });
+        const db = await gdb('search-db', { rtc: true });
 
-        const [sendData, getData] = db.room.makeAction('nodePosition');
+        // Use the current GenosRTC API: create a data channel for position updates
+        const positionChannel = db.room.channel('nodePosition');
 
-        db.room.onPeerJoin(peerId => console.log(`${peerId} joined`));
-        db.room.onPeerLeave(peerId => console.log(`${peerId} left`));
+        // Listen for peer lifecycle events using the new event names
+        db.room.on('peer:join', (peerId) => console.log(`${peerId} joined`));
+        db.room.on('peer:leave', (peerId) => {
+            console.log(`${peerId} left`);
+            // Cleanup remote trajectory when a peer leaves
+            if (remoteTrajectories[peerId]) {
+                if (remoteTrajectories[peerId].marker) {
+                    map.removeLayer(remoteTrajectories[peerId].marker);
+                }
+                if (remoteTrajectories[peerId].polyline) {
+                    map.removeLayer(remoteTrajectories[peerId].polyline);
+                }
+                delete remoteTrajectories[peerId];
+            }
+        });
 
         let map, userMarker, userCircle, followingUser = true, sharingLocation = false, watchId;
 
@@ -113,7 +127,7 @@
         }
 
         const btn = document.querySelector('#shareLocation');
-        btn.innerHTML = 'Share location'; // Initial text
+    btn.innerHTML = 'Share location'; // Initial button text
 
         btn.onclick = async function () {
             if (sharingLocation) {
@@ -138,7 +152,7 @@
                 const position = await getCurrentPosition();
                 const { latitude, longitude, accuracy } = position.coords;
                 updateMap(latitude, longitude, accuracy);
-                await sendLocationToNostr(latitude, longitude);
+                await sendLocation(latitude, longitude);
                 watchId = startWatchingPosition();
             } catch (error) {
                 console.error("Error getting location:", error);
@@ -146,10 +160,11 @@
         }
 
         function startWatchingPosition() {
+            // Start a geolocation watch to continuously broadcast position changes
             return navigator.geolocation.watchPosition(async (position) => {
                 const { latitude, longitude, accuracy } = position.coords;
                 updateMap(latitude, longitude, accuracy);
-                await sendLocationToNostr(latitude, longitude);
+                await sendLocation(latitude, longitude);
             }, (error) => {
                 console.error("Error watching position:", error);
             }, {
@@ -187,7 +202,7 @@
             }
         }
 
-        // New function to send a signal that sharing has stopped
+        // Send a signal through the channel indicating sharing has stopped
         async function sendStopSharingSignal() {
             const event = {
                 kind: 1,
@@ -196,8 +211,9 @@
                 content: JSON.stringify({ action: 'stopSharing' })
             };
 
-            await sendData(event);
-            // room.leave();
+            // Broadcast to all peers via the data channel
+            positionChannel.send(event);
+            // db.room.leave(); // Optional: leave room if desired
         }
 
         function updateMap(latitude, longitude, accuracy) {
@@ -215,7 +231,7 @@
                     radius: Math.max(accuracy, 50)
                 }).addTo(map);
 
-                // Initialize the polyline
+                // Initialize the local trajectory polyline
                 trajectoryPoints = [[latitude, longitude]];
                 trajectoryPolyline = L.polyline(trajectoryPoints, {
                     color: 'blue'
@@ -226,7 +242,7 @@
                 userCircle.setLatLng([latitude, longitude]);
                 userCircle.setRadius(Math.max(accuracy, 50));
 
-                // Add the new point to the trajectory and update the polyline
+                // Append new point to the local trajectory and update the polyline
                 trajectoryPoints.push([latitude, longitude]);
                 trajectoryPolyline.setLatLngs(trajectoryPoints);
             }
@@ -238,7 +254,8 @@
             userCircle.bringToBack();
         }
 
-        async function sendLocationToNostr(latitude, longitude) {
+        // Send current location to peers via the data channel
+        async function sendLocation(latitude, longitude) {
             const event = {
                 kind: 1,
                 created_at: Math.floor(Date.now() / 1000),
@@ -246,10 +263,12 @@
                 content: JSON.stringify({ latitude, longitude })
             };
 
-            await sendData(event);
+            // Broadcast to all peers via the data channel
+            positionChannel.send(event);
         }
 
-        getData((data, peerId) => {
+        // Handle incoming location messages from peers
+        positionChannel.on('message', (data, peerId) => {
             const content = JSON.parse(data.content);
 
             if (content.action === 'stopSharing') {
@@ -290,7 +309,7 @@
                 };
             }
 
-            // Add the new point to the trajectory and update the polyline
+            // Append new point to the remote trajectory and update the polyline
             remoteTrajectories[peerId].points.push([latitude, longitude]);
             remoteTrajectories[peerId].polyline.setLatLngs(remoteTrajectories[peerId].points);
         });
