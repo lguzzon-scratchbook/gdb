@@ -7,7 +7,7 @@ This page showcases various examples demonstrating GenosDB's capabilities. It's 
 
 ---
 
-## GDB Basic Examples
+## Basic Examples
 
 These are simple, typically single-file demonstrations designed to illustrate core GenosDB functionalities. They are usually hosted directly from this repository's [examples](https://github.com/estebanrfp/gdb/tree/main/examples) directory.
 
@@ -58,7 +58,7 @@ A real-time collaborative rich‑text editor powered by GenosDB: live typing syn
 
 ---
 
-## RBAC Security Examples
+## Security Manager (SM) Examples
 
 ### [Security Manager (SM Testbed)](https://estebanrfp.github.io/gdb/examples/sm-testbed.html)
 Security Manager + Role-Based Access Control (RBAC) + WebAuthn Security.
@@ -83,7 +83,7 @@ A single-page HTML application demonstrating secure, real-time, peer-to-peer not
 
 ---
 
-## GDB Tools & Testbeds
+## Tools & Testbeds
 
 ### [GenosDB - Perf & Stress Test](https://estebanrfp.github.io/gdb/examples/perf-stress-test.html)
 A dedicated environment for benchmarking GenosDB under high-load scenarios. 
