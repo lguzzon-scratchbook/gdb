@@ -195,11 +195,15 @@
         async function initializeApp() {            
             try {
                 updateStatus("Initializing GDB...");
-                db = await gdb("webAuthnDemoDB_v2", { rtc: true, sm: true }); // Use a slightly different DB name if testing fresh
-  
-                updateStatus("GDB ready. Initializing RBAC Security Context...");
 
-                await db.sm.createSecurityContext(db); 
+                db = await gdb("webAuthnDemoDB_v2", {
+                    rtc: true,
+                    sm: {
+                        superAdmins: ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+                    }
+                });
+
+                updateStatus("GDB ready. Initializing RBAC Security Context...");
                 
                 // Set the callback that will manage UI updates
                 db.sm.setSecurityStateChangeCallback(updateUI);
