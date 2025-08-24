@@ -1,5 +1,11 @@
 # Technical Summary: GenosDB and Distributed Trust Model
 
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=U79nmK5qUyM">
+    <img src="https://img.youtube.com/vi/U79nmK5qUyM/0.jpg" alt="GenosDB: Hybrid Sync and Zero-Trust Security Architecture" width="100%" />
+  </a>
+</div>
+
 ## Central Challenge: Distributed Trust Without a Central Server
 In peer-to-peer (P2P) networks, how can peers trust each other when there’s no central authority? GenosDB addresses this with a layered architecture based on three core principles:
 
