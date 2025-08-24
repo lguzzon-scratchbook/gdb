@@ -6,27 +6,25 @@ The Security Manager (SM) is not imported separately but is activated and attach
 
 ### Enable the Security Manager
 
-To use the SM RBAC and identity features, you must enable the `sm` option when you initialize GDB.
+To activate SM and use RBAC and identity features, you must enable the `sm` option when you initialize GDB.
+
+> Important:
+> To activate the Security Manager (SM) module, you **must** provide a configuration object with the `superAdmins` property. This property is **mandatory**.
+> If `superAdmins` is not included, the SM module will not initialize.
+
+> Example (required minimum):
 
 ```javascript
 // Import module
-import { gdb } from "./dist/index.js";
-```
+import { gdb } from "./dist/index.js"
 
-```javascript
-// Enable the security module and pass superadmin addresses directly
+// Enable the security module and pass superadmin addresses
 const db = await gdb("my-db", {
-  rtc: true, 
+  rtc: true,
   sm: {
-    superAdmins: ["0x1...", "0x2..."] // superadmin addresses
-  }
-});
-
-// Or simply enable with defaults:
-// const db = await gdb("my-db", { rtc: true, sm: true });
-
-// Now you can access all security functions via `db.sm`
-console.log("Security context is automatically initialized");
+    superAdmins: ["0x1...", "0x2..."], // superadmin addresses
+  },
+})
 ```
 
 ---
@@ -43,7 +41,7 @@ The Security Manager (SM) for GDB integrates several key security aspects:
     - Default permissions:
       - `guest`: `['read', 'sync']`
       - `user`: `['write', 'link', 'sync']` + inherits guest
-      - `manager`: `['publish']` + inherits user  
+      - `manager`: `['publish']` + inherits user
       - `admin`: `['delete']` + inherits manager
       - `superadmin`: `['assignRole', 'deleteAny']` + inherits admin
     - Role assignments are stored within GDB itself, making them part of the synchronized state.
@@ -66,18 +64,18 @@ The security module is automatically initialized when you create a GDB instance 
 ```javascript
 async function initializeApp() {
   // Initialize GDB with the Security Manager enabled and superadmins
-  const db = await gdb("my-db", { 
+  const db = await gdb("my-db", {
     rtc: true,
     sm: {
-      superAdmins: ["0x1...", "0x2..."] // superadmin addresses
-    }
-  });
-  
-  console.log("Security Context Automatically Initialized for GDB.");
+      superAdmins: ["0x1...", "0x2..."], // superadmin addresses
+    },
+  })
+
+  console.log("Security Context Automatically Initialized for GDB.")
   // UI can now be updated based on db.sm.isSecurityActive(), db.sm.getActiveEthAddress(), etc.
 }
 
-initializeApp();
+initializeApp()
 ```
 
 ---
@@ -92,6 +90,7 @@ When the Security Manager initializes, it will attempt to silently resume a WebA
 If both conditions are met, the SM decrypts the locally stored Ethereum key material and reactivates the signer without invoking any WebAuthn prompt. This prevents repeated biometric prompts on page reload.
 
 Guidance for apps:
+
 - Do not auto-call `db.sm.loginCurrentUserWithWebAuthn()` on page load; reserve it for explicit user actions (e.g., clicking “Login with WebAuthn”).
 - Use `db.sm.hasExistingWebAuthnRegistration()` only to decide whether to show the WebAuthn Login button.
 - Call `db.sm.clearSecurity()` to log out and clear the “last session was WebAuthn” flag; subsequent loads will not resume silently until the user logs in again with WebAuthn.
@@ -100,19 +99,19 @@ Minimal pattern:
 
 ```javascript
 // Initialize GDB with SM enabled (SM will handle silent resume automatically)
-const db = await gdb("my-db", { rtc: true, sm: true });
+const db = await gdb("my-db", { rtc: true, sm: true })
 
 // Optional: react to state changes for UI
-db.sm.setSecurityStateChangeCallback((state) => updateUI(state));
+db.sm.setSecurityStateChangeCallback((state) => updateUI(state))
 
 // Show WebAuthn login button only if hardware is registered
-const showWebAuthn = db.sm.hasExistingWebAuthnRegistration();
-toggleWebAuthnLoginButton(showWebAuthn);
+const showWebAuthn = db.sm.hasExistingWebAuthnRegistration()
+toggleWebAuthnLoginButton(showWebAuthn)
 
 // On user click: perform interactive login (may prompt)
 loginWebAuthnBtn.onclick = async () => {
-  await db.sm.loginCurrentUserWithWebAuthn();
-};
+  await db.sm.loginCurrentUserWithWebAuthn()
+}
 ```
 
 Note: Some example pages explicitly create the Security Context after initialization to ensure the silent resume logic runs immediately. If you enable SM via `{ sm: true }`, the context is automatically set up by the module.
@@ -128,8 +127,8 @@ Logs out the current user. This deactivates local signing capability by removing
 #### Example
 
 ```javascript
-await db.sm.clearSecurity();
-console.log("User logged out, local signing capabilities deactivated.");
+await db.sm.clearSecurity()
+console.log("User logged out, local signing capabilities deactivated.")
 // Update UI to reflect logged-out state
 ```
 
@@ -153,15 +152,17 @@ Sets a callback function to be notified of changes in the security state. This i
 
 ```javascript
 db.sm.setSecurityStateChangeCallback((securityState) => {
-  console.log("Security State Changed:", securityState);
+  console.log("Security State Changed:", securityState)
   // Example UI update:
-  const statusDisplay = document.getElementById("statusDisplay");
+  const statusDisplay = document.getElementById("statusDisplay")
   if (securityState.isActive) {
-    statusDisplay.textContent = `Logged in as: ${securityState.activeAddress}`;
+    statusDisplay.textContent = `Logged in as: ${securityState.activeAddress}`
   } else {
-    statusDisplay.textContent = "Logged out. WebAuthn available: " + securityState.hasWebAuthnHardwareRegistration;
+    statusDisplay.textContent =
+      "Logged out. WebAuthn available: " +
+      securityState.hasWebAuthnHardwareRegistration
   }
-});
+})
 ```
 
 ---
@@ -180,20 +181,23 @@ Generates a new, temporary Ethereum identity (address, private key, mnemonic). T
 
 ```javascript
 try {
-  const newIdentity = await db.sm.startNewUserRegistration();
+  const newIdentity = await db.sm.startNewUserRegistration()
   if (newIdentity) {
-    console.log("New ETH Identity Generated (Volatile):");
-    console.log("Address:", newIdentity.address);
-    console.log("IMPORTANT - Save Mnemonic Phrase NOW:", newIdentity.mnemonic);
+    console.log("New ETH Identity Generated (Volatile):")
+    console.log("Address:", newIdentity.address)
+    console.log("IMPORTANT - Save Mnemonic Phrase NOW:", newIdentity.mnemonic)
     // UI should strongly prompt user to securely save the mnemonic,
     // then offer to protect this new identity with WebAuthn.
   }
 } catch (error) {
-  console.error("Failed to generate new identity:", error);
+  console.error("Failed to generate new identity:", error)
 }
 ```
+
 ---
+
 ## 🆔 Identity Management
+
 _(This section remains conceptually the same, but all calls are now prefixed with `db.sm.`)_
 
 ---
@@ -204,71 +208,71 @@ These functions provide a simple API, similar to GDB's core `put` and `get`, but
 
 ### `db.sm.put(originalValue, id?)`
 
--   **Signature**: `(originalValue: any, id?: string): Promise<string>`
+- **Signature**: `(originalValue: any, id?: string): Promise<string>`
 
 Stores data securely in the GDB instance. The `originalValue` is encrypted using a key derived from the active user's Ethereum identity.
 
--   **Parameters**:
-    -   `originalValue` `{any}` – The data to store. It must be JSON-serializable.
-    -   `id` `{string}` _(optional)_ – The ID for this piece of data. If not provided, a new unique ID will be generated and returned.
--   **Returns**: `{Promise<string>}` – The `id` that can be used with `db.sm.get()` to retrieve the data.
+- **Parameters**:
+  - `originalValue` `{any}` – The data to store. It must be JSON-serializable.
+  - `id` `{string}` _(optional)_ – The ID for this piece of data. If not provided, a new unique ID will be generated and returned.
+- **Returns**: `{Promise<string>}` – The `id` that can be used with `db.sm.get()` to retrieve the data.
 
 #### Example
 
 ```javascript
 // Assuming a user is logged in via db.sm.
-const mySecretData = { task: "Buy milk", details: "Organic, full fat" };
-const myNoteId = "shoppingListApril";
+const mySecretData = { task: "Buy milk", details: "Organic, full fat" }
+const myNoteId = "shoppingListApril"
 
 try {
-  const returnedId = await db.sm.put(mySecretData, myNoteId);
-  console.log(`Secure data saved with ID: ${returnedId}`); // Logs: "shoppingListApril"
+  const returnedId = await db.sm.put(mySecretData, myNoteId)
+  console.log(`Secure data saved with ID: ${returnedId}`) // Logs: "shoppingListApril"
 } catch (error) {
-  console.error("Failed to save secure data:", error.message);
+  console.error("Failed to save secure data:", error.message)
 }
 ```
 
 ### `db.sm.get(id, callback?)`
 
--   **Signature**: `(id: string, callback?: Function): Promise<{ result: object | null, unsubscribe?: Function }>`
+- **Signature**: `(id: string, callback?: Function): Promise<{ result: object | null, unsubscribe?: Function }>`
 
 Retrieves and automatically attempts to decrypt data that was previously stored using `db.sm.put()` by the **current active user**.
 
--   **Parameters**:
-    -   `id` `{string}` – The ID of the data to retrieve.
-    -   `callback` `{Function}` _(optional)_ – A function to call with updates. It receives a processed node object.
--   **Returns**: `{Promise<object>}` – An object containing:
-    -   `result` `{object | null}`: The processed node object or `null` if not found. The node object structure is:
-        -   `id` `{string}`: The node's ID.
-        -   `value` `{any}`:
-            -   If decryption was successful: The original, decrypted data.
-            -   If decryption failed (e.g., not owner, no session): The raw encrypted ciphertext.
-        -   `edges` `{Array}`: Edges of the node.
-        -   `timestamp` `{object}`: The GDB timestamp of the node.
-        -   `decrypted` `{boolean}`: `true` if the data was successfully decrypted, `false` otherwise.
-    -   `unsubscribe` `{Function}` _(optional)_: If a `callback` was provided, this function stops the real-time listener.
+- **Parameters**:
+  - `id` `{string}` – The ID of the data to retrieve.
+  - `callback` `{Function}` _(optional)_ – A function to call with updates. It receives a processed node object.
+- **Returns**: `{Promise<object>}` – An object containing:
+  - `result` `{object | null}`: The processed node object or `null` if not found. The node object structure is:
+    - `id` `{string}`: The node's ID.
+    - `value` `{any}`:
+      - If decryption was successful: The original, decrypted data.
+      - If decryption failed (e.g., not owner, no session): The raw encrypted ciphertext.
+    - `edges` `{Array}`: Edges of the node.
+    - `timestamp` `{object}`: The GDB timestamp of the node.
+    - `decrypted` `{boolean}`: `true` if the data was successfully decrypted, `false` otherwise.
+  - `unsubscribe` `{Function}` _(optional)_: If a `callback` was provided, this function stops the real-time listener.
 
 #### Example: Getting Secure Data
 
 ```javascript
-const noteIdToRetrieve = "shoppingListApril";
+const noteIdToRetrieve = "shoppingListApril"
 
 try {
-  const { result: node } = await db.sm.get(noteIdToRetrieve);
+  const { result: node } = await db.sm.get(noteIdToRetrieve)
 
   if (node) {
-    console.log("Was Decrypted:", node.decrypted);
-    
+    console.log("Was Decrypted:", node.decrypted)
+
     if (node.decrypted) {
-      console.log("Decrypted Content:", node.value); // { task: "Buy milk", ... }
+      console.log("Decrypted Content:", node.value) // { task: "Buy milk", ... }
     } else {
-      console.warn("Could not decrypt. Value received:", node.value);
+      console.warn("Could not decrypt. Value received:", node.value)
     }
   } else {
-    console.log("Node not found with ID:", noteIdToRetrieve);
+    console.log("Node not found with ID:", noteIdToRetrieve)
   }
 } catch (error) {
-  console.error("Error getting secure data:", error.message);
+  console.error("Error getting secure data:", error.message)
 }
 ```
 
@@ -288,14 +292,18 @@ If `ethPrivateKeyForProtection` (a hex string) is provided, it uses that key. Ot
 ```javascript
 // Assuming newIdentity was obtained from db.sm.startNewUserRegistration()
 try {
-  const protectedAddress = await db.sm.protectCurrentIdentityWithWebAuthn(newIdentity.privateKey);
+  const protectedAddress = await db.sm.protectCurrentIdentityWithWebAuthn(
+    newIdentity.privateKey
+  )
   if (protectedAddress) {
-    console.log(`Identity ${protectedAddress} successfully protected with WebAuthn and session started.`);
+    console.log(
+      `Identity ${protectedAddress} successfully protected with WebAuthn and session started.`
+    )
   } else {
-    console.error("WebAuthn protection failed.");
+    console.error("WebAuthn protection failed.")
   }
 } catch (error) {
-  console.error("Error during WebAuthn protection:", error);
+  console.error("Error during WebAuthn protection:", error)
 }
 ```
 
@@ -311,14 +319,14 @@ Initiates the WebAuthn authentication (assertion) process for a user previously 
 
 ```javascript
 try {
-  const loggedInAddress = await db.sm.loginCurrentUserWithWebAuthn();
+  const loggedInAddress = await db.sm.loginCurrentUserWithWebAuthn()
   if (loggedInAddress) {
-    console.log(`Successfully logged in with WebAuthn as ${loggedInAddress}.`);
+    console.log(`Successfully logged in with WebAuthn as ${loggedInAddress}.`)
   } else {
-    console.warn("WebAuthn login failed.");
+    console.warn("WebAuthn login failed.")
   }
 } catch (error) {
-  console.error("Error during WebAuthn login:", error);
+  console.error("Error during WebAuthn login:", error)
 }
 ```
 
@@ -335,16 +343,20 @@ Loads or recovers an Ethereum identity using a provided BIP39 mnemonic phrase. I
 #### Example
 
 ```javascript
-const mnemonicPhrase = "your twelve word secret recovery phrase goes here..."; // User provides this
+const mnemonicPhrase = "your twelve word secret recovery phrase goes here..." // User provides this
 try {
-  const recoveredIdentity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonicPhrase);
+  const recoveredIdentity = await db.sm.loginOrRecoverUserWithMnemonic(
+    mnemonicPhrase
+  )
   if (recoveredIdentity) {
-    console.log(`Logged in/Recovered identity for ${recoveredIdentity.address}.`);
+    console.log(
+      `Logged in/Recovered identity for ${recoveredIdentity.address}.`
+    )
   } else {
-    console.error("Failed to log in/recover with mnemonic.");
+    console.error("Failed to log in/recover with mnemonic.")
   }
 } catch (error) {
-  console.error("Error during mnemonic login/recovery:", error);
+  console.error("Error during mnemonic login/recovery:", error)
 }
 ```
 
@@ -368,7 +380,7 @@ const myAppRoles = {
 };
 
 // Pass custom roles in the initial configuration
-const db = await gdb("my-db", { 
+const db = await gdb("my-db", {
   sm: {
     superAdmins: ["0x1...", "0x2..."] // superadmin addresses
     customRoles: myAppRoles
@@ -382,7 +394,7 @@ console.log("Custom roles have been configured during initialization.");
 
 ### `db.sm.assignRole(targetUserEthAddress, role, expiresAt?)`
 
-Assigns a specified role to a target user's Ethereum address. **Important:** This function itself does *not* perform an RBAC check on the caller; it's assumed that the caller's permission to assign roles (typically the `'assignRole'` permission) has already been verified. Role assignments are stored as nodes within GDB.
+Assigns a specified role to a target user's Ethereum address. **Important:** This function itself does _not_ perform an RBAC check on the caller; it's assumed that the caller's permission to assign roles (typically the `'assignRole'` permission) has already been verified. Role assignments are stored as nodes within GDB.
 
 - **Signature**: `(targetUserEthAddress: string, role: string, expiresAt?: string | Date | number): Promise<void>`
 - **Parameters**:
@@ -394,16 +406,16 @@ Assigns a specified role to a target user's Ethereum address. **Important:** Thi
 #### Example: Assigning a Role with Expiration
 
 ```javascript
-const targetUser = "0xTargetUserAddress...";
-const newRole = "manager";
-const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+const targetUser = "0xTargetUserAddress..."
+const newRole = "manager"
+const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 try {
   // Assumes current user has 'assignRole' permission.
-  await db.sm.assignRole(targetUser, newRole, thirtyDaysFromNow);
-  console.log(`Role '${newRole}' assignment for ${targetUser} written to GDB.`);
+  await db.sm.assignRole(targetUser, newRole, thirtyDaysFromNow)
+  console.log(`Role '${newRole}' assignment for ${targetUser} written to GDB.`)
 } catch (error) {
-  console.error(`Failed to assign role: ${error.message}`);
+  console.error(`Failed to assign role: ${error.message}`)
 }
 ```
 
@@ -411,7 +423,7 @@ try {
 
 ### `db.sm.executeWithPermission(operationName)`
 
-Verifies if the currently authenticated user has the specified `operationName` permission based on their role. This function should be called *before* attempting a restricted action.
+Verifies if the currently authenticated user has the specified `operationName` permission based on their role. This function should be called _before_ attempting a restricted action.
 
 - **Signature**: `(operationName: string): Promise<string>`
 - **Parameters**:
@@ -421,17 +433,18 @@ Verifies if the currently authenticated user has the specified `operationName` p
 #### Example: Protected Operation
 
 ```javascript
-const nodeIdToDelete = "some_node_id";
+const nodeIdToDelete = "some_node_id"
 try {
   // Verify permission first
-  const currentUserAddress = await db.sm.executeWithPermission("delete");
-  
-  console.log(`User ${currentUserAddress} has 'delete' permission. Proceeding...`);
-  await db.remove(nodeIdToDelete);
-  console.log(`Node ${nodeIdToDelete} delete operation sent.`);
+  const currentUserAddress = await db.sm.executeWithPermission("delete")
 
+  console.log(
+    `User ${currentUserAddress} has 'delete' permission. Proceeding...`
+  )
+  await db.remove(nodeIdToDelete)
+  console.log(`Node ${nodeIdToDelete} delete operation sent.`)
 } catch (error) {
-  console.error(`Operation failed: ${error.message}`);
+  console.error(`Operation failed: ${error.message}`)
 }
 ```
 
