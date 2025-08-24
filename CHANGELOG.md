@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.5] - 2025-08-24
+
+### Changed
+- **Security Manager (SM) Initialization Hardened:** The configuration for the SM module has been made stricter to ensure secure and correct setups.
+  - The `rtc: true` option is now **mandatory** when enabling the SM module, reinforcing that its core security features operate in a P2P context.
+  - The module must be initialized with a full configuration object, including the mandatory `superAdmins` array (e.g., `sm: { superAdmins: [...] }`).
+
+### Improved
+- **API Encapsulation and Clarity:** The public API of the Security Manager (`db.sm`) has been significantly streamlined. Internal helper and utility functions are now properly encapsulated, resulting in a cleaner, more focused, and easier-to-use API for developers.
+- **Bundle Size Reduction:** The improved encapsulation enhances tree-shaking, which can lead to a smaller final bundle size for applications that include the Security Manager module.
+
 ## [0.9.3] - 2025-08-21
 
 ### ⚠️ Breaking Change
