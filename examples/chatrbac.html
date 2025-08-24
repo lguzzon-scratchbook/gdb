@@ -361,9 +361,9 @@
                 sm = db.sm
 
                 statusBar.textContent = "Status: DB ready. Initializing security context...";
-                // sm.createSecurityContext(db, SUPERADMIN_ADDRESSES);
-                // sm.setCustomRoles(CHAT_APP_ROLES);
+    
                 sm.setSecurityStateChangeCallback(updateUI);
+                
                 const initialState = {
                     isActive: sm.isSecurityActive(),
                     activeAddress: sm.getActiveEthAddress(),

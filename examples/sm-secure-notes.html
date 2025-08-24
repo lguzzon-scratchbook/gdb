@@ -241,8 +241,9 @@
                 db = await gdb(dbName, { rtc: true, sm: true });
                 sm = db.sm;
                 log(`GDB Ready.`, 'success');
-                await sm.createSecurityContext(db);
+
                 sm.setSecurityStateChangeCallback(securityUpdateHandler);
+                
                 log(`Security Context Ready. Attempting session restore...`, 'success');
                 initSection.classList.add('hidden');
             } catch (e) {
