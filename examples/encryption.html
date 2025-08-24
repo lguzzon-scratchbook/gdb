@@ -205,14 +205,21 @@
         async function initializeApp() {
             try {
                 updateStatus("Initializing GDB...");
-                db = await gdb("encryptionDemoDB", { rtc: true, sm: true });
-                sm = db.sm;
+
+                db = await gdb("encryptionDemoDB", {
+                    rtc: true,
+                    sm: {
+                        superAdmins: ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+                    }
+                });
+
                 updateStatus("GDB ready. Initializing Security Context...");
-                await sm.createSecurityContext(db);
-                sm.setSecurityStateChangeCallback(updateUI);
+
+                db.sm.setSecurityStateChangeCallback(updateUI);
+                
                 const initialState = {
-                    isActive: sm.isSecurityActive(),
-                    activeAddress: sm.getActiveEthAddress(),
+                    isActive: db.sm.isSecurityActive(),
+                    activeAddress: db.sm.getActiveEthAddress(),
                 };
                 updateUI(initialState);
                 if (!initialState.isActive) {
@@ -232,7 +239,7 @@
             }
             try {
                 updateStatus("Attempting to login with mnemonic...");
-                const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
+                const identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
                 if (identity) {
                     mnemonicInput.value = '';
                     updateStatus(`Successfully logged in as ${identity.address}.`);
@@ -251,13 +258,13 @@
                 updateStatus("Please enter some text to encrypt.", true);
                 return;
             }
-            if (!sm.isSecurityActive()) {
+            if (!db.sm.isSecurityActive()) {
                 updateStatus("You must be logged in to encrypt data.", true);
                 return;
             }
             try {
                 updateStatus("Encrypting data...");
-                const encryptedString = await sm.encryptDataForCurrentUser(dataToEncrypt);
+                const encryptedString = await db.sm.encryptDataForCurrentUser(dataToEncrypt);
                 encryptedOutputArea.value = encryptedString;
                 cipherTextToDecryptInput.value = encryptedString;
                 updateStatus("Data encrypted successfully.");
@@ -273,13 +280,13 @@
                 updateStatus("Please enter some ciphertext to decrypt.", true);
                 return;
             }
-            if (!sm.isSecurityActive()) {
+            if (!db.sm.isSecurityActive()) {
                 updateStatus("You must be logged in to decrypt data.", true);
                 return;
             }
             try {
                 updateStatus("Decrypting data...");
-                const decryptedData = await sm.decryptDataForCurrentUser(dataToDecrypt);
+                const decryptedData = await db.sm.decryptDataForCurrentUser(dataToDecrypt);
                 decryptedOutputArea.textContent = JSON.stringify(decryptedData, null, 2);
                 updateStatus("Data decrypted successfully.");
             } catch (error) {
@@ -292,7 +299,7 @@
         btnLogout.addEventListener('click', async () => {
             try {
                 updateStatus("Logging out...");
-                await sm.clearSecurity();
+                await db.sm.clearSecurity();
                 updateStatus("Successfully logged out.");
             } catch (error) {
                 updateStatus(`Logout error: ${error.message}`, true);
