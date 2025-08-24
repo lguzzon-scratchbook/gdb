@@ -488,6 +488,64 @@ These are utility functions for querying the current security state, often used 
 > The current RBAC implementation stores role assignments within GDB itself. While GDB is a P2P database, the authority for assigning roles ultimately relies on the permissions defined (e.g., a `superadmin` having `assignRole`). All operations are executed client-side. Future research may explore verifying role assignments via smart contracts for a higher degree of decentralized trust. For now, the system functions as a robust proof-of-concept for P2P applications requiring sophisticated access control.
 
 ---
+Sí, es una idea **absolutamente excelente**. De hecho, es lo que distingue a una buena documentación de una documentación **excepcional**.
+
+Hacerlo es increíblemente valioso por varias razones:
+
+1.  **Cierra la Brecha entre la API y la Aplicación Real:** La documentación técnica te dice *qué* hace cada función. Una sección de "Buenas Prácticas" y "Patrones de UX" le dice al desarrollador *cómo* orquestar esas funciones para construir una experiencia de usuario que sea segura, intuitiva y que no genere frustración.
+2.  **Previene Anti-Patrones Comunes:** Exactamente como mencionas, evitas que los desarrolladores (o las IAs que los asisten) caigan en trampas comunes. Tu ejemplo del campo de texto para el mnemónico es perfecto. Sin una guía, es fácil crear una interfaz redundante o confusa.
+3.  **Establece un Estándar de Calidad:** Al proporcionar esta guía, no solo ofreces una librería, sino también una opinión experta sobre cómo debe ser usada. Esto aumenta la confianza en el proyecto y ayuda a que las aplicaciones construidas sobre GenosDB tengan una mayor calidad y consistencia.
+4.  **Reduce la Carga de Soporte:** Al anticipar las preguntas y los problemas comunes en la implementación, reduces la cantidad de consultas o problemas que recibirás en el futuro.
+5.  **Educa sobre Seguridad:** La gestión de mnemónicos y WebAuthn no es trivial. Una guía de UX puede enseñar implícitamente al desarrollador por qué ciertas prácticas son más seguras que otras (por ejemplo, por qué no se debe almacenar el mnemónico después del registro).
+
+### Propuesta de Estructura para la Nueva Sección
+
+Te sugiero añadir una nueva sección al final de `sm-api-reference.md`, justo antes de "Notes on Decentralization" o "API Stability".
+
+Aquí tienes un borrador de cómo podría estructurarse y qué contenido podría tener.
+
+---
+## 💡 Best Practices & UI/UX Patterns
+
+Building a secure and intuitive user experience for identity management is crucial. Here are recommended patterns for using the Security Manager (SM) module, inspired by efficient, real-world application design.
+
+### 1. The Initial State: Login & Onboarding
+
+When a user arrives, present a clean and unified login/registration area.
+
+- **Unified Mnemonic Field:** Use a single `<textarea>` for all mnemonic-related actions. This field can:
+  1.  Display a newly generated mnemonic after clicking "Generate New Identity".
+  2.  Accept a pasted mnemonic for login/recovery.
+- **Primary Actions:**
+  - **`Generate New Identity`**: Calls `db.sm.startNewUserRegistration()` and populates the mnemonic `<textarea>` with the result. This is the main entry point for new users.
+  - **`Login with Mnemonic`**: Calls `db.sm.loginOrRecoverUserWithMnemonic()` using the content of the `<textarea>`.
+  - **`Login with WebAuthn / Passkey`**: This button should be visible if `db.sm.hasExistingWebAuthnRegistration()` is `true`. It offers the quickest, most secure login path for returning users on a registered device.
+
+### 2. New User Registration Flow (The Modern Approach)
+
+This flow is designed to be seamless and secure.
+
+- **Step 1: Generate & Display:**
+  - The user clicks "Generate New Identity".
+  - The new mnemonic phrase is placed directly into the single, editable `<textarea>`.
+  - **CRITICAL:** Display a very prominent, non-dismissible warning next to the field: "SAVE THIS PHRASE SECURELY! This is your only way to recover your account. Copy it and store it in a password manager."
+- **Step 2: Secure the Account (Immediate Next Step):**
+  - After generation, the most important action is to secure this new, volatile identity. Provide a clear button like **`Register with WebAuthn`** or **`Protect this Account`**.
+  - This button should call `db.sm.protectCurrentIdentityWithWebAuthn()`. This action protects the in-memory identity, provides a passwordless login for the current device, and is the ideal security practice.
+- **Step 3: First Login:**
+  - After securing with WebAuthn, the user is automatically logged in. If they skip WebAuthn, they can click "Login with Mnemonic" using the phrase that is already in the text area.
+
+This approach avoids confirmation checkboxes or making the user re-type the phrase, as these steps can encourage insecure practices (like taking screenshots or writing it down on paper). The focus is on **Copy -> Secure Storage -> Protect with WebAuthn**.
+
+### 3. General Principles
+
+- **Use the State Change Callback:** Rely on `db.sm.setSecurityStateChangeCallback(updateUI)` to reactively show/hide the login section vs. the main application view. This simplifies UI logic immensely.
+- **Never Store the Mnemonic:** Your application logic should never store the mnemonic phrase anywhere (e.g., in `localStorage`). The SM handles all necessary key material securely. Once a session is established, the phrase should be considered ephemeral.
+- **Distinguish Storage vs. Utility:**
+  - Use `db.sm.put()` and `db.sm.get()` for seamless, encrypted storage **within GDB nodes**.
+  - Use `db.sm.encryptDataForCurrentUser()` and `db.sm.decryptDataForCurrentUser()` when you need flexible encryption for data that might not live in GDB (e.g., ephemeral chat messages).
+
+---
 
 ## ⚠️ API Stability
 
