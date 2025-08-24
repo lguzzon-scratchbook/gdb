@@ -65,6 +65,12 @@ To mitigate the risk of invalid state propagation during a full graph synchroniz
 
 Security in GDB is multi-layered and integrated directly into the P2P fabric via the **Security Manager (SM)**. It combines the cryptographic strength of WebAuthn and Ethereum identities for user authentication with a flexible, data-driven RBAC system for authorization. Digital signatures on every operation ensure authenticity and integrity across the network, creating a robust framework for building secure, decentralized applications.
 
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=Lkw4hQpgt50">
+    <img src="https://img.youtube.com/vi/Lkw4hQpgt50/0.jpg" alt="GenosDB Presentation" width="100%" />
+  </a>
+</div>
+
 **Live Demo / Testbed:**
 
 You can see GDB with its security features in action at our live testbed environment:
