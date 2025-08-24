@@ -22,7 +22,7 @@ import { gdb } from "./dist/index.js"
 const db = await gdb("my-db", {
   rtc: true,
   sm: {
-    superAdmins: ["0x1...", "0x2..."], // superadmin addresses
+    superAdmins: ["0x1...", "0x2..."], // superadmin addresses (mandatory)
   },
 })
 ```
@@ -99,7 +99,12 @@ Minimal pattern:
 
 ```javascript
 // Initialize GDB with SM enabled (SM will handle silent resume automatically)
-const db = await gdb("my-db", { rtc: true, sm: true })
+const db = await gdb("my-db", {
+  rtc: true,
+  sm: {
+    superAdmins: ["0x1...", "0x2..."], // superadmin addresses (mandatory)
+  },
+})
 
 // Optional: react to state changes for UI
 db.sm.setSecurityStateChangeCallback((state) => updateUI(state))
@@ -114,7 +119,7 @@ loginWebAuthnBtn.onclick = async () => {
 }
 ```
 
-Note: Some example pages explicitly create the Security Context after initialization to ensure the silent resume logic runs immediately. If you enable SM via `{ sm: true }`, the context is automatically set up by the module.
+Note: Some example pages explicitly create the Security Context after initialization to ensure the silent resume logic runs immediately. If you enable SM via `sm: { superAdmins: [...] }`, the context is automatically set up by the module. The `superAdmins` field is mandatory; without it, the SM module will not initialize.
 
 ---
 
@@ -382,7 +387,7 @@ const myAppRoles = {
 // Pass custom roles in the initial configuration
 const db = await gdb("my-db", {
   sm: {
-    superAdmins: ["0x1...", "0x2..."] // superadmin addresses
+    superAdmins: ["0x1...", "0x2..."] // superadmin addresses (mandatory)
     customRoles: myAppRoles
   }
 });
@@ -438,9 +443,7 @@ try {
   // Verify permission first
   const currentUserAddress = await db.sm.executeWithPermission("delete")
 
-  console.log(
-    `User ${currentUserAddress} has 'delete' permission. Proceeding...`
-  )
+  console.log(`User ${currentUserAddress} has 'delete' permission. Proceeding...`)
   await db.remove(nodeIdToDelete)
   console.log(`Node ${nodeIdToDelete} delete operation sent.`)
 } catch (error) {
@@ -489,4 +492,4 @@ These are utility functions for querying the current security state, often used 
 
 ## Usage Examples
 
-You can find practical examples of how to use this library in the [examples](https://github.com/estebanrfp/gdb/tree/main/examples) directory, particularly `rbac.html`.
+You can find practical examples in the [examples guide](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-examples.md)
