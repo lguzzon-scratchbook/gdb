@@ -1,5 +1,11 @@
 ## **GDB's Advanced Synchronization and Security Architecture**
 
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=wN1Ee7fsKJg">
+    <img src="https://img.youtube.com/vi/wN1Ee7fsKJg/0.jpg" alt="GenosDB: Hybrid Sync and Zero-Trust Security Architecture" width="100%" />
+  </a>
+</div>
+
 ### A Technical Deep Dive into the Hybrid Delta Protocol and the Zero-Trust Security Layer
 
 GenosDB (GDB) is engineered to provide a seamless, secure, and highly efficient environment for real-time, distributed applications. This document provides a detailed technical breakdown of its core synchronization engine and the integrated security layer. By examining the implementation, we can understand how GDB achieves both high performance and robust, decentralized data integrity.
