@@ -6,26 +6,28 @@ The Security Manager (SM) is not imported separately but is activated and attach
 
 ### Enable the Security Manager
 
-To activate SM and use RBAC and identity features, you must enable the `sm` option when you initialize GDB.
-
-> Important:
-> To activate the Security Manager (SM) module, you **must** provide a configuration object with the `superAdmins` property. This property is **mandatory**.
-> If `superAdmins` is not included, the SM module will not initialize.
-
-> Example (required minimum):
-
-```javascript
-// Import module
-import { gdb } from "./dist/index.js"
-
-// Enable the security module and pass superadmin addresses
-const db = await gdb("my-db", {
-  rtc: true,
-  sm: {
-    superAdmins: ["0x1...", "0x2..."], // superadmin addresses (mandatory)
-  },
-})
-```
+> To utilize the SM RBAC and identity features, you must enable the `sm` option with a configuration object when you initialize GDB.
+>
+> **It is mandatory to provide a `superAdmins` array** containing at least one superadmin Ethereum address. This is critical to ensure the permission system is functional from the outset, allowing roles to be assigned.
+>
+> ```javascript
+> // Import the module
+> import { gdb } from "genosdb";
+>
+> // Enable the security module by providing the required configuration
+> const db = await gdb("my-db", {
+>   rtc: true, 
+>   sm: {
+>     superAdmins: ["0xAddressOfFirstAdmin...", "0xAnotherAdmin..."] // Mandatory list of superadmin Ethereum addresses.
+>   }
+> });
+>
+> // The 'db' instance now has the SM module configured and active.
+> // You can access all security functions via `db.sm`.
+> console.log(`Security Manager active. Superadmin address: ${db.sm.getActiveEthAddress() || 'None (awaiting login)'}`);
+> ```
+>
+> **Note on Automatic Initialization**: When you provide the `sm` configuration object, the `gdb` function automatically handles all necessary internal initialization logic. This includes setting up the security context, registering the P2P middleware, and attempting a silent WebAuthn session resume. The `db` instance you receive is fully prepared for use with all Security Manager features.
 
 ---
 
