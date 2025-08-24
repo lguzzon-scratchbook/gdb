@@ -132,11 +132,11 @@
                 <input type="text" id="noteId" placeholder="e.g., myShoppingList">
                 <label for="noteContent">Note Content:</label>
                 <textarea id="noteContent" placeholder="Things to buy..."></textarea>
-                <button id="btnSaveNote">Save Note (via sm.put)</button>
+                <button id="btnSaveNote">Save Note (via db.sm.put)</button>
             </div>
 
             <div style="margin-top: 20px;">
-                <h3>Watch a Note (Real-time via sm.get)</h3>
+                <h3>Watch a Note (Real-time via db.sm.get)</h3>
                 <label for="watchNoteId">Note ID to Watch:</label>
                 <input type="text" id="watchNoteId" placeholder="Enter ID to watch">
                 <button id="btnWatchNote">Watch Note</button>
@@ -238,12 +238,17 @@
             log(`Initializing GDB: ${dbName}...`);
 
             try {
-                db = await gdb(dbName, { rtc: true, sm: true });
-                sm = db.sm;
+                db = await gdb(dbName, {
+                    rtc: true,
+                    sm: {
+                        superAdmins: ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+                    }
+                });
+
                 log(`GDB Ready.`, 'success');
 
-                sm.setSecurityStateChangeCallback(securityUpdateHandler);
-                
+                db.sm.setSecurityStateChangeCallback(securityUpdateHandler);
+
                 log(`Security Context Ready. Attempting session restore...`, 'success');
                 initSection.classList.add('hidden');
             } catch (e) {
@@ -259,7 +264,7 @@
             if (!mnemonic) { log("Mnemonic is required.", 'error'); return; }
             try {
                 log(`Attempting Mnemonic Login...`);
-                const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
+                const identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
                 if (identity) {
                     log(`Logged in with Mnemonic: ${identity.address.substring(0, 10)}...`, 'success');
                     mnemonicInput.value = '';
@@ -274,7 +279,7 @@
         btnNewIdentity.addEventListener('click', async () => {
             try {
                 log(`Generating new identity...`);
-                const identity = await sm.startNewUserRegistration();
+                const identity = await db.sm.startNewUserRegistration();
                 if (identity) {
                     newIdentityDetails.innerHTML = `<b>New Identity (SAVE THIS MNEMONIC SECURELY!):</b><br>Address: ${identity.address}<br>Mnemonic: ${identity.mnemonic}`;
                     mnemonicInput.value = identity.mnemonic;
@@ -289,7 +294,7 @@
         btnRegisterWebAuthn.addEventListener('click', async () => {
             try {
                 log("Registering current identity with WebAuthn...");
-                const address = await sm.protectCurrentIdentityWithWebAuthn();
+                const address = await db.sm.protectCurrentIdentityWithWebAuthn();
                 if (address) {
                     log(`Identity protected with WebAuthn. Address: ${address}`, 'success');
                 } else {
@@ -304,7 +309,7 @@
         btnLoginWebAuthn.addEventListener('click', async () => {
             try {
                 log("Attempting WebAuthn login...");
-                const address = await sm.loginCurrentUserWithWebAuthn();
+                const address = await db.sm.loginCurrentUserWithWebAuthn();
                 if (address) {
                     log(`Logged in with WebAuthn: ${address}`, 'success');
                 } else {
@@ -318,7 +323,7 @@
         // --- Logout ---
         btnLogout.addEventListener('click', async () => {
             log(`Logging out...`);
-            await sm.clearSecurity();
+            await db.sm.clearSecurity();
             log(`Logged out.`, 'success');
             newIdentityDetails.textContent = '';
         });
@@ -335,7 +340,7 @@
 
             log(`Saving note with ID: '${id || '(new)'}'...`);
             try {
-                const finalId = await sm.put(contentToSave, id);
+                const finalId = await db.sm.put(contentToSave, id);
                 log(`Note saved. Final ID: '${finalId}'. Content: ${JSON.stringify(contentToSave).substring(0, 50)}...`, 'success');
                 if (!id) noteIdInput.value = finalId;
                 watchNoteIdInput.value = finalId;
@@ -366,7 +371,7 @@
             lastKnownWatchedNodeId = idToWatch;
 
             try {
-                const { unsubscribe } = await sm.get(idToWatch, (node) => {
+                const { unsubscribe } = await db.sm.get(idToWatch, (node) => {
                     log(`Real-time update for watched note '${idToWatch}': Decrypted=${node ? node.decrypted : 'N/A'}`, 'info');
                     if (node) {
                         let displayValue = `ID: ${node.id}\nTimestamp: ${JSON.stringify(node.timestamp)}\nDecrypted: ${node.decrypted}\n\nValue:\n`;
