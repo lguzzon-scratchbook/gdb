@@ -388,8 +388,9 @@ const myAppRoles = {
 
 // Pass custom roles in the initial configuration
 const db = await gdb("my-db", {
+  rtc: true,
   sm: {
-    superAdmins: ["0x1...", "0x2..."] // superadmin addresses (mandatory)
+    superAdmins: ["0x1...", "0x2..."], // superadmin addresses (mandatory)
     customRoles: myAppRoles
   }
 });
