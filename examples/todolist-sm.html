@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure To-Do List (GDB + SM)</title>
+  <style>
+    :root {
+      --bg: #f4f7f6;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --primary: #3498db;
+      --primary-hover: #2980b9;
+      --secondary: #6c757d;
+      --secondary-hover: #5a6268;
+      --border: #e1e4e8;
+      --surface: #ffffff;
+      --surface-soft: #fafafa;
+      --warning: #e74c3c;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      background-color: var(--surface);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    h1,
+    h2 {
+      text-align: center;
+      color: var(--text);
+      margin: 0 0 16px 0;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      margin: 0 0 12px 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    textarea { min-height: 84px; resize: vertical; }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      margin: 6px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      transition: transform 0.12s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 6px rgba(52, 152, 219, 0.25);
+    }
+
+    button:hover { background-color: var(--primary-hover); }
+    button:active { transform: translateY(1px); }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; box-shadow: none; }
+
+    button.secondary { background-color: var(--secondary); box-shadow: 0 2px 6px rgba(108, 117, 125, 0.25); }
+    button.secondary:hover { background-color: var(--secondary-hover); }
+
+    button.icon-button {
+      background: none;
+      padding: 6px;
+      font-size: 18px;
+      box-shadow: none;
+    }
+
+    button.icon-button:hover { transform: scale(1.05); }
+
+    .status {
+      margin: 16px 0;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background-color: #ecf0f1;
+      color: var(--muted);
+    }
+
+    .info {
+      margin: 16px 0;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background-color: var(--surface-soft);
+      border: 1px solid var(--border);
+      word-wrap: break-word;
+    }
+
+    .warning {
+      color: #fff;
+      font-weight: 600;
+      background-color: var(--warning);
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .hidden { display: none !important; }
+
+    .auth-actions,
+    .session-actions { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+    .auth-options { display: flex; flex-direction: column; gap: 16px; }
+
+    .action-group {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    code {
+      background-color: #f6f8fa;
+      padding: 2px 6px;
+      border-radius: 6px;
+      word-break: break-all;
+      color: var(--text);
+    }
+
+    ul { list-style: none; padding: 0; margin: 12px 0 0 0; }
+
+    li {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      background: var(--surface);
+    }
+
+    li span { flex: 1; cursor: pointer; }
+
+    .completed { text-decoration: line-through; color: #95a5a6; }
+
+    .edit-mode { display: inline-block; width: 70%; }
+
+    .edit-buttons { display: flex; gap: 6px; }
+
+    .icon-container { display: flex; gap: 10px; align-items: center; }
+
+  /* Utility: flex rows used in auth and task input */
+  .flex-row { display: flex; gap: 8px; align-items: center; }
+  .flex-row input[type="text"],
+  .flex-row textarea { width: auto; flex: 1; margin: 0; }
+
+  /* Section titles */
+  .auth-options h3 { margin: 0 0 8px 0; font-size: 1rem; color: var(--muted); font-weight: 600; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Enhanced To-Do List (SM)</h1>
+    <div id="statusBar" class="status">Status: Awaiting initialization...</div>
+
+    <!-- ===== AUTHENTICATION UI ===== -->
+    <div id="authSection">
+      <div class="auth-options">
+        <div class="action-group">
+          <h3>New User?</h3>
+          <button id="btnRegisterNew">1. Generate New Identity</button>
+          <div id="newIdentityInfo" class="info hidden">
+            <p><strong>New Address:</strong> <code id="newEthAddress"></code></p>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong>Mnemonic:</strong>
+              <code id="newMnemonic"></code>
+              <button id="btnCopyMnemonic" class="secondary" style="padding: 6px 10px; font-size: 0.95em;">Copy</button>
+            </div>
+            <div class="warning">⚠️ IMPORTANT: Securely save this Mnemonic Phrase! It's the only way to recover your account.</div>
+            <button id="btnProtectWebAuthn" disabled>2. Protect & Login with WebAuthn</button>
+          </div>
+        </div>
+        <div class="action-group">
+          <h3>Existing User?</h3>
+          <button id="btnLoginWebAuthn" disabled>Login with WebAuthn</button>
+          <p>Or enter your mnemonic phrase to log in:</p>
+          <textarea id="inputMnemonic" placeholder="Enter your 12-word mnemonic phrase..." rows="3"></textarea>
+          <button id="btnLoginMnemonic" disabled>Login with Mnemonic</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TO-DO LIST APPLICATION UI (Initially Hidden) ===== -->
+    <div id="toDoAppSection" class="hidden">
+      <div id="loggedInSection">
+        <div class="info">
+          <p><strong>Logged In As:</strong> <code id="loggedInUserAddress"></code></p>
+        </div>
+        <div class="session-actions">
+          <button id="btnLogout" class="secondary">Logout</button>
+        </div>
+      </div>
+
+      <h2>My Tasks</h2>
+      <div class="flex-row">
+        <input type="text" id="taskInput" placeholder="Add a new task and press Enter...">
+        <button id="btnAddTask">Add</button>
+      </div>
+      <ul id="taskList"></ul>
+    </div>
+  </div>
+
+  <script type="module">
+    import { gdb } from "../dist/index.js";
+
+    // --- GLOBAL STATE ---
+    let db;
+    let sm;
+    let taskSubscriptionUnsubscribe = null; // To hold the unsubscribe function for tasks
+    let volatileIdentity = null; // Stores temporary new identity { address, mnemonic, privateKey }
+
+    // --- DOM ELEMENT REFERENCES ---
+    const statusBar = document.getElementById('statusBar');
+    const authSection = document.getElementById('authSection');
+    const toDoAppSection = document.getElementById('toDoAppSection');
+
+    // New Auth Elements
+    const btnRegisterNew = document.getElementById('btnRegisterNew');
+    const newIdentityInfo = document.getElementById('newIdentityInfo');
+    const newEthAddressElem = document.getElementById('newEthAddress');
+    const newMnemonicElem = document.getElementById('newMnemonic');
+    const btnCopyMnemonic = document.getElementById('btnCopyMnemonic');
+    const btnProtectWebAuthn = document.getElementById('btnProtectWebAuthn');
+    const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
+    const inputMnemonic = document.getElementById('inputMnemonic');
+    const btnLoginMnemonic = document.getElementById('btnLoginMnemonic');
+
+    // App Elements
+    const loggedInSection = document.getElementById('loggedInSection');
+    const loggedInUserAddressElem = document.getElementById('loggedInUserAddress');
+    const btnLogout = document.getElementById('btnLogout');
+    const taskInput = document.getElementById('taskInput');
+    const btnAddTask = document.getElementById('btnAddTask');
+    const taskList = document.getElementById('taskList');
+
+    // --- UI HELPER FUNCTIONS ---
+    function updateStatus(message, isError = false) {
+      statusBar.textContent = `Status: ${message}`;
+      statusBar.style.color = isError ? '#d93025' : '#333';
+    }
+
+    // --- CORE APPLICATION LOGIC ---
+
+    /**
+     * This is the main controller for the application's UI state.
+     * It is called whenever the user's authentication state changes (login/logout).
+     */
+    async function handleSecurityChange(securityState) {
+      if (!securityState) {
+        updateStatus("Security state unavailable.", true);
+        return;
+      }
+
+      if (securityState.isActive) { // --- USER IS LOGGED IN ---
+        updateStatus(`Logged in as ${securityState.activeAddress.substring(0, 10)}...`);
+        authSection.classList.add('hidden');
+        toDoAppSection.classList.remove('hidden');
+        loggedInUserAddressElem.textContent = securityState.activeAddress;
+        newIdentityInfo.classList.add('hidden'); // Hide mnemonic section
+
+        // ** CRITICAL **: Now that we are logged in, subscribe to this user's tasks.
+        await subscribeToTasks();
+
+      } else { // --- USER IS LOGGED OUT ---
+        updateStatus(securityState.hasWebAuthnHardwareRegistration ? "Ready to login with WebAuthn." : "Ready for new user registration or mnemonic login.");
+        authSection.classList.remove('hidden');
+        toDoAppSection.classList.add('hidden');
+
+        btnLoginWebAuthn.disabled = !securityState.hasWebAuthnHardwareRegistration;
+
+        // Handle display for a new, unsaved identity
+        if (securityState.hasVolatileIdentity) {
+          newIdentityInfo.classList.remove('hidden');
+          btnProtectWebAuthn.disabled = false;
+          btnRegisterNew.disabled = true;
+        } else {
+          newIdentityInfo.classList.add('hidden');
+          btnProtectWebAuthn.disabled = true;
+          btnRegisterNew.disabled = false;
+        }
+
+        // ** CRITICAL **: Unsubscribe from any previous user's tasks and clear the UI.
+        await unsubscribeAndClearTasks();
+      }
+    }    /**
+     * Subscribes to the task list for the currently logged-in user.
+     * The `db.map` call will automatically only return data for the active user.
+     */
+    async function subscribeToTasks() {
+      if (taskSubscriptionUnsubscribe) return; // Already subscribed
+
+      updateStatus("Loading tasks...");
+      const { unsubscribe } = await db.map(({ id, value, action }) => {
+        if (action === 'initial' || action === 'added') {
+          handleAddTask(id, value);
+        } else if (action === 'removed') {
+          handleDeleteTask(id);
+        } else if (action === 'updated') {
+          handleUpdateTask(id, value);
+        }
+      });
+      taskSubscriptionUnsubscribe = unsubscribe; // Store the unsubscribe function
+      updateStatus("Tasks loaded.");
+    }
+
+    /**
+     * Clears the UI and unsubscribes from task updates.
+     * This is crucial to run on logout to prevent data leakage between sessions.
+     */
+    async function unsubscribeAndClearTasks() {
+      if (taskSubscriptionUnsubscribe) {
+        taskSubscriptionUnsubscribe();
+        taskSubscriptionUnsubscribe = null;
+      }
+      taskList.innerHTML = ''; // Clear the list from the DOM
+    }
+
+    // --- TO-DO LIST DOM MANIPULATION ---
+    // (These functions are mostly unchanged from your original To-Do list)
+    function createTaskElements(li, id, { text, completed }) {
+      // Clear previous content in case of reuse
+      li.innerHTML = '';
+
+      const taskTextSpan = document.createElement('span');
+      taskTextSpan.className = completed ? 'completed' : '';
+      taskTextSpan.textContent = text;
+      taskTextSpan.onclick = () => toggleTask(id);
+
+      const taskEditTextInput = document.createElement('input');
+      taskEditTextInput.type = 'text';
+      taskEditTextInput.value = text;
+      taskEditTextInput.className = 'edit-mode hidden';
+      taskEditTextInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') saveEdit(id, taskEditTextInput.value);
+      });
+
+      const iconContainer = document.createElement('div');
+      iconContainer.className = 'icon-container';
+      const editButton = document.createElement('button');
+      editButton.className = 'icon-button';
+      editButton.innerHTML = '✏️';
+      editButton.onclick = () => enableEditMode(li);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'icon-button';
+      deleteButton.innerHTML = '🗑️';
+      deleteButton.onclick = () => deleteTask(id);
+
+      const editButtonsContainer = document.createElement('div');
+      editButtonsContainer.className = 'edit-buttons hidden';
+      const saveButton = document.createElement('button');
+      saveButton.className = 'icon-button';
+      saveButton.innerHTML = '💾';
+      saveButton.onclick = () => saveEdit(id, taskEditTextInput.value);
+
+      const cancelButton = document.createElement('button');
+      cancelButton.className = 'icon-button';
+      cancelButton.innerHTML = '❌';
+      cancelButton.onclick = () => cancelEdit(li);
+
+      editButtonsContainer.append(saveButton, cancelButton);
+      iconContainer.append(editButton, editButtonsContainer, deleteButton);
+      li.append(taskTextSpan, taskEditTextInput, iconContainer);
+    }
+
+    function handleAddTask(id, data) {
+      const li = document.createElement('li');
+      li.id = id;
+      createTaskElements(li, id, data);
+      taskList.appendChild(li);
+    }
+
+    function handleUpdateTask(id, data) {
+      const li = document.getElementById(id);
+      if (li) createTaskElements(li, id, data); // Re-render the element completely
+    }
+
+    function handleDeleteTask(id) {
+      const li = document.getElementById(id);
+      if (li) li.remove();
+    }
+
+    function enableEditMode(li) {
+      li.querySelector('span').classList.add('hidden');
+      li.querySelector('input.edit-mode').classList.remove('hidden');
+      li.querySelector('.edit-buttons').classList.remove('hidden');
+      li.querySelector('.icon-container button:first-child').style.display = 'none';
+    }
+
+    function cancelEdit(li) {
+      li.querySelector('span').classList.remove('hidden');
+      li.querySelector('input.edit-mode').classList.add('hidden');
+      li.querySelector('.edit-buttons').classList.add('hidden');
+      li.querySelector('.icon-container button:first-child').style.display = 'inline-block';
+    }
+
+    // --- TO-DO LIST DATABASE OPERATIONS ---
+    async function toggleTask(id) {
+      const li = document.getElementById(id);
+      if (!li) return;
+      const taskTextSpan = li.querySelector('span');
+      const completed = !taskTextSpan.classList.contains('completed');
+      await db.put({ text: taskTextSpan.textContent, completed }, id);
+    }
+
+    async function saveEdit(id, newText) {
+      if (!newText.trim()) return;
+      const li = document.getElementById(id);
+      if (!li) return;
+      const completed = li.querySelector('span').classList.contains('completed');
+      await db.put({ text: newText.trim(), completed }, id);
+      // The update will be handled by the db.map listener, which calls handleUpdateTask
+    }
+
+    async function deleteTask(id) {
+      await db.remove(id);
+    }
+
+    async function addTask() {
+      if (!taskInput.value.trim()) return;
+      await db.put({ text: taskInput.value.trim(), completed: false });
+      taskInput.value = '';
+    }
+
+
+    // --- AUTHENTICATION EVENT LISTENERS ---
+    btnRegisterNew.addEventListener('click', async () => {
+      try {
+        updateStatus("Generating new identity...");
+        volatileIdentity = await db.sm.startNewUserRegistration();
+        if (volatileIdentity) {
+          newEthAddressElem.textContent = volatileIdentity.address;
+          newMnemonicElem.textContent = volatileIdentity.mnemonic;
+          updateStatus("New identity generated. SAVE YOUR MNEMONIC.");
+        }
+      } catch (error) { updateStatus(`Error: ${error.message}`, true); }
+    });
+
+    btnCopyMnemonic.addEventListener('click', () => {
+      const mnemonic = newMnemonicElem.textContent;
+      navigator.clipboard.writeText(mnemonic).then(() => {
+        const originalText = btnCopyMnemonic.textContent;
+        btnCopyMnemonic.textContent = 'Copied!';
+        setTimeout(() => btnCopyMnemonic.textContent = originalText, 1500);
+        inputMnemonic.value = mnemonic;
+        inputMnemonic.dispatchEvent(new Event('input'));
+      });
+    });
+
+    inputMnemonic.addEventListener('input', () => {
+      const mnemonic = inputMnemonic.value.trim();
+      const words = mnemonic.split(/\s+/).filter(Boolean);
+      btnLoginMnemonic.disabled = words.length < 12;
+    });
+
+    btnLoginMnemonic.addEventListener('click', async () => {
+      const mnemonic = inputMnemonic.value.trim();
+      if (!mnemonic) return;
+      try {
+        updateStatus("Attempting mnemonic login...");
+        const identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
+        if (identity) {
+          updateStatus(`Session started for ${identity.address.substring(0, 10)}...`);
+          inputMnemonic.value = '';
+        } else {
+          updateStatus("Mnemonic login failed. Check the phrase.", true);
+        }
+      } catch (error) { updateStatus(`Mnemonic Login Error: ${error.message}`, true); }
+    });
+
+    btnProtectWebAuthn.addEventListener('click', async () => {
+      if (!volatileIdentity) return;
+      try {
+        updateStatus("Starting WebAuthn registration...");
+        const protectedAddress = await db.sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
+        if (protectedAddress) {
+          updateStatus(`Identity ${protectedAddress} protected & session started!`);
+          volatileIdentity = null;
+        } else {
+          updateStatus("WebAuthn protection cancelled or failed.", true);
+        }
+      } catch (error) { updateStatus(`WebAuthn Error: ${error.message}`, true); }
+    });
+
+    btnLoginWebAuthn.addEventListener('click', async () => {
+      try {
+        updateStatus("Attempting WebAuthn login...");
+        const loggedInAddress = await db.sm.loginCurrentUserWithWebAuthn();
+        if (!loggedInAddress) {
+          updateStatus("WebAuthn login failed or was cancelled.", true);
+        }
+      } catch (error) { updateStatus(`WebAuthn Login Error: ${error.message}`, true); }
+    });
+
+    btnLogout.addEventListener('click', async () => {
+      try {
+        updateStatus("Logging out...");
+        await db.sm.clearSecurity();
+        volatileIdentity = null;
+        updateStatus("Successfully logged out.");
+      } catch (error) { updateStatus(`Logout Error: ${error.message}`, true); }
+    });
+
+    // To-Do list "Add" listeners
+    taskInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addTask();
+    });
+    btnAddTask.addEventListener('click', addTask);
+
+    // --- INITIALIZATION ---
+    async function initializeApp() {
+      try {
+        updateStatus("Initializing Database...");
+
+        db = await gdb("secureTodoAppDB_v2", { // Changed DB name to avoid conflicts
+          rtc: true,
+          sm: {
+            superAdmins: ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+          }
+        });
+
+        updateStatus("Initializing Security Context...");
+
+        // Set the master callback that drives the entire application's state
+        db.sm.setSecurityStateChangeCallback(handleSecurityChange);
+
+        // Trigger the first state check to see if a user is already logged in
+        const initialState = {
+          isActive: db.sm.isSecurityActive(),
+          activeAddress: db.sm.getActiveEthAddress(),
+          hasVolatileIdentity: !!db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery(),
+          hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration()
+        };
+        await handleSecurityChange(initialState); // Run the handler to set the initial UI
+
+      } catch (error) {
+        updateStatus(`Initialization Error: ${error.message}`, true);
+        console.error("Initialization failed:", error);
+      }
+    }
+
+    initializeApp();
+  </script>
+</body>
+
+</html>
