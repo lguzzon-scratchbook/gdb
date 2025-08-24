@@ -879,941 +879,942 @@
 
   <script type="module">
     import { gdb } from "../dist/index.js";
-    (async () => {
-      // Initialize GenosDB with P2P and Security Module
-      const db = await gdb("collab-doc", {
-        rtc: true,
-        sm: {
-          superAdmins: ["0x62c48827e883f114821211673Dc309a29Aae7e6A", "0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
-          customRoles: {
-            // Allow everyone to write initially via 'guest'
-            guest: { can: ["read", "sync", "write"] },
-            viewer: { can: ["read", "sync", "write"] },
-            editor: { can: ["write", "sync"], inherits: ["viewer"] },
-            superadmin: { can: ["write", "sync"], inherits: ["viewer"] }
-          }
+
+    // Initialize GenosDB with P2P and Security Module
+    const db = await gdb("collab-doc", {
+      rtc: true,
+      sm: {
+        superAdmins: ["0x62c48827e883f114821211673Dc309a29Aae7e6A", "0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+        customRoles: {
+          // Allow everyone to write initially via 'guest'
+          guest: { can: ["read", "sync", "write"] },
+          viewer: { can: ["read", "sync", "write"] },
+          editor: { can: ["write", "sync"], inherits: ["viewer"] },
+          superadmin: { can: ["write", "sync"], inherits: ["viewer"] }
         }
-      });
-      const room = db.room;
-      const docChannel = room.channel("docUpdates");
-      const cursorChannel = room.channel("cursorPos");
-      const fileChannel = room.channel("fileTransfer");
-      const editor = document.getElementById('editor');
-      const wordCountEl = document.getElementById('wordCount');
-      const previewModeSel = document.getElementById('previewMode');
-      const previewContent = document.getElementById('previewContent');
-      const editorPane = document.getElementById('editorPane');
-      const previewPane = document.getElementById('preview');
-      const splitter = document.getElementById('splitter');
-      const editorWrap = document.getElementById('editorWrap');
-      const togglePreviewBtn = document.getElementById('togglePreview');
-      const resetSplitBtn = document.getElementById('resetSplit');
-      const status = document.getElementById('status');
-      const authDiv = document.getElementById('auth');
-      const authSummary = document.getElementById('authSummary');
-      const authSummaryAddr = document.getElementById('authSummaryAddr');
-      const authDetails = document.getElementById('authDetails');
-      const loginWebAuthnBtn = document.getElementById('loginWebAuthn');
-      const signupWebAuthnBtn = document.getElementById('signupWebAuthn');
-      const protectWebAuthnBtn = document.getElementById('protectWebAuthn');
-      const logoutBtn = document.getElementById('logoutBtn');
-      const authMsg = document.getElementById('authMsg');
-      const mnemonicBlock = document.getElementById('mnemonicBlock');
-      const mnemonicInput = document.getElementById('mnemonicInput');
-      const copyMnemonicBtn = document.getElementById('copyMnemonic');
-      const downloadMnemonicBtn = document.getElementById('downloadMnemonic');
-      const hideMnemonicBtn = document.getElementById('hideMnemonic');
-      const mnemonicLoginInput = document.getElementById('mnemonicLoginInput');
-      const mnemonicLoginSection = mnemonicLoginInput ? mnemonicLoginInput.parentElement : null;
-      const loginMnemonicBtn = document.getElementById('loginMnemonic');
-      const fileInput = document.getElementById('fileInput');
-      const saveVersionBtn = document.getElementById('saveVersion');
-      const startVideoBtn = document.getElementById('startVideo');
-      const btnFile = document.getElementById('btnFile');
-      // File button triggers hidden input
-      btnFile.addEventListener('click', () => fileInput.click());
-      const btnBold = document.getElementById('btnBold');
-      const btnItalic = document.getElementById('btnItalic');
-      const btnUnderline = document.getElementById('btnUnderline');
-      const btnStrike = document.getElementById('btnStrike');
-      const colorPicker = document.getElementById('colorPicker');
-      const btnLink = document.getElementById('btnLink');
-      const btnUnlink = document.getElementById('btnUnlink');
-      const blockFormat = document.getElementById('blockFormat');
-      const btnUl = document.getElementById('btnUl');
-      const btnOl = document.getElementById('btnOl');
-      const btnLeft = document.getElementById('btnLeft');
-      const btnCenter = document.getElementById('btnCenter');
-      const btnRight = document.getElementById('btnRight');
-      const btnUndo = document.getElementById('btnUndo');
-      const btnRedo = document.getElementById('btnRedo');
-      const btnClear = document.getElementById('btnClear');
-      const fileList = document.getElementById('fileList');
-      const versionList = document.getElementById('versionList');
-      const versionsToggleBtn = document.getElementById('versionsToggleBtn');
-      const versionsPanel = document.getElementById('versionsPanel');
-      const videoContainer = document.getElementById('videoContainer');
-      const docId = 'main-doc';
-      let peerCount = 0;
-      let isSaving = false;
-      let lastTimestamp = 0;
-      // Live typing throttle + save debounce
-      let liveThrottleMs = 80; // ~12.5 fps for real-time feel
-      let lastLiveSent = 0;
-      let liveScheduled = null;
-      let pendingContent = '';
-      let saveDebounceTimer;
-      let guestWriteNoticeShown = false;
-      let showSavedUntil = 0;
-      let savedFlashTimer = null;
-      const cursorMap = {};
-      const peerVideos = {};
-
-      // Helper: shorten Ethereum address for UI
-      const shortAddr = (addr) => {
-        if (!addr || typeof addr !== 'string') return addr || '';
-        const a = addr.trim();
-        return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
-      };
-
-      // Helpers for contenteditable
-      const getEditorHTML = () => editor.innerHTML;
-      const setEditorHTML = (html) => { editor.innerHTML = html || ''; };
-      const focusEditor = () => { editor.focus(); };
-      // line numbers removed
-
-      // Live word count
-      const updateWordCount = () => {
-        if (!wordCountEl) return;
-        try {
-          const text = (editor.innerText || '').trim();
-          const words = text ? (text.match(/\S+/g) || []).length : 0;
-          wordCountEl.textContent = `${words} ${words === 1 ? 'word' : 'words'}`;
-        } catch { }
-      };
-
-      // Lightweight HTML -> Markdown converter (best-effort; not 100% accurate)
-      const htmlToMarkdown = (html) => {
-        try {
-          const tmp = document.createElement('div');
-          tmp.innerHTML = html || '';
-          // <br> to newline
-          tmp.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-          // Bold/Strong
-          tmp.querySelectorAll('b,strong').forEach(el => el.replaceWith(`**${el.textContent}**`));
-          // Italic/Em
-          tmp.querySelectorAll('i,em').forEach(el => el.replaceWith(`*${el.textContent}*`));
-          // Underline (approximation)
-          tmp.querySelectorAll('u').forEach(el => el.replaceWith(`_${el.textContent}_`));
-          // Strikethrough
-          tmp.querySelectorAll('s,strike,del').forEach(el => el.replaceWith(`~~${el.textContent}~~`));
-          // Inline code
-          tmp.querySelectorAll('code').forEach(el => el.replaceWith('`' + el.textContent + '`'));
-          // Code blocks
-          tmp.querySelectorAll('pre').forEach(el => el.replaceWith('\n\n```\n' + el.textContent + '\n```\n\n'));
-          // Links
-          tmp.querySelectorAll('a').forEach(a => a.replaceWith('[' + (a.textContent || '') + '](' + (a.getAttribute('href') || '') + ')'));
-          // Headings
-          for (let i = 1; i <= 6; i++) {
-            tmp.querySelectorAll('h' + i).forEach(h => h.replaceWith('\n\n' + '#'.repeat(i) + ' ' + h.textContent + '\n\n'));
-          }
-          // Blockquotes
-          tmp.querySelectorAll('blockquote').forEach(q => {
-            const lines = (q.textContent || '').split(/\n/).map(l => '> ' + l).join('\n');
-            q.replaceWith('\n\n' + lines + '\n\n');
-          });
-          // Lists
-          tmp.querySelectorAll('ul').forEach(ul => {
-            const lines = Array.from(ul.querySelectorAll(':scope > li')).map(li => '- ' + li.textContent).join('\n');
-            ul.replaceWith('\n' + lines + '\n');
-          });
-          tmp.querySelectorAll('ol').forEach(ol => {
-            const items = Array.from(ol.querySelectorAll(':scope > li')).map((li, i) => (i + 1) + '. ' + li.textContent).join('\n');
-            ol.replaceWith('\n' + items + '\n');
-          });
-          // Paragraphs
-          tmp.querySelectorAll('p').forEach(p => p.replaceWith('\n\n' + p.textContent + '\n\n'));
-          // Collapse excessive newlines
-          return (tmp.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
-        } catch {
-          return html || '';
-        }
-      };
-
-      const updatePreview = () => {
-        if (!previewContent) return;
-        const html = getEditorHTML();
-        const mode = previewModeSel && previewModeSel.value ? previewModeSel.value : 'markdown';
-        if (mode === 'html') {
-          previewContent.style.whiteSpace = 'pre-wrap';
-          previewContent.textContent = html;
-        } else {
-          previewContent.style.whiteSpace = 'pre-wrap';
-          previewContent.textContent = htmlToMarkdown(html);
-        }
-      };
-      if (previewModeSel) previewModeSel.addEventListener('change', updatePreview);
-
-      // Splitter logic: mouse/touch drag + keyboard
-      const MIN_LEFT = 280; // px
-      const MIN_RIGHT = 280; // px
-      const saveSplit = (px) => {
-        try { localStorage.setItem('collab2.split.leftWidth', String(px)); } catch { }
-      };
-      const loadSplit = () => {
-        try { const v = parseInt(localStorage.getItem('collab2.split.leftWidth') || '', 10); return isFinite(v) ? v : null; } catch { return null; }
-      };
-      const saveHidden = (hidden) => {
-        try { localStorage.setItem('collab2.preview.hidden', hidden ? '1' : '0'); } catch { }
-      };
-      const loadHidden = () => {
-        try { return localStorage.getItem('collab2.preview.hidden') === '1'; } catch { return false; }
-      };
-      const applySplit = (leftPx) => {
-        const total = editorWrap.clientWidth; // global from DOM
-        const clamped = Math.max(MIN_LEFT, Math.min(total - MIN_RIGHT - splitter.offsetWidth, leftPx));
-        editorPane.style.width = clamped + 'px';
-        previewPane.style.width = (total - clamped - splitter.offsetWidth) + 'px';
-        splitter.setAttribute('aria-valuenow', String(clamped));
-      };
-      let dragging = false;
-      const onMove = (clientX) => {
-        const rect = editorWrap.getBoundingClientRect();
-        const leftPx = clientX - rect.left;
-        applySplit(leftPx);
-      };
-      if (splitter) {
-        splitter.addEventListener('mousedown', (e) => { dragging = true; splitter.classList.add('dragging'); e.preventDefault(); });
-        window.addEventListener('mousemove', (e) => { if (!dragging) return; onMove(e.clientX); });
-        window.addEventListener('mouseup', () => { if (!dragging) return; dragging = false; splitter.classList.remove('dragging'); saveSplit(parseInt(editorPane.style.width || '0', 10)); });
-        // Touch
-        splitter.addEventListener('touchstart', (e) => { dragging = true; splitter.classList.add('dragging'); });
-        window.addEventListener('touchmove', (e) => { if (!dragging) return; const t = e.touches[0]; onMove(t.clientX); });
-        window.addEventListener('touchend', () => { if (!dragging) return; dragging = false; splitter.classList.remove('dragging'); saveSplit(parseInt(editorPane.style.width || '0', 10)); });
-        // Keyboard arrows
-        splitter.addEventListener('keydown', (e) => {
-          const step = (e.shiftKey ? 50 : 10);
-          const total = editorWrap.clientWidth;
-          const current = parseInt(editorPane.style.width || String(Math.floor(total / 2)), 10);
-          if (e.key === 'ArrowLeft') { applySplit(current - step); saveSplit(parseInt(editorPane.style.width || '0', 10)); e.preventDefault(); }
-          if (e.key === 'ArrowRight') { applySplit(current + step); saveSplit(parseInt(editorPane.style.width || '0', 10)); e.preventDefault(); }
-        });
       }
-      // Apply saved split on load
-      const saved = loadSplit();
-      if (saved) applySplit(saved);
-      // Apply hidden state
-      let previewHidden = loadHidden();
-      let lastLeftBeforeHide = null;
-      const setPreviewHidden = (hidden) => {
-        previewHidden = hidden;
-        if (hidden) {
-          // store current left width to restore later
-          lastLeftBeforeHide = parseInt(editorPane.style.width || '0', 10) || Math.floor(editorWrap.clientWidth * 0.5);
-          previewPane.style.display = 'none';
-          splitter.style.display = 'none';
-          editorPane.style.width = '100%';
-          togglePreviewBtn?.setAttribute('aria-pressed', 'true');
-        } else {
-          previewPane.style.display = 'flex';
-          splitter.style.display = 'block';
-          const base = saved || lastLeftBeforeHide || Math.floor(editorWrap.clientWidth * 0.5);
-          applySplit(base);
-          togglePreviewBtn?.setAttribute('aria-pressed', 'false');
+    });
+    const room = db.room;
+    const docChannel = room.channel("docUpdates");
+    const cursorChannel = room.channel("cursorPos");
+    const fileChannel = room.channel("fileTransfer");
+    const editor = document.getElementById('editor');
+    const wordCountEl = document.getElementById('wordCount');
+    const previewModeSel = document.getElementById('previewMode');
+    const previewContent = document.getElementById('previewContent');
+    const editorPane = document.getElementById('editorPane');
+    const previewPane = document.getElementById('preview');
+    const splitter = document.getElementById('splitter');
+    const editorWrap = document.getElementById('editorWrap');
+    const togglePreviewBtn = document.getElementById('togglePreview');
+    const resetSplitBtn = document.getElementById('resetSplit');
+    const status = document.getElementById('status');
+    const authDiv = document.getElementById('auth');
+    const authSummary = document.getElementById('authSummary');
+    const authSummaryAddr = document.getElementById('authSummaryAddr');
+    const authDetails = document.getElementById('authDetails');
+    const loginWebAuthnBtn = document.getElementById('loginWebAuthn');
+    const signupWebAuthnBtn = document.getElementById('signupWebAuthn');
+    const protectWebAuthnBtn = document.getElementById('protectWebAuthn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const authMsg = document.getElementById('authMsg');
+    const mnemonicBlock = document.getElementById('mnemonicBlock');
+    const mnemonicInput = document.getElementById('mnemonicInput');
+    const copyMnemonicBtn = document.getElementById('copyMnemonic');
+    const downloadMnemonicBtn = document.getElementById('downloadMnemonic');
+    const hideMnemonicBtn = document.getElementById('hideMnemonic');
+    const mnemonicLoginInput = document.getElementById('mnemonicLoginInput');
+    const mnemonicLoginSection = mnemonicLoginInput ? mnemonicLoginInput.parentElement : null;
+    const loginMnemonicBtn = document.getElementById('loginMnemonic');
+    const fileInput = document.getElementById('fileInput');
+    const saveVersionBtn = document.getElementById('saveVersion');
+    const startVideoBtn = document.getElementById('startVideo');
+    const btnFile = document.getElementById('btnFile');
+    const btnBold = document.getElementById('btnBold');
+    const btnItalic = document.getElementById('btnItalic');
+    const btnUnderline = document.getElementById('btnUnderline');
+    const btnStrike = document.getElementById('btnStrike');
+    const colorPicker = document.getElementById('colorPicker');
+    const btnLink = document.getElementById('btnLink');
+    const btnUnlink = document.getElementById('btnUnlink');
+    const blockFormat = document.getElementById('blockFormat');
+    const btnUl = document.getElementById('btnUl');
+    const btnOl = document.getElementById('btnOl');
+    const btnLeft = document.getElementById('btnLeft');
+    const btnCenter = document.getElementById('btnCenter');
+    const btnRight = document.getElementById('btnRight');
+    const btnUndo = document.getElementById('btnUndo');
+    const btnRedo = document.getElementById('btnRedo');
+    const btnClear = document.getElementById('btnClear');
+    const fileList = document.getElementById('fileList');
+    const versionList = document.getElementById('versionList');
+    const versionsToggleBtn = document.getElementById('versionsToggleBtn');
+    const versionsPanel = document.getElementById('versionsPanel');
+    const videoContainer = document.getElementById('videoContainer');
+    const docId = 'main-doc';
+    let peerCount = 0;
+    let isSaving = false;
+    let lastTimestamp = 0;
+    // Live typing throttle + save debounce
+    let liveThrottleMs = 80; // ~12.5 fps for real-time feel
+    let lastLiveSent = 0;
+    let liveScheduled = null;
+    let pendingContent = '';
+    let saveDebounceTimer;
+    let guestWriteNoticeShown = false;
+    let showSavedUntil = 0;
+    let savedFlashTimer = null;
+    const cursorMap = {};
+    const peerVideos = {};
+
+    // File button triggers hidden input
+    btnFile.addEventListener('click', () => fileInput.click());
+
+    // Helper: shorten Ethereum address for UI
+    const shortAddr = (addr) => {
+      if (!addr || typeof addr !== 'string') return addr || '';
+      const a = addr.trim();
+      return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+    };
+
+    // Helpers for contenteditable
+    const getEditorHTML = () => editor.innerHTML;
+    const setEditorHTML = (html) => { editor.innerHTML = html || ''; };
+    const focusEditor = () => { editor.focus(); };
+    // line numbers removed
+
+    // Live word count
+    const updateWordCount = () => {
+      if (!wordCountEl) return;
+      try {
+        const text = (editor.innerText || '').trim();
+        const words = text ? (text.match(/\S+/g) || []).length : 0;
+        wordCountEl.textContent = `${words} ${words === 1 ? 'word' : 'words'}`;
+      } catch { }
+    };
+
+    // Lightweight HTML -> Markdown converter (best-effort; not 100% accurate)
+    const htmlToMarkdown = (html) => {
+      try {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html || '';
+        // <br> to newline
+        tmp.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+        // Bold/Strong
+        tmp.querySelectorAll('b,strong').forEach(el => el.replaceWith(`**${el.textContent}**`));
+        // Italic/Em
+        tmp.querySelectorAll('i,em').forEach(el => el.replaceWith(`*${el.textContent}*`));
+        // Underline (approximation)
+        tmp.querySelectorAll('u').forEach(el => el.replaceWith(`_${el.textContent}_`));
+        // Strikethrough
+        tmp.querySelectorAll('s,strike,del').forEach(el => el.replaceWith(`~~${el.textContent}~~`));
+        // Inline code
+        tmp.querySelectorAll('code').forEach(el => el.replaceWith('`' + el.textContent + '`'));
+        // Code blocks
+        tmp.querySelectorAll('pre').forEach(el => el.replaceWith('\n\n```\n' + el.textContent + '\n```\n\n'));
+        // Links
+        tmp.querySelectorAll('a').forEach(a => a.replaceWith('[' + (a.textContent || '') + '](' + (a.getAttribute('href') || '') + ')'));
+        // Headings
+        for (let i = 1; i <= 6; i++) {
+          tmp.querySelectorAll('h' + i).forEach(h => h.replaceWith('\n\n' + '#'.repeat(i) + ' ' + h.textContent + '\n\n'));
         }
-        saveHidden(hidden);
-      };
-      setPreviewHidden(previewHidden);
-      window.addEventListener('resize', () => {
+        // Blockquotes
+        tmp.querySelectorAll('blockquote').forEach(q => {
+          const lines = (q.textContent || '').split(/\n/).map(l => '> ' + l).join('\n');
+          q.replaceWith('\n\n' + lines + '\n\n');
+        });
+        // Lists
+        tmp.querySelectorAll('ul').forEach(ul => {
+          const lines = Array.from(ul.querySelectorAll(':scope > li')).map(li => '- ' + li.textContent).join('\n');
+          ul.replaceWith('\n' + lines + '\n');
+        });
+        tmp.querySelectorAll('ol').forEach(ol => {
+          const items = Array.from(ol.querySelectorAll(':scope > li')).map((li, i) => (i + 1) + '. ' + li.textContent).join('\n');
+          ol.replaceWith('\n' + items + '\n');
+        });
+        // Paragraphs
+        tmp.querySelectorAll('p').forEach(p => p.replaceWith('\n\n' + p.textContent + '\n\n'));
+        // Collapse excessive newlines
+        return (tmp.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+      } catch {
+        return html || '';
+      }
+    };
+
+    const updatePreview = () => {
+      if (!previewContent) return;
+      const html = getEditorHTML();
+      const mode = previewModeSel && previewModeSel.value ? previewModeSel.value : 'markdown';
+      if (mode === 'html') {
+        previewContent.style.whiteSpace = 'pre-wrap';
+        previewContent.textContent = html;
+      } else {
+        previewContent.style.whiteSpace = 'pre-wrap';
+        previewContent.textContent = htmlToMarkdown(html);
+      }
+    };
+    if (previewModeSel) previewModeSel.addEventListener('change', updatePreview);
+
+    // Splitter logic: mouse/touch drag + keyboard
+    const MIN_LEFT = 280; // px
+    const MIN_RIGHT = 280; // px
+    const saveSplit = (px) => {
+      try { localStorage.setItem('collab2.split.leftWidth', String(px)); } catch { }
+    };
+    const loadSplit = () => {
+      try { const v = parseInt(localStorage.getItem('collab2.split.leftWidth') || '', 10); return isFinite(v) ? v : null; } catch { return null; }
+    };
+    const saveHidden = (hidden) => {
+      try { localStorage.setItem('collab2.preview.hidden', hidden ? '1' : '0'); } catch { }
+    };
+    const loadHidden = () => {
+      try { return localStorage.getItem('collab2.preview.hidden') === '1'; } catch { return false; }
+    };
+    const applySplit = (leftPx) => {
+      const total = editorWrap.clientWidth; // global from DOM
+      const clamped = Math.max(MIN_LEFT, Math.min(total - MIN_RIGHT - splitter.offsetWidth, leftPx));
+      editorPane.style.width = clamped + 'px';
+      previewPane.style.width = (total - clamped - splitter.offsetWidth) + 'px';
+      splitter.setAttribute('aria-valuenow', String(clamped));
+    };
+    let dragging = false;
+    const onMove = (clientX) => {
+      const rect = editorWrap.getBoundingClientRect();
+      const leftPx = clientX - rect.left;
+      applySplit(leftPx);
+    };
+    if (splitter) {
+      splitter.addEventListener('mousedown', (e) => { dragging = true; splitter.classList.add('dragging'); e.preventDefault(); });
+      window.addEventListener('mousemove', (e) => { if (!dragging) return; onMove(e.clientX); });
+      window.addEventListener('mouseup', () => { if (!dragging) return; dragging = false; splitter.classList.remove('dragging'); saveSplit(parseInt(editorPane.style.width || '0', 10)); });
+      // Touch
+      splitter.addEventListener('touchstart', (e) => { dragging = true; splitter.classList.add('dragging'); });
+      window.addEventListener('touchmove', (e) => { if (!dragging) return; const t = e.touches[0]; onMove(t.clientX); });
+      window.addEventListener('touchend', () => { if (!dragging) return; dragging = false; splitter.classList.remove('dragging'); saveSplit(parseInt(editorPane.style.width || '0', 10)); });
+      // Keyboard arrows
+      splitter.addEventListener('keydown', (e) => {
+        const step = (e.shiftKey ? 50 : 10);
         const total = editorWrap.clientWidth;
         const current = parseInt(editorPane.style.width || String(Math.floor(total / 2)), 10);
-        applySplit(current);
+        if (e.key === 'ArrowLeft') { applySplit(current - step); saveSplit(parseInt(editorPane.style.width || '0', 10)); e.preventDefault(); }
+        if (e.key === 'ArrowRight') { applySplit(current + step); saveSplit(parseInt(editorPane.style.width || '0', 10)); e.preventDefault(); }
       });
+    }
+    // Apply saved split on load
+    const saved = loadSplit();
+    if (saved) applySplit(saved);
+    // Apply hidden state
+    let previewHidden = loadHidden();
+    let lastLeftBeforeHide = null;
+    const setPreviewHidden = (hidden) => {
+      previewHidden = hidden;
+      if (hidden) {
+        // store current left width to restore later
+        lastLeftBeforeHide = parseInt(editorPane.style.width || '0', 10) || Math.floor(editorWrap.clientWidth * 0.5);
+        previewPane.style.display = 'none';
+        splitter.style.display = 'none';
+        editorPane.style.width = '100%';
+        togglePreviewBtn?.setAttribute('aria-pressed', 'true');
+      } else {
+        previewPane.style.display = 'flex';
+        splitter.style.display = 'block';
+        const base = saved || lastLeftBeforeHide || Math.floor(editorWrap.clientWidth * 0.5);
+        applySplit(base);
+        togglePreviewBtn?.setAttribute('aria-pressed', 'false');
+      }
+      saveHidden(hidden);
+    };
+    setPreviewHidden(previewHidden);
+    window.addEventListener('resize', () => {
+      const total = editorWrap.clientWidth;
+      const current = parseInt(editorPane.style.width || String(Math.floor(total / 2)), 10);
+      applySplit(current);
+    });
 
-      // Button handlers
-      togglePreviewBtn?.addEventListener('click', () => setPreviewHidden(!previewHidden));
-      resetSplitBtn?.addEventListener('click', () => {
-        if (previewHidden) setPreviewHidden(false);
-        const total = editorWrap.clientWidth;
-        const fifty = Math.floor(total / 2);
-        applySplit(fifty);
-        saveSplit(fifty);
-      });
+    // Button handlers
+    togglePreviewBtn?.addEventListener('click', () => setPreviewHidden(!previewHidden));
+    resetSplitBtn?.addEventListener('click', () => {
+      if (previewHidden) setPreviewHidden(false);
+      const total = editorWrap.clientWidth;
+      const fifty = Math.floor(total / 2);
+      applySplit(fifty);
+      saveSplit(fifty);
+    });
 
-      // Selection helpers to ensure toolbar actions apply to intended text
-      let savedRange = null;
-      const saveSelection = () => {
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
-      };
-      const restoreSelection = () => {
-        if (!savedRange) return;
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(savedRange);
-      };
-      // Save selection when interacting with toolbar
-      document.getElementById('toolbar').addEventListener('mousedown', (e) => {
-        // Don't steal drag from selecting text in editor
+    // Selection helpers to ensure toolbar actions apply to intended text
+    let savedRange = null;
+    const saveSelection = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
+    };
+    const restoreSelection = () => {
+      if (!savedRange) return;
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    };
+    // Save selection when interacting with toolbar
+    document.getElementById('toolbar').addEventListener('mousedown', (e) => {
+      // Don't steal drag from selecting text in editor
+      if (!editor.contains(e.target)) saveSelection();
+    });
+    const sideTb = document.getElementById('sideToolbar');
+    if (sideTb) {
+      sideTb.addEventListener('mousedown', (e) => {
         if (!editor.contains(e.target)) saveSelection();
       });
-      const sideTb = document.getElementById('sideToolbar');
-      if (sideTb) {
-        sideTb.addEventListener('mousedown', (e) => {
-          if (!editor.contains(e.target)) saveSelection();
-        });
-      }
+    }
 
-      // Ensure icons visible: if SVG not supported/rendered, show fallback emoji
-      const ensureIconsVisible = () => {
-        document.querySelectorAll('#toolbar .icon-btn, #sideToolbar .icon-btn').forEach(btn => {
-          const svg = btn.querySelector('svg');
-          const fb = btn.querySelector('.fallback');
-          try {
-            const ok = !!(svg && svg.getBBox && svg.getBBox().width > 0);
-            if (!ok && fb) {
-              svg && (svg.style.display = 'none');
-              fb.style.display = 'block';
-            }
-          } catch {
-            if (svg) svg.style.display = 'none';
-            if (fb) fb.style.display = 'block';
+    // Ensure icons visible: if SVG not supported/rendered, show fallback emoji
+    const ensureIconsVisible = () => {
+      document.querySelectorAll('#toolbar .icon-btn, #sideToolbar .icon-btn').forEach(btn => {
+        const svg = btn.querySelector('svg');
+        const fb = btn.querySelector('.fallback');
+        try {
+          const ok = !!(svg && svg.getBBox && svg.getBBox().width > 0);
+          if (!ok && fb) {
+            svg && (svg.style.display = 'none');
+            fb.style.display = 'block';
           }
-        });
-      };
-
-      // Update status
-      const updateStatus = () => {
-        const savedSuffix = Date.now() < showSavedUntil ? ' | Saved' : '';
-        status.textContent = `Connected peers: ${peerCount}${savedSuffix}`;
-      };
-      // Versions panel toggle
-      const setVersionsOpen = (open) => {
-        if (open) {
-          versionsPanel.removeAttribute('hidden');
-          versionsToggleBtn.setAttribute('aria-expanded', 'true');
-        } else {
-          versionsPanel.setAttribute('hidden', '');
-          versionsToggleBtn.setAttribute('aria-expanded', 'false');
-        }
-        try { localStorage.setItem('collab2.versions.open', open ? '1' : '0'); } catch { }
-      };
-      const initialOpen = (() => { try { return localStorage.getItem('collab2.versions.open') === '1'; } catch { return false; } })();
-      setVersionsOpen(initialOpen);
-      versionsToggleBtn.addEventListener('click', () => {
-        const isOpen = !versionsPanel.hasAttribute('hidden');
-        setVersionsOpen(!isOpen);
-      });
-
-      // UI helpers
-      const showMsg = (type, text) => {
-        const t = String(text || '');
-        // Suppress centered success messages for version saves; use minimalist status flash instead
-        if (type === 'ok' && /(version|saved)/i.test(t)) {
-          try {
-            showSavedUntil = Date.now() + 1500;
-            updateStatus();
-            if (savedFlashTimer) clearTimeout(savedFlashTimer);
-            savedFlashTimer = setTimeout(() => { updateStatus(); }, 1600);
-          } catch { }
-          return;
-        }
-        authMsg.className = 'msg show ' + (type === 'ok' ? 'ok' : 'err');
-        authMsg.textContent = t;
-      };
-      const clearMsg = () => {
-        authMsg.className = 'msg';
-        authMsg.textContent = '';
-      };
-      const updateMnemonicBlock = () => {
-        try {
-          const m = db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery?.();
-          if (m) {
-            mnemonicInput.value = m;
-            mnemonicBlock.style.display = 'block';
-            protectWebAuthnBtn.disabled = false;
-          } else {
-            mnemonicBlock.style.display = 'none';
-          }
-        } catch { }
-      };
-      const setAuthUI = (state) => {
-        authDiv.style.display = 'block';
-        if (state.isActive) {
-          // summary compact mode
-          authDiv.classList.add('compact');
-          authSummary.style.display = 'flex';
-          authSummaryAddr.textContent = state.activeAddress || '—';
-          authSummary.setAttribute('aria-expanded', 'false');
-          logoutBtn.style.display = 'inline-block';
-          protectWebAuthnBtn.disabled = !!state.isWebAuthnProtected;
-          // Hide sign-up/login controls
-          signupWebAuthnBtn.style.display = 'none';
-          loginWebAuthnBtn.style.display = 'none';
-          if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'none';
-          // Show protect if not protected yet; otherwise hide it
-          protectWebAuthnBtn.style.display = state.isWebAuthnProtected ? 'none' : 'inline-block';
-          // Hide mnemonic block to declutter when signed in
-          mnemonicBlock.style.display = 'none';
-          editor.disabled = false;
-        } else {
-          // no compact when signed out
-          authDiv.classList.remove('compact');
-          authSummary.style.display = 'none';
-          authSummaryAddr.textContent = '—';
-          authSummary.setAttribute('aria-expanded', 'false');
-          logoutBtn.style.display = 'none';
-          protectWebAuthnBtn.disabled = true;
-          // keep editor enabled for guest write demo
-          editor.disabled = false;
-          // Show sign-up/login controls again
-          signupWebAuthnBtn.style.display = 'inline-block';
-          loginWebAuthnBtn.style.display = state.hasWebAuthnHardwareRegistration ? 'inline-block' : 'none';
-          if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'block';
-          protectWebAuthnBtn.style.display = 'inline-block';
-        }
-        updateMnemonicBlock();
-      };
-      // Security state change callback
-      db.sm.setSecurityStateChangeCallback((state) => setAuthUI(state));
-
-      // Toggle details when clicking/pressing on summary
-      const toggleAuthDetails = () => {
-        const isCompact = authDiv.classList.contains('compact');
-        if (isCompact) {
-          authDiv.classList.remove('compact');
-          authSummary.setAttribute('aria-expanded', 'true');
-        } else if (db.sm.isSecurityActive && db.sm.isSecurityActive()) {
-          // Only auto-compact when signed in
-          authDiv.classList.add('compact');
-          authSummary.setAttribute('aria-expanded', 'false');
-        }
-      };
-      if (authSummary) {
-        authSummary.addEventListener('click', toggleAuthDetails);
-        authSummary.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAuthDetails(); }
-        });
-      }
-
-      // Ensure we have an active temporary identity for demo (signed ops)
-      const ensureActiveGuestIdentity = async () => {
-        if (db.sm.isSecurityActive && db.sm.isSecurityActive()) return true;
-        try {
-          const temp = await db.sm.startNewUserRegistration();
-          if (temp?.mnemonic) {
-            const identity = await db.sm.loginOrRecoverUserWithMnemonic(temp.mnemonic);
-            if (identity?.address) {
-              setAuthUI({
-                isActive: true,
-                activeAddress: identity.address,
-                isWebAuthnProtected: false,
-                hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration ? db.sm.hasExistingWebAuthnRegistration() : false
-              });
-              return true;
-            }
-          }
-        } catch (e) {
-          console.warn('Could not auto-activate temporary identity', e);
-        }
-        return false;
-      };
-
-      // WebAuthn login
-      loginWebAuthnBtn.addEventListener('click', async () => {
-        try {
-          clearMsg();
-          const address = await db.sm.loginCurrentUserWithWebAuthn();
-          if (address) showMsg('ok', `Signed in as ${shortAddr(address)}`);
-          else showMsg('err', 'WebAuthn login failed');
-        } catch (error) {
-          showMsg('err', 'WebAuthn login error: ' + (error?.message || error));
+        } catch {
+          if (svg) svg.style.display = 'none';
+          if (fb) fb.style.display = 'block';
         }
       });
+    };
 
-      // WebAuthn signup
-      signupWebAuthnBtn.addEventListener('click', async () => {
-        try {
-          clearMsg();
-          const newIdentity = await db.sm.startNewUserRegistration();
-          if (newIdentity) {
-            mnemonicInput.value = newIdentity.mnemonic;
-            mnemonicBlock.style.display = 'block';
-            protectWebAuthnBtn.disabled = false;
-            showMsg('ok', 'Identity created. Save your mnemonic, then protect it with WebAuthn.');
-          } else {
-            showMsg('err', 'Could not create identity');
-          }
-        } catch (error) {
-          showMsg('err', 'Error creating identity: ' + (error?.message || error));
-        }
-      });
-
-      // Protect current/volatile identity with WebAuthn
-      protectWebAuthnBtn.addEventListener('click', async () => {
-        try {
-          clearMsg();
-          const pk = undefined; // usa la identidad volátil si existe
-          const address = await db.sm.protectCurrentIdentityWithWebAuthn(pk);
-          if (address) {
-            showMsg('ok', `Identity ${shortAddr(address)} protected with WebAuthn`);
-            mnemonicBlock.style.display = 'none';
-          } else {
-            showMsg('err', 'Could not protect identity');
-          }
-        } catch (error) {
-          showMsg('err', 'Error protecting identity: ' + (error?.message || error));
-        }
-      });
-
-      // Mnemonic login
-      loginMnemonicBtn.addEventListener('click', async () => {
-        const mnemonic = mnemonicLoginInput.value.trim();
-        if (mnemonic) {
-          try {
-            clearMsg();
-            const identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
-            if (identity) {
-              mnemonicInput.value = identity.mnemonic || mnemonic;
-              // Clean UI to highlight logged-in state
-              mnemonicBlock.style.display = 'none';
-              if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'none';
-              signupWebAuthnBtn.style.display = 'none';
-              loginWebAuthnBtn.style.display = 'none';
-              protectWebAuthnBtn.disabled = false;
-              protectWebAuthnBtn.style.display = 'inline-block';
-              showMsg('ok', `Signed in as ${shortAddr(identity.address)}. Protect it with WebAuthn to secure this device.`);
-            } else {
-              showMsg('err', 'Invalid mnemonic');
-            }
-          } catch (error) {
-            showMsg('err', 'Mnemonic login error: ' + (error?.message || error));
-          }
-        }
-      });
-
-      // Copy/Download/Hide mnemonic
-      copyMnemonicBtn.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(mnemonicInput.value);
-          // Also prefill the login field and focus it
-          if (mnemonicLoginInput) {
-            mnemonicLoginInput.value = mnemonicInput.value;
-            mnemonicLoginInput.focus();
-            // optionally select it for quick replace if needed
-            try { mnemonicLoginInput.select?.(); } catch { }
-          }
-          showMsg('ok', 'Mnemonic copied and filled into the login field');
-        } catch { showMsg('err', 'Could not copy'); }
-      });
-      downloadMnemonicBtn.addEventListener('click', () => {
-        try {
-          const blob = new Blob([mnemonicInput.value + "\n"], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = 'mnemonic.txt'; a.click();
-          URL.revokeObjectURL(url);
-        } catch { }
-      });
-      hideMnemonicBtn.addEventListener('click', () => { mnemonicBlock.style.display = 'none'; });
-
-      // Logout
-      logoutBtn.addEventListener('click', async () => {
-        try {
-          clearMsg();
-          await db.sm.clearSecurity();
-          showMsg('ok', 'Signed out');
-        } catch (e) { showMsg('err', 'Could not sign out'); }
-      });
-
-      // Handle peer joins/leaves
-      room.on('peer:join', (peerId) => {
-        peerCount++;
-        updateStatus();
-        // Send current doc to the new peer to quickly sync their view
-        const current = getEditorHTML();
-        if (current) {
-          docChannel.send({ content: current, ts: lastTimestamp }, peerId);
-        }
-      });
-      room.on('peer:leave', (peerId) => {
-        peerCount--;
-        updateStatus();
-        if (cursorMap[peerId]) {
-          cursorMap[peerId].remove();
-          delete cursorMap[peerId];
-        }
-        if (peerVideos[peerId]) {
-          peerVideos[peerId].remove();
-          delete peerVideos[peerId];
-        }
-      });
-
-      // Handle document updates via channel
-      docChannel.on('message', (data, fromPeerId) => {
-        if (data.ts > lastTimestamp) {
-          lastTimestamp = data.ts;
-          setEditorHTML(data.content);
-          updatePreview();
-          updateWordCount();
-        }
-      });
-
-      // Video chat
-      startVideoBtn.addEventListener('click', async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          db.room.addStream(stream);
-          startVideoBtn.style.display = 'none';
-        } catch (error) {
-          showMsg('err', 'Could not access camera/microphone: ' + (error?.message || error));
-        }
-      });
-
-      db.room.on('stream:add', (stream, peerId) => {
-        if (!peerVideos[peerId] && stream.getVideoTracks().length > 0) {
-          const video = document.createElement('video');
-          video.autoplay = true;
-          video.playsInline = true;
-          video.srcObject = stream;
-          videoContainer.appendChild(video);
-          peerVideos[peerId] = video;
-        }
-      });
-
-      // Check document existence
-      const { result: initialDoc } = await db.get(docId);
-      if (!initialDoc) {
-        await db.put({ content: '' }, docId);
+    // Update status
+    const updateStatus = () => {
+      const savedSuffix = Date.now() < showSavedUntil ? ' | Saved' : '';
+      status.textContent = `Connected peers: ${peerCount}${savedSuffix}`;
+    };
+    // Versions panel toggle
+    const setVersionsOpen = (open) => {
+      if (open) {
+        versionsPanel.removeAttribute('hidden');
+        versionsToggleBtn.setAttribute('aria-expanded', 'true');
       } else {
-        setEditorHTML(initialDoc.value.content || '');
-        lastTimestamp = initialDoc.timestamp ? initialDoc.timestamp.physical : Date.now();
+        versionsPanel.setAttribute('hidden', '');
+        versionsToggleBtn.setAttribute('aria-expanded', 'false');
       }
-      // Ensure preview is correct on load
-      updateWordCount();
-      updatePreview();
-      ensureIconsVisible();
+      try { localStorage.setItem('collab2.versions.open', open ? '1' : '0'); } catch { }
+    };
+    const initialOpen = (() => { try { return localStorage.getItem('collab2.versions.open') === '1'; } catch { return false; } })();
+    setVersionsOpen(initialOpen);
+    versionsToggleBtn.addEventListener('click', () => {
+      const isOpen = !versionsPanel.hasAttribute('hidden');
+      setVersionsOpen(!isOpen);
+    });
 
-      // Real-time document updates from DB
-      const { unsubscribe } = await db.map({
-        query: { id: docId }
-      }, ({ id, value, action }) => {
-        if (action === 'updated' && id === docId) {
-          const newTs = value.timestamp ? value.timestamp.physical : Date.now();
-          if (newTs > lastTimestamp) {
-            lastTimestamp = newTs;
-            setEditorHTML(value.content || '');
-            updateWordCount();
-          }
-        }
-      });
-
-      // Live broadcast while typing (throttled) + save when user stops (debounced)
-      editor.addEventListener('input', async () => {
-        const now = Date.now();
-        pendingContent = getEditorHTML();
-        // line numbers removed
-        updateWordCount();
-        updatePreview();
-
-        // Live send (no RBAC requirement for demo; peers see changes immediately)
-        const sendLive = () => {
-          const ts = Date.now();
-          if (ts > lastTimestamp) lastTimestamp = ts;
-          docChannel.send({ content: pendingContent, ts });
-          lastLiveSent = ts;
-          liveScheduled = null;
-        };
-
-        if (now - lastLiveSent >= liveThrottleMs) {
-          sendLive();
-        } else if (!liveScheduled) {
-          liveScheduled = setTimeout(sendLive, liveThrottleMs - (now - lastLiveSent));
-        }
-
-        // Debounced persistent save
-        clearTimeout(saveDebounceTimer);
-        isSaving = true; // indicate intent to save soon
-        updateStatus();
-        saveDebounceTimer = setTimeout(async () => {
-          try {
-            // Make sure operations will be signed and accepted by peers
-            await ensureActiveGuestIdentity();
-            await db.sm.executeWithPermission("write");
-          } catch (e) {
-            // As a last resort, attempt to persist locally
-            if (!guestWriteNoticeShown) {
-              showMsg('ok', 'Temporary identity in use for demo.');
-              guestWriteNoticeShown = true;
-            }
-          }
-          try {
-            const ts = Date.now();
-            if (ts > lastTimestamp) lastTimestamp = ts;
-            await db.put({ content: pendingContent }, docId);
-          } finally {
-            isSaving = false;
-            // Show 'Saved' briefly, then revert
-            showSavedUntil = Date.now() + 1500;
-            updateStatus();
-            if (savedFlashTimer) clearTimeout(savedFlashTimer);
-            savedFlashTimer = setTimeout(() => {
-              updateStatus();
-            }, 1600);
-          }
-        }, 600);
-      });
-
-      // line numbers and gutter scroll sync removed
-
-      // Formatting buttons
-      const execCmd = (cmd) => {
-        restoreSelection();
-        document.execCommand(cmd, false, null);
-        focusEditor();
-      };
-      btnBold.addEventListener('click', () => execCmd('bold'));
-      btnItalic.addEventListener('click', () => execCmd('italic'));
-      btnUnderline.addEventListener('click', () => execCmd('underline'));
-      btnStrike.addEventListener('click', () => execCmd('strikethrough'));
-
-      // Color picker
-      colorPicker.addEventListener('change', () => {
-        restoreSelection();
-        document.execCommand('foreColor', false, colorPicker.value);
-        focusEditor();
-      });
-
-      // Link insertion
-      btnLink.addEventListener('click', () => {
-        restoreSelection();
-        const sel = window.getSelection();
-        const hasSelection = sel && !sel.isCollapsed;
-        let url = prompt('Enter URL', 'https://');
-        if (!url) return;
-        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-        if (hasSelection) {
-          document.execCommand('createLink', false, url);
-        } else {
-          const text = prompt('Text to display', url) || url;
-          document.execCommand('insertHTML', false, `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`);
-        }
-        focusEditor();
-      });
-      btnUnlink.addEventListener('click', () => execCmd('unlink'));
-
-      // Block formatting
-      blockFormat.addEventListener('change', () => {
-        restoreSelection();
-        const val = blockFormat.value;
-        document.execCommand('formatBlock', false, val);
-        focusEditor();
-      });
-
-      // (font size selector removed)
-
-      // Lists
-      btnUl.addEventListener('click', () => execCmd('insertUnorderedList'));
-      btnOl.addEventListener('click', () => execCmd('insertOrderedList'));
-
-      // Alignment
-      btnLeft.addEventListener('click', () => execCmd('justifyLeft'));
-      btnCenter.addEventListener('click', () => execCmd('justifyCenter'));
-      btnRight.addEventListener('click', () => execCmd('justifyRight'));
-
-      // History
-      btnUndo.addEventListener('click', () => execCmd('undo'));
-      btnRedo.addEventListener('click', () => execCmd('redo'));
-
-      // Clear formatting (keeps links unless selection includes them)
-      btnClear.addEventListener('click', () => execCmd('removeFormat'));
-
-      // Cursor + selection tracking
-      const peerStyles = {};
-      const ensurePeerStyle = (peerId) => {
-        if (peerStyles[peerId]) return peerStyles[peerId];
-        const color = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
-        peerStyles[peerId] = { color };
-        return peerStyles[peerId];
-      };
-      const sendCursorPos = () => {
+    // UI helpers
+    const showMsg = (type, text) => {
+      const t = String(text || '');
+      // Suppress centered success messages for version saves; use minimalist status flash instead
+      if (type === 'ok' && /(version|saved)/i.test(t)) {
         try {
-          const sel = window.getSelection();
-          if (!sel || sel.rangeCount === 0) return;
-          const range = sel.getRangeAt(0);
-          const collapsed = range.collapsed;
-          // Cursor position
-          const caretRange = range.cloneRange();
-          caretRange.collapse(true);
-          const caretRect = caretRange.getBoundingClientRect();
-          const hostRect = editor.getBoundingClientRect();
-          const left = Math.max(0, caretRect.left - hostRect.left + editor.scrollLeft);
-          const top = Math.max(0, caretRect.top - hostRect.top + editor.scrollTop);
-          // Selection rects
-          let rects = [];
-          if (!collapsed) {
-            const r = range.cloneRange();
-            const clientRects = Array.from(r.getClientRects());
-            rects = clientRects.map(cr => ({
-              left: Math.max(0, cr.left - hostRect.left + editor.scrollLeft),
-              top: Math.max(0, cr.top - hostRect.top + editor.scrollTop),
-              width: cr.width,
-              height: cr.height
-            }));
-          }
-          cursorChannel.send({ left, top, rects, ts: Date.now() });
-        } catch { }
-      };
-      editor.addEventListener('keyup', sendCursorPos);
-      editor.addEventListener('mouseup', sendCursorPos);
-      editor.addEventListener('input', sendCursorPos);
-
-      cursorChannel.on('message', (data, peerId) => {
-        const { color } = ensurePeerStyle(peerId);
-        // Cursor element
-        if (!cursorMap[peerId]) {
-          const cursor = document.createElement('div');
-          cursor.className = 'cursor';
-          cursor.style.backgroundColor = color;
-          editor.appendChild(cursor);
-          cursorMap[peerId] = { cursor, rects: [] };
-        }
-        const entry = cursorMap[peerId];
-        entry.cursor.style.left = `${data.left}px`;
-        entry.cursor.style.top = `${data.top}px`;
-        // Clear old selection rects
-        if (entry.rects && entry.rects.length) {
-          entry.rects.forEach(el => el.remove());
-        }
-        entry.rects = [];
-        // Draw new selection rects
-        if (Array.isArray(data.rects)) {
-          data.rects.forEach(r => {
-            const el = document.createElement('div');
-            el.className = 'selection-rect';
-            el.style.left = `${r.left}px`;
-            el.style.top = `${r.top}px`;
-            el.style.width = `${r.width}px`;
-            el.style.height = `${r.height}px`;
-            el.style.backgroundColor = color + '40'; // hex with transparency approx
-            editor.appendChild(el);
-            entry.rects.push(el);
-          });
-        }
-      });
-
-      // File sharing
-      // Append file items into the same versions panel, styled in green
-      const appendWithRollingLimit = (container, element, limit) => {
-        container.insertBefore(element, container.firstChild);
-        while (container.children.length > limit) {
-          container.removeChild(container.lastChild);
-        }
-      };
-      const MAX_HISTORY_ITEMS = 30; // rolling limit suggestion
-      fileChannel.on('message', (message, peerId) => {
-        const { metadata, payload } = message;
-        const blob = new Blob([payload], { type: metadata.type });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = metadata.name;
-        link.textContent = `File from ${peerId}: ${metadata.name}`;
-        link.className = 'file-item';
-        appendWithRollingLimit(versionList, link, MAX_HISTORY_ITEMS);
-      });
-
-      fileInput.addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        try {
-          await ensureActiveGuestIdentity();
-          await db.sm.executeWithPermission("write");
-          const buffer = await file.arrayBuffer();
-          const message = {
-            metadata: { name: file.name, type: file.type, id: `file-${Date.now()}` },
-            payload: buffer
-          };
-          fileChannel.send(message);
-        } catch (error) {
-          showMsg('err', 'Error sharing file: ' + (error?.message || error));
-        }
-      });
-
-      // Version history
-      saveVersionBtn.addEventListener('click', async () => {
-        try {
-          await ensureActiveGuestIdentity();
-          await db.sm.executeWithPermission("write");
-          const versionId = `version-${Date.now()}`;
-          await db.put({ content: getEditorHTML(), timestamp: new Date().toISOString() }, versionId);
-          await db.link(docId, versionId);
-          const tsIso = new Date().toISOString();
-          const btn = document.createElement('button');
-          btn.textContent = `Version ${tsIso}`;
-          btn.addEventListener('click', async () => {
-            try {
-              const { result: node } = await db.get(versionId);
-              if (node && node.value) {
-                setEditorHTML(node.value.content || '');
-                updateWordCount();
-                updatePreview();
-                const ts = Date.now();
-                if (ts > lastTimestamp) lastTimestamp = ts;
-                docChannel.send({ content: getEditorHTML(), ts });
-              }
-            } catch { }
-          });
-          // Prepend newest first and enforce rolling limit
-          if (versionList.firstChild) versionList.insertBefore(btn, versionList.firstChild);
-          else versionList.appendChild(btn);
-          while (versionList.children.length > MAX_HISTORY_ITEMS) versionList.removeChild(versionList.lastChild);
-          // Minimalist status flash like typing-save: show "Saved" near Connected peers
           showSavedUntil = Date.now() + 1500;
           updateStatus();
           if (savedFlashTimer) clearTimeout(savedFlashTimer);
           savedFlashTimer = setTimeout(() => { updateStatus(); }, 1600);
-        } catch (error) {
-          showMsg('err', 'Error saving version: ' + (error?.message || error));
+        } catch { }
+        return;
+      }
+      authMsg.className = 'msg show ' + (type === 'ok' ? 'ok' : 'err');
+      authMsg.textContent = t;
+    };
+    const clearMsg = () => {
+      authMsg.className = 'msg';
+      authMsg.textContent = '';
+    };
+    const updateMnemonicBlock = () => {
+      try {
+        const m = db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery?.();
+        if (m) {
+          mnemonicInput.value = m;
+          mnemonicBlock.style.display = 'block';
+          protectWebAuthnBtn.disabled = false;
+        } else {
+          mnemonicBlock.style.display = 'none';
         }
-      });
+      } catch { }
+    };
+    const setAuthUI = (state) => {
+      authDiv.style.display = 'block';
+      if (state.isActive) {
+        // summary compact mode
+        authDiv.classList.add('compact');
+        authSummary.style.display = 'flex';
+        authSummaryAddr.textContent = state.activeAddress || '—';
+        authSummary.setAttribute('aria-expanded', 'false');
+        logoutBtn.style.display = 'inline-block';
+        protectWebAuthnBtn.disabled = !!state.isWebAuthnProtected;
+        // Hide sign-up/login controls
+        signupWebAuthnBtn.style.display = 'none';
+        loginWebAuthnBtn.style.display = 'none';
+        if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'none';
+        // Show protect if not protected yet; otherwise hide it
+        protectWebAuthnBtn.style.display = state.isWebAuthnProtected ? 'none' : 'inline-block';
+        // Hide mnemonic block to declutter when signed in
+        mnemonicBlock.style.display = 'none';
+        editor.disabled = false;
+      } else {
+        // no compact when signed out
+        authDiv.classList.remove('compact');
+        authSummary.style.display = 'none';
+        authSummaryAddr.textContent = '—';
+        authSummary.setAttribute('aria-expanded', 'false');
+        logoutBtn.style.display = 'none';
+        protectWebAuthnBtn.disabled = true;
+        // keep editor enabled for guest write demo
+        editor.disabled = false;
+        // Show sign-up/login controls again
+        signupWebAuthnBtn.style.display = 'inline-block';
+        loginWebAuthnBtn.style.display = state.hasWebAuthnHardwareRegistration ? 'inline-block' : 'none';
+        if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'block';
+        protectWebAuthnBtn.style.display = 'inline-block';
+      }
+      updateMnemonicBlock();
+    };
+    // Security state change callback
+    db.sm.setSecurityStateChangeCallback((state) => setAuthUI(state));
 
-      const { results } = await db.map({
-        query: { $edge: { id: docId } }
+    // Toggle details when clicking/pressing on summary
+    const toggleAuthDetails = () => {
+      const isCompact = authDiv.classList.contains('compact');
+      if (isCompact) {
+        authDiv.classList.remove('compact');
+        authSummary.setAttribute('aria-expanded', 'true');
+      } else if (db.sm.isSecurityActive && db.sm.isSecurityActive()) {
+        // Only auto-compact when signed in
+        authDiv.classList.add('compact');
+        authSummary.setAttribute('aria-expanded', 'false');
+      }
+    };
+    if (authSummary) {
+      authSummary.addEventListener('click', toggleAuthDetails);
+      authSummary.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAuthDetails(); }
       });
-      results.forEach(node => {
-        const btn = document.createElement('button');
-        btn.textContent = `Version ${node.value.timestamp}`;
-        btn.addEventListener('click', () => {
-          setEditorHTML(node.value.content || '');
+    }
+
+    // Ensure we have an active temporary identity for demo (signed ops)
+    const ensureActiveGuestIdentity = async () => {
+      if (db.sm.isSecurityActive && db.sm.isSecurityActive()) return true;
+      try {
+        const temp = await db.sm.startNewUserRegistration();
+        if (temp?.mnemonic) {
+          const identity = await db.sm.loginOrRecoverUserWithMnemonic(temp.mnemonic);
+          if (identity?.address) {
+            setAuthUI({
+              isActive: true,
+              activeAddress: identity.address,
+              isWebAuthnProtected: false,
+              hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration ? db.sm.hasExistingWebAuthnRegistration() : false
+            });
+            return true;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not auto-activate temporary identity', e);
+      }
+      return false;
+    };
+
+    // WebAuthn login
+    loginWebAuthnBtn.addEventListener('click', async () => {
+      try {
+        clearMsg();
+        const address = await db.sm.loginCurrentUserWithWebAuthn();
+        if (address) showMsg('ok', `Signed in as ${shortAddr(address)}`);
+        else showMsg('err', 'WebAuthn login failed');
+      } catch (error) {
+        showMsg('err', 'WebAuthn login error: ' + (error?.message || error));
+      }
+    });
+
+    // WebAuthn signup
+    signupWebAuthnBtn.addEventListener('click', async () => {
+      try {
+        clearMsg();
+        const newIdentity = await db.sm.startNewUserRegistration();
+        if (newIdentity) {
+          mnemonicInput.value = newIdentity.mnemonic;
+          mnemonicBlock.style.display = 'block';
+          protectWebAuthnBtn.disabled = false;
+          showMsg('ok', 'Identity created. Save your mnemonic, then protect it with WebAuthn.');
+        } else {
+          showMsg('err', 'Could not create identity');
+        }
+      } catch (error) {
+        showMsg('err', 'Error creating identity: ' + (error?.message || error));
+      }
+    });
+
+    // Protect current/volatile identity with WebAuthn
+    protectWebAuthnBtn.addEventListener('click', async () => {
+      try {
+        clearMsg();
+        const pk = undefined; // usa la identidad volátil si existe
+        const address = await db.sm.protectCurrentIdentityWithWebAuthn(pk);
+        if (address) {
+          showMsg('ok', `Identity ${shortAddr(address)} protected with WebAuthn`);
+          mnemonicBlock.style.display = 'none';
+        } else {
+          showMsg('err', 'Could not protect identity');
+        }
+      } catch (error) {
+        showMsg('err', 'Error protecting identity: ' + (error?.message || error));
+      }
+    });
+
+    // Mnemonic login
+    loginMnemonicBtn.addEventListener('click', async () => {
+      const mnemonic = mnemonicLoginInput.value.trim();
+      if (mnemonic) {
+        try {
+          clearMsg();
+          const identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
+          if (identity) {
+            mnemonicInput.value = identity.mnemonic || mnemonic;
+            // Clean UI to highlight logged-in state
+            mnemonicBlock.style.display = 'none';
+            if (mnemonicLoginSection) mnemonicLoginSection.style.display = 'none';
+            signupWebAuthnBtn.style.display = 'none';
+            loginWebAuthnBtn.style.display = 'none';
+            protectWebAuthnBtn.disabled = false;
+            protectWebAuthnBtn.style.display = 'inline-block';
+            showMsg('ok', `Signed in as ${shortAddr(identity.address)}. Protect it with WebAuthn to secure this device.`);
+          } else {
+            showMsg('err', 'Invalid mnemonic');
+          }
+        } catch (error) {
+          showMsg('err', 'Mnemonic login error: ' + (error?.message || error));
+        }
+      }
+    });
+
+    // Copy/Download/Hide mnemonic
+    copyMnemonicBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(mnemonicInput.value);
+        // Also prefill the login field and focus it
+        if (mnemonicLoginInput) {
+          mnemonicLoginInput.value = mnemonicInput.value;
+          mnemonicLoginInput.focus();
+          // optionally select it for quick replace if needed
+          try { mnemonicLoginInput.select?.(); } catch { }
+        }
+        showMsg('ok', 'Mnemonic copied and filled into the login field');
+      } catch { showMsg('err', 'Could not copy'); }
+    });
+    downloadMnemonicBtn.addEventListener('click', () => {
+      try {
+        const blob = new Blob([mnemonicInput.value + "\n"], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'mnemonic.txt'; a.click();
+        URL.revokeObjectURL(url);
+      } catch { }
+    });
+    hideMnemonicBtn.addEventListener('click', () => { mnemonicBlock.style.display = 'none'; });
+
+    // Logout
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        clearMsg();
+        await db.sm.clearSecurity();
+        showMsg('ok', 'Signed out');
+      } catch (e) { showMsg('err', 'Could not sign out'); }
+    });
+
+    // Handle peer joins/leaves
+    room.on('peer:join', (peerId) => {
+      peerCount++;
+      updateStatus();
+      // Send current doc to the new peer to quickly sync their view
+      const current = getEditorHTML();
+      if (current) {
+        docChannel.send({ content: current, ts: lastTimestamp }, peerId);
+      }
+    });
+    room.on('peer:leave', (peerId) => {
+      peerCount--;
+      updateStatus();
+      if (cursorMap[peerId]) {
+        cursorMap[peerId].remove();
+        delete cursorMap[peerId];
+      }
+      if (peerVideos[peerId]) {
+        peerVideos[peerId].remove();
+        delete peerVideos[peerId];
+      }
+    });
+
+    // Handle document updates via channel
+    docChannel.on('message', (data, fromPeerId) => {
+      if (data.ts > lastTimestamp) {
+        lastTimestamp = data.ts;
+        setEditorHTML(data.content);
+        updatePreview();
+        updateWordCount();
+      }
+    });
+
+    // Video chat
+    startVideoBtn.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        db.room.addStream(stream);
+        startVideoBtn.style.display = 'none';
+      } catch (error) {
+        showMsg('err', 'Could not access camera/microphone: ' + (error?.message || error));
+      }
+    });
+
+    db.room.on('stream:add', (stream, peerId) => {
+      if (!peerVideos[peerId] && stream.getVideoTracks().length > 0) {
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.playsInline = true;
+        video.srcObject = stream;
+        videoContainer.appendChild(video);
+        peerVideos[peerId] = video;
+      }
+    });
+
+    // Check document existence
+    const { result: initialDoc } = await db.get(docId);
+    if (!initialDoc) {
+      await db.put({ content: '' }, docId);
+    } else {
+      setEditorHTML(initialDoc.value.content || '');
+      lastTimestamp = initialDoc.timestamp ? initialDoc.timestamp.physical : Date.now();
+    }
+    // Ensure preview is correct on load
+    updateWordCount();
+    updatePreview();
+    ensureIconsVisible();
+
+    // Real-time document updates from DB
+    const { unsubscribe } = await db.map({
+      query: { id: docId }
+    }, ({ id, value, action }) => {
+      if (action === 'updated' && id === docId) {
+        const newTs = value.timestamp ? value.timestamp.physical : Date.now();
+        if (newTs > lastTimestamp) {
+          lastTimestamp = newTs;
+          setEditorHTML(value.content || '');
           updateWordCount();
-          updatePreview();
+        }
+      }
+    });
+
+    // Live broadcast while typing (throttled) + save when user stops (debounced)
+    editor.addEventListener('input', async () => {
+      const now = Date.now();
+      pendingContent = getEditorHTML();
+      // line numbers removed
+      updateWordCount();
+      updatePreview();
+
+      // Live send (no RBAC requirement for demo; peers see changes immediately)
+      const sendLive = () => {
+        const ts = Date.now();
+        if (ts > lastTimestamp) lastTimestamp = ts;
+        docChannel.send({ content: pendingContent, ts });
+        lastLiveSent = ts;
+        liveScheduled = null;
+      };
+
+      if (now - lastLiveSent >= liveThrottleMs) {
+        sendLive();
+      } else if (!liveScheduled) {
+        liveScheduled = setTimeout(sendLive, liveThrottleMs - (now - lastLiveSent));
+      }
+
+      // Debounced persistent save
+      clearTimeout(saveDebounceTimer);
+      isSaving = true; // indicate intent to save soon
+      updateStatus();
+      saveDebounceTimer = setTimeout(async () => {
+        try {
+          // Make sure operations will be signed and accepted by peers
+          await ensureActiveGuestIdentity();
+          await db.sm.executeWithPermission("write");
+        } catch (e) {
+          // As a last resort, attempt to persist locally
+          if (!guestWriteNoticeShown) {
+            showMsg('ok', 'Temporary identity in use for demo.');
+            guestWriteNoticeShown = true;
+          }
+        }
+        try {
           const ts = Date.now();
           if (ts > lastTimestamp) lastTimestamp = ts;
-          docChannel.send({ content: getEditorHTML(), ts });
-        });
-        // Append older items at the end; overall list will be trimmed by subsequent insertions
-        versionList.appendChild(btn);
-      });
+          await db.put({ content: pendingContent }, docId);
+        } finally {
+          isSaving = false;
+          // Show 'Saved' briefly, then revert
+          showSavedUntil = Date.now() + 1500;
+          updateStatus();
+          if (savedFlashTimer) clearTimeout(savedFlashTimer);
+          savedFlashTimer = setTimeout(() => {
+            updateStatus();
+          }, 1600);
+        }
+      }, 600);
+    });
 
+    // line numbers and gutter scroll sync removed
 
+    // Formatting buttons
+    const execCmd = (cmd) => {
+      restoreSelection();
+      document.execCommand(cmd, false, null);
+      focusEditor();
+    };
+    btnBold.addEventListener('click', () => execCmd('bold'));
+    btnItalic.addEventListener('click', () => execCmd('italic'));
+    btnUnderline.addEventListener('click', () => execCmd('underline'));
+    btnStrike.addEventListener('click', () => execCmd('strikethrough'));
 
-      // Initial status
-      updateStatus();
-      status.classList.add('active');
+    // Color picker
+    colorPicker.addEventListener('change', () => {
+      restoreSelection();
+      document.execCommand('foreColor', false, colorPicker.value);
+      focusEditor();
+    });
 
-      // Initial auth state
+    // Link insertion
+    btnLink.addEventListener('click', () => {
+      restoreSelection();
+      const sel = window.getSelection();
+      const hasSelection = sel && !sel.isCollapsed;
+      let url = prompt('Enter URL', 'https://');
+      if (!url) return;
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      if (hasSelection) {
+        document.execCommand('createLink', false, url);
+      } else {
+        const text = prompt('Text to display', url) || url;
+        document.execCommand('insertHTML', false, `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`);
+      }
+      focusEditor();
+    });
+    btnUnlink.addEventListener('click', () => execCmd('unlink'));
+
+    // Block formatting
+    blockFormat.addEventListener('change', () => {
+      restoreSelection();
+      const val = blockFormat.value;
+      document.execCommand('formatBlock', false, val);
+      focusEditor();
+    });
+
+    // (font size selector removed)
+
+    // Lists
+    btnUl.addEventListener('click', () => execCmd('insertUnorderedList'));
+    btnOl.addEventListener('click', () => execCmd('insertOrderedList'));
+
+    // Alignment
+    btnLeft.addEventListener('click', () => execCmd('justifyLeft'));
+    btnCenter.addEventListener('click', () => execCmd('justifyCenter'));
+    btnRight.addEventListener('click', () => execCmd('justifyRight'));
+
+    // History
+    btnUndo.addEventListener('click', () => execCmd('undo'));
+    btnRedo.addEventListener('click', () => execCmd('redo'));
+
+    // Clear formatting (keeps links unless selection includes them)
+    btnClear.addEventListener('click', () => execCmd('removeFormat'));
+
+    // Cursor + selection tracking
+    const peerStyles = {};
+    const ensurePeerStyle = (peerId) => {
+      if (peerStyles[peerId]) return peerStyles[peerId];
+      const color = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+      peerStyles[peerId] = { color };
+      return peerStyles[peerId];
+    };
+    const sendCursorPos = () => {
       try {
-        const initialState = {
-          isActive: db.sm.isSecurityActive(),
-          activeAddress: db.sm.getActiveEthAddress ? db.sm.getActiveEthAddress() : null,
-          isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn ? db.sm.isCurrentSessionProtectedByWebAuthn() : false,
-          hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration ? db.sm.hasExistingWebAuthnRegistration() : false
-        };
-        setAuthUI(initialState);
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        const range = sel.getRangeAt(0);
+        const collapsed = range.collapsed;
+        // Cursor position
+        const caretRange = range.cloneRange();
+        caretRange.collapse(true);
+        const caretRect = caretRange.getBoundingClientRect();
+        const hostRect = editor.getBoundingClientRect();
+        const left = Math.max(0, caretRect.left - hostRect.left + editor.scrollLeft);
+        const top = Math.max(0, caretRect.top - hostRect.top + editor.scrollTop);
+        // Selection rects
+        let rects = [];
+        if (!collapsed) {
+          const r = range.cloneRange();
+          const clientRects = Array.from(r.getClientRects());
+          rects = clientRects.map(cr => ({
+            left: Math.max(0, cr.left - hostRect.left + editor.scrollLeft),
+            top: Math.max(0, cr.top - hostRect.top + editor.scrollTop),
+            width: cr.width,
+            height: cr.height
+          }));
+        }
+        cursorChannel.send({ left, top, rects, ts: Date.now() });
       } catch { }
+    };
+    editor.addEventListener('keyup', sendCursorPos);
+    editor.addEventListener('mouseup', sendCursorPos);
+    editor.addEventListener('input', sendCursorPos);
 
-      // No auto interactive WebAuthn login on load. The SM performs a silent resume if applicable.
-    })();
+    cursorChannel.on('message', (data, peerId) => {
+      const { color } = ensurePeerStyle(peerId);
+      // Cursor element
+      if (!cursorMap[peerId]) {
+        const cursor = document.createElement('div');
+        cursor.className = 'cursor';
+        cursor.style.backgroundColor = color;
+        editor.appendChild(cursor);
+        cursorMap[peerId] = { cursor, rects: [] };
+      }
+      const entry = cursorMap[peerId];
+      entry.cursor.style.left = `${data.left}px`;
+      entry.cursor.style.top = `${data.top}px`;
+      // Clear old selection rects
+      if (entry.rects && entry.rects.length) {
+        entry.rects.forEach(el => el.remove());
+      }
+      entry.rects = [];
+      // Draw new selection rects
+      if (Array.isArray(data.rects)) {
+        data.rects.forEach(r => {
+          const el = document.createElement('div');
+          el.className = 'selection-rect';
+          el.style.left = `${r.left}px`;
+          el.style.top = `${r.top}px`;
+          el.style.width = `${r.width}px`;
+          el.style.height = `${r.height}px`;
+          el.style.backgroundColor = color + '40'; // hex with transparency approx
+          editor.appendChild(el);
+          entry.rects.push(el);
+        });
+      }
+    });
+
+    // File sharing
+    // Append file items into the same versions panel, styled in green
+    const appendWithRollingLimit = (container, element, limit) => {
+      container.insertBefore(element, container.firstChild);
+      while (container.children.length > limit) {
+        container.removeChild(container.lastChild);
+      }
+    };
+    const MAX_HISTORY_ITEMS = 30; // rolling limit suggestion
+    fileChannel.on('message', (message, peerId) => {
+      const { metadata, payload } = message;
+      const blob = new Blob([payload], { type: metadata.type });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = metadata.name;
+      link.textContent = `File from ${peerId}: ${metadata.name}`;
+      link.className = 'file-item';
+      appendWithRollingLimit(versionList, link, MAX_HISTORY_ITEMS);
+    });
+
+    fileInput.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        await ensureActiveGuestIdentity();
+        await db.sm.executeWithPermission("write");
+        const buffer = await file.arrayBuffer();
+        const message = {
+          metadata: { name: file.name, type: file.type, id: `file-${Date.now()}` },
+          payload: buffer
+        };
+        fileChannel.send(message);
+      } catch (error) {
+        showMsg('err', 'Error sharing file: ' + (error?.message || error));
+      }
+    });
+
+    // Version history
+    saveVersionBtn.addEventListener('click', async () => {
+      try {
+        await ensureActiveGuestIdentity();
+        await db.sm.executeWithPermission("write");
+        const versionId = `version-${Date.now()}`;
+        await db.put({ content: getEditorHTML(), timestamp: new Date().toISOString() }, versionId);
+        await db.link(docId, versionId);
+        const tsIso = new Date().toISOString();
+        const btn = document.createElement('button');
+        btn.textContent = `Version ${tsIso}`;
+        btn.addEventListener('click', async () => {
+          try {
+            const { result: node } = await db.get(versionId);
+            if (node && node.value) {
+              setEditorHTML(node.value.content || '');
+              updateWordCount();
+              updatePreview();
+              const ts = Date.now();
+              if (ts > lastTimestamp) lastTimestamp = ts;
+              docChannel.send({ content: getEditorHTML(), ts });
+            }
+          } catch { }
+        });
+        // Prepend newest first and enforce rolling limit
+        if (versionList.firstChild) versionList.insertBefore(btn, versionList.firstChild);
+        else versionList.appendChild(btn);
+        while (versionList.children.length > MAX_HISTORY_ITEMS) versionList.removeChild(versionList.lastChild);
+        // Minimalist status flash like typing-save: show "Saved" near Connected peers
+        showSavedUntil = Date.now() + 1500;
+        updateStatus();
+        if (savedFlashTimer) clearTimeout(savedFlashTimer);
+        savedFlashTimer = setTimeout(() => { updateStatus(); }, 1600);
+      } catch (error) {
+        showMsg('err', 'Error saving version: ' + (error?.message || error));
+      }
+    });
+
+    const { results } = await db.map({
+      query: { $edge: { id: docId } }
+    });
+    results.forEach(node => {
+      const btn = document.createElement('button');
+      btn.textContent = `Version ${node.value.timestamp}`;
+      btn.addEventListener('click', () => {
+        setEditorHTML(node.value.content || '');
+        updateWordCount();
+        updatePreview();
+        const ts = Date.now();
+        if (ts > lastTimestamp) lastTimestamp = ts;
+        docChannel.send({ content: getEditorHTML(), ts });
+      });
+      // Append older items at the end; overall list will be trimmed by subsequent insertions
+      versionList.appendChild(btn);
+    });
+
+
+
+    // Initial status
+    updateStatus();
+    status.classList.add('active');
+
+    // Initial auth state
+    try {
+      const initialState = {
+        isActive: db.sm.isSecurityActive(),
+        activeAddress: db.sm.getActiveEthAddress ? db.sm.getActiveEthAddress() : null,
+        isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn ? db.sm.isCurrentSessionProtectedByWebAuthn() : false,
+        hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration ? db.sm.hasExistingWebAuthnRegistration() : false
+      };
+      setAuthUI(initialState);
+    } catch { }
+
+    // No auto interactive WebAuthn login on load. The SM performs a silent resume if applicable.
+
   </script>
 </body>
 
