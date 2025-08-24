@@ -16,7 +16,7 @@ The Security Manager (SM) is not imported separately but is activated and attach
 >
 > // Enable the security module by providing the required configuration
 > const db = await gdb("my-db", {
->   rtc: true, 
+>   rtc: true, // Required for the SM module
 >   sm: {
 >     superAdmins: ["0xAddressOfFirstAdmin...", "0xAnotherAdmin..."] // Mandatory list of superadmin Ethereum addresses.
 >   }
@@ -27,7 +27,7 @@ The Security Manager (SM) is not imported separately but is activated and attach
 > console.log(`Security Manager active. Superadmin address: ${db.sm.getActiveEthAddress() || 'None (awaiting login)'}`);
 > ```
 >
-> **Note on Automatic Initialization**: When you provide the `sm` configuration object, the `gdb` function automatically handles all necessary internal initialization logic. This includes setting up the security context, registering the P2P middleware, and attempting a silent WebAuthn session resume. The `db` instance you receive is fully prepared for use with all Security Manager features.
+> **Note on Automatic Initialization**: When you provide the `sm` configuration object, the `gdb` function automatically handles all necessary internal setup. This includes registering the P2P security middleware, a core feature that relies on the `Real-Time Communication module` to sign and verify data between peers. For this reason, `rtc: true` must be enabled alongside the sm configuration. The initialization process also attempts a silent WebAuthn session resume, ensuring the db instance you receive is fully prepared for use.
 
 ---
 
@@ -67,9 +67,9 @@ The security module is automatically initialized when you create a GDB instance 
 async function initializeApp() {
   // Initialize GDB with the Security Manager enabled and superadmins
   const db = await gdb("my-db", {
-    rtc: true,
+    rtc: true, // Required for the SM module
     sm: {
-      superAdmins: ["0x1...", "0x2..."], // superadmin addresses
+      superAdmins: ["0x1...", "0x2..."], // Mandatory list of superadmin Ethereum addresses.
     },
   })
 
@@ -102,9 +102,9 @@ Minimal pattern:
 ```javascript
 // Initialize GDB with SM enabled (SM will handle silent resume automatically)
 const db = await gdb("my-db", {
-  rtc: true,
+  rtc: true, // Required for the SM module
   sm: {
-    superAdmins: ["0x1...", "0x2..."], // superadmin addresses (mandatory)
+    superAdmins: ["0x1...", "0x2..."], // Mandatory list of superadmin Ethereum addresses.
   },
 })
 
@@ -121,7 +121,7 @@ loginWebAuthnBtn.onclick = async () => {
 }
 ```
 
-Note: Some example pages explicitly create the Security Context after initialization to ensure the silent resume logic runs immediately. If you enable SM via `sm: { superAdmins: [...] }`, the context is automatically set up by the module. The `superAdmins` field is mandatory; without it, the SM module will not initialize.
+Note: The security context is set up automatically when you provide the `sm: { superAdmins: [...] }` configuration. The `superAdmins` field is mandatory; the SM module will not initialize without it.
 
 ---
 
@@ -388,9 +388,9 @@ const myAppRoles = {
 
 // Pass custom roles in the initial configuration
 const db = await gdb("my-db", {
-  rtc: true,
+  rtc: true, // Required for the SM module
   sm: {
-    superAdmins: ["0x1...", "0x2..."], // superadmin addresses (mandatory)
+    superAdmins: ["0x1...", "0x2..."], // Mandatory list of superadmin Ethereum addresses.
     customRoles: myAppRoles
   }
 });
