@@ -64,6 +64,9 @@ A real-time collaborative rich‑text editor powered by GenosDB: live typing syn
 
 ## Security Manager (SM) Examples
 
+### [Secure Auth UX Demo](https://estebanrfp.github.io/gdb/examples/sm-auth-demo.html)
+A self-contained example demonstrating a secure and intuitive user authentication (UX) flow using the GenosDB Security Manager (SM) module. It implements best practices for Mnemonic-based registration and WebAuthn (Passkeys) authentication, serving as a starter template for decentralized applications. [Secure Auth UX Demo v2](https://estebanrfp.github.io/gdb/examples/sm-auth-demo2.html)
+
 ### [Security Manager (SM Testbed)](https://estebanrfp.github.io/gdb/examples/sm-testbed.html)
 Security Manager + Role-Based Access Control (RBAC) + WebAuthn Security.
 
