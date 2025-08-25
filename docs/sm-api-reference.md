@@ -505,46 +505,90 @@ Te sugiero añadir una nueva sección al final de `sm-api-reference.md`, justo a
 Aquí tienes un borrador de cómo podría estructurarse y qué contenido podría tener.
 
 ---
+¡Fantástico! Este ejercicio es increíblemente valioso. Analizar la salida de la IA nos da una visión directa de cómo se interpreta la documentación y nos permite pulirla para cerrar esas últimas brechas.
+
+Has identificado los puntos débiles perfectamente. La IA hizo un buen trabajo, pero tomó algunas decisiones de UX que, aunque lógicas, no son las ideales. Vamos a usar esto para refinar nuestras recomendaciones.
+
+Primero, confirmemos tus observaciones:
+
+1.  **Botón de "Login with WebAuthn"**: Tienes razón, el código lo maneja correctamente. La IA implementó la lógica para mostrarlo solo si existe un registro previo.
+    ```javascript
+    // Esta línea en updateUI es correcta:
+    webauthnLoginBtn.classList.toggle('hidden', !state.hasWebAuthnHardwareRegistration);
+    ```
+    Así que esto funciona como se esperaba según la documentación. ¡Bien!
+
+2.  **Flujo "Generate New Identity"**: Aquí está el principal problema, como bien señalas. La IA, al generar una nueva identidad, **oculta el botón "Login with Mnemonic"**.
+    ```javascript
+    // Esta lógica en updateUI es la causa del problema:
+    generateBtn.classList.toggle('hidden', state.hasVolatileIdentity);
+    mnemonicLoginBtn.classList.toggle('hidden', state.hasVolatileIdentity);
+    ```
+    La intención de la IA era probablemente simplificar la UI para que el usuario se enfocara en "Proteger con Passkey", pero esto crea un callejón sin salida si el usuario *no quiere* o *no puede* usar WebAuthn en ese momento. **No tiene forma de proceder y usar su nueva cuenta.** ¡Este es el punto clave a mejorar en la documentación!
+
+3.  **Textarea Redimensionable**: Un detalle estético, pero importante. Un `<textarea>` redimensionable puede romper el diseño de una interfaz minimalista. Es una excelente sugerencia de UX.
+
+### Propuesta de Mejora para "Best Practices & UI/UX Patterns"
+
+Basado en este análisis, vamos a reescribir la sección para que sea aún más explícita y guíe al desarrollador (humano o IA) hacia la UX ideal, previniendo estos errores.
+
+---
+
 ## 💡 Best Practices & UI/UX Patterns
 
-Building a secure and intuitive user experience for identity management is crucial. Here are recommended patterns for using the Security Manager (SM) module, inspired by efficient, real-world application design.
+Building a secure and intuitive user experience for identity management is crucial. These patterns will help you create a robust and user-friendly login/registration flow.
 
-### 1. The Initial State: Login & Onboarding
+### 1. The Core Principle: A Unified Interface
 
-When a user arrives, present a clean and unified login/registration area.
+For a minimalist design, use a **single, non-resizable `<textarea>`** for all mnemonic-related actions. This field serves multiple purposes:
+1.  **Input:** To paste an existing mnemonic for login/recovery.
+2.  **Output:** To display a newly generated mnemonic.
 
-- **Unified Mnemonic Field:** Use a single `<textarea>` for all mnemonic-related actions. This field can:
-  1.  Display a newly generated mnemonic after clicking "Generate New Identity".
-  2.  Accept a pasted mnemonic for login/recovery.
-- **Primary Actions:**
-  - **`Generate New Identity`**: Calls `db.sm.startNewUserRegistration()` and populates the mnemonic `<textarea>` with the result. This is the main entry point for new users.
-  - **`Login with Mnemonic`**: Calls `db.sm.loginOrRecoverUserWithMnemonic()` using the content of the `<textarea>`.
-  - **`Login with WebAuthn / Passkey`**: This button should be visible if `db.sm.hasExistingWebAuthnRegistration()` is `true`. It offers the quickest, most secure login path for returning users on a registered device.
+This avoids visual clutter and simplifies the user journey.
+*CSS Tip:* `textarea { resize: none; }`
 
-### 2. New User Registration Flow (The Modern Approach)
+### 2. The Initial State: Login & Onboarding
 
-This flow is designed to be seamless and secure.
+When the app loads and the user is logged out (`state.isActive` is `false`):
 
-- **Step 1: Generate & Display:**
-  - The user clicks "Generate New Identity".
-  - The new mnemonic phrase is placed directly into the single, editable `<textarea>`.
-  - **CRITICAL:** Display a very prominent, non-dismissible warning next to the field: "SAVE THIS PHRASE SECURELY! This is your only way to recover your account. Copy it and store it in a password manager."
-- **Step 2: Secure the Account (Immediate Next Step):**
-  - After generation, the most important action is to secure this new, volatile identity. Provide a clear button like **`Register with WebAuthn`** or **`Protect this Account`**.
-  - This button should call `db.sm.protectCurrentIdentityWithWebAuthn()`. This action protects the in-memory identity, provides a passwordless login for the current device, and is the ideal security practice.
-- **Step 3: First Login:**
-  - After securing with WebAuthn, the user is automatically logged in. If they skip WebAuthn, they can click "Login with Mnemonic" using the phrase that is already in the text area.
+- **Show the Mnemonic `<textarea>` and the primary action buttons:**
+  - `[Generate New Identity]` -> Calls `db.sm.startNewUserRegistration()`.
+  - `[Login with Mnemonic]` -> Calls `db.sm.loginOrRecoverUserWithMnemonic()`.
+- **Conditionally show the WebAuthn/Passkey button:**
+  - `[Login with Passkey]` -> This button should **only be visible** if `state.hasWebAuthnHardwareRegistration` is `true`. It offers the fastest login for returning users.
 
-This approach avoids confirmation checkboxes or making the user re-type the phrase, as these steps can encourage insecure practices (like taking screenshots or writing it down on paper). The focus is on **Copy -> Secure Storage -> Protect with WebAuthn**.
+### 3. The New User Registration Flow (Critical Path)
 
-### 3. General Principles
+This is where the user experience must be flawless.
 
-- **Use the State Change Callback:** Rely on `db.sm.setSecurityStateChangeCallback(updateUI)` to reactively show/hide the login section vs. the main application view. This simplifies UI logic immensely.
-- **Never Store the Mnemonic:** Your application logic should never store the mnemonic phrase anywhere (e.g., in `localStorage`). The SM handles all necessary key material securely. Once a session is established, the phrase should be considered ephemeral.
+- **Step 1: User clicks `[Generate New Identity]`.**
+  - The new mnemonic phrase populates the `<textarea>`.
+  - **CRITICAL:** A prominent, non-dismissible warning message must appear: "SAVE THIS PHRASE SECURELY! This is your only way to recover your account. Copy it and store it in a password manager."
+
+- **Step 2: Present Clear Choices.**
+  - **The UI must now show two distinct paths forward:**
+    1.  **The Recommended Path:** A primary, highlighted button like `[Protect Account with Passkey]` becomes visible. This button calls `db.sm.protectCurrentIdentityWithWebAuthn()`.
+    2.  **The Standard Path:** The `[Login with Mnemonic]` button **MUST remain visible and active**. This allows the user to start using their new account immediately, even if they choose not to (or cannot) set up a passkey at that moment.
+
+- **Step 3: Update the UI accordingly.**
+  - The `[Generate New Identity]` button can be temporarily hidden to avoid confusion while the new mnemonic is displayed.
+  - The key is to **never create a dead end**. The user must always have a clear action to proceed.
+
+**Anti-Pattern to Avoid:** Do not hide the "Login with Mnemonic" button after generating a new identity. This forces the user into a WebAuthn-only flow and can lock them out if they are unable to complete it.
+
+### 4. The Logged-In State
+
+- **Reactive UI:** Once `state.isActive` becomes `true`, hide the entire login section and show the main application view.
+- **Load User-Specific Data:** Use the `state.activeAddress` to fetch and display data relevant to the logged-in user. For example, call `db.sm.get()` to load their secure notes upon login.
+
+### 5. General Principles
+
+- **Rely on the State Callback:** `db.sm.setSecurityStateChangeCallback(updateUI)` is your single source of truth. All UI changes (showing/hiding buttons, switching views) should be driven by the properties of the `state` object (`isActive`, `hasVolatileIdentity`, `hasWebAuthnHardwareRegistration`).
+- **Never Store the Mnemonic:** Your application logic should never persist the mnemonic phrase. It is ephemeral and should only exist in the UI temporarily during the onboarding process.
 - **Distinguish Storage vs. Utility:**
   - Use `db.sm.put()` and `db.sm.get()` for seamless, encrypted storage **within GDB nodes**.
-  - Use `db.sm.encryptDataForCurrentUser()` and `db.sm.decryptDataForCurrentUser()` when you need flexible encryption for data that might not live in GDB (e.g., ephemeral chat messages).
-
+  - Use `db.sm.encryptDataForCurrentUser()` and `db.sm.decryptDataForCurrentUser()` for flexible, ad-hoc encryption tasks.
+  
 ---
 
 ## ⚠️ API Stability
