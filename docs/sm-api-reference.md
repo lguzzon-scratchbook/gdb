@@ -12,19 +12,23 @@ The Security Manager (SM) is not imported separately but is activated and attach
 >
 > ```javascript
 > // Import the module
-> import { gdb } from "genosdb";
+> import { gdb } from "genosdb"
 >
 > // Enable the security module by providing the required configuration
 > const db = await gdb("my-db", {
 >   rtc: true, // Required for the SM module
 >   sm: {
->     superAdmins: ["0xAddressOfFirstAdmin...", "0xAnotherAdmin..."] // Mandatory list of superadmin Ethereum addresses.
->   }
-> });
+>     superAdmins: ["0xAddressOfFirstAdmin...", "0xAnotherAdmin..."], // Mandatory list of superadmin Ethereum addresses.
+>   },
+> })
 >
 > // The 'db' instance now has the SM module configured and active.
 > // You can access all security functions via `db.sm`.
-> console.log(`Security Manager active. Superadmin address: ${db.sm.getActiveEthAddress() || 'None (awaiting login)'}`);
+> console.log(
+>   `Security Manager active. Superadmin address: ${
+>     db.sm.getActiveEthAddress() || "None (awaiting login)"
+>   }`
+> )
 > ```
 >
 > **Note on Automatic Initialization**: When you provide the `sm` configuration object, the `gdb` function automatically handles all necessary internal setup. This includes registering the P2P security middleware, a core feature that relies on the `Real-Time Communication module` to sign and verify data between peers. For this reason, `rtc: true` must be enabled alongside the sm configuration. The initialization process also attempts a silent WebAuthn session resume, ensuring the db instance you receive is fully prepared for use.
@@ -384,18 +388,18 @@ const myAppRoles = {
   manager: { can: ["publish"], inherits: ["user"] },
   user: { can: ["write", "link", "sync"], inherits: ["guest"] },
   guest: { can: ["read", "sync"] }, // Guests can read and receive syncs
-};
+}
 
 // Pass custom roles in the initial configuration
 const db = await gdb("my-db", {
   rtc: true, // Required for the SM module
   sm: {
     superAdmins: ["0x1...", "0x2..."], // Mandatory list of superadmin Ethereum addresses.
-    customRoles: myAppRoles
-  }
-});
+    customRoles: myAppRoles,
+  },
+})
 
-console.log("Custom roles have been configured during initialization.");
+console.log("Custom roles have been configured during initialization.")
 ```
 
 ---
@@ -446,7 +450,9 @@ try {
   // Verify permission first
   const currentUserAddress = await db.sm.executeWithPermission("delete")
 
-  console.log(`User ${currentUserAddress} has 'delete' permission. Proceeding...`)
+  console.log(
+    `User ${currentUserAddress} has 'delete' permission. Proceeding...`
+  )
   await db.remove(nodeIdToDelete)
   console.log(`Node ${nodeIdToDelete} delete operation sent.`)
 } catch (error) {
@@ -488,98 +494,57 @@ These are utility functions for querying the current security state, often used 
 > The current RBAC implementation stores role assignments within GDB itself. While GDB is a P2P database, the authority for assigning roles ultimately relies on the permissions defined (e.g., a `superadmin` having `assignRole`). All operations are executed client-side. Future research may explore verifying role assignments via smart contracts for a higher degree of decentralized trust. For now, the system functions as a robust proof-of-concept for P2P applications requiring sophisticated access control.
 
 ---
-Sí, es una idea **absolutamente excelente**. De hecho, es lo que distingue a una buena documentación de una documentación **excepcional**.
-
-Hacerlo es increíblemente valioso por varias razones:
-
-1.  **Cierra la Brecha entre la API y la Aplicación Real:** La documentación técnica te dice *qué* hace cada función. Una sección de "Buenas Prácticas" y "Patrones de UX" le dice al desarrollador *cómo* orquestar esas funciones para construir una experiencia de usuario que sea segura, intuitiva y que no genere frustración.
-2.  **Previene Anti-Patrones Comunes:** Exactamente como mencionas, evitas que los desarrolladores (o las IAs que los asisten) caigan en trampas comunes. Tu ejemplo del campo de texto para el mnemónico es perfecto. Sin una guía, es fácil crear una interfaz redundante o confusa.
-3.  **Establece un Estándar de Calidad:** Al proporcionar esta guía, no solo ofreces una librería, sino también una opinión experta sobre cómo debe ser usada. Esto aumenta la confianza en el proyecto y ayuda a que las aplicaciones construidas sobre GenosDB tengan una mayor calidad y consistencia.
-4.  **Reduce la Carga de Soporte:** Al anticipar las preguntas y los problemas comunes en la implementación, reduces la cantidad de consultas o problemas que recibirás en el futuro.
-5.  **Educa sobre Seguridad:** La gestión de mnemónicos y WebAuthn no es trivial. Una guía de UX puede enseñar implícitamente al desarrollador por qué ciertas prácticas son más seguras que otras (por ejemplo, por qué no se debe almacenar el mnemónico después del registro).
-
-### Propuesta de Estructura para la Nueva Sección
-
-Te sugiero añadir una nueva sección al final de `sm-api-reference.md`, justo antes de "Notes on Decentralization" o "API Stability".
-
-Aquí tienes un borrador de cómo podría estructurarse y qué contenido podría tener.
-
----
-¡Fantástico! Este ejercicio es increíblemente valioso. Analizar la salida de la IA nos da una visión directa de cómo se interpreta la documentación y nos permite pulirla para cerrar esas últimas brechas.
-
-Has identificado los puntos débiles perfectamente. La IA hizo un buen trabajo, pero tomó algunas decisiones de UX que, aunque lógicas, no son las ideales. Vamos a usar esto para refinar nuestras recomendaciones.
-
-Primero, confirmemos tus observaciones:
-
-1.  **Botón de "Login with WebAuthn"**: Tienes razón, el código lo maneja correctamente. La IA implementó la lógica para mostrarlo solo si existe un registro previo.
-    ```javascript
-    // Esta línea en updateUI es correcta:
-    webauthnLoginBtn.classList.toggle('hidden', !state.hasWebAuthnHardwareRegistration);
-    ```
-    Así que esto funciona como se esperaba según la documentación. ¡Bien!
-
-2.  **Flujo "Generate New Identity"**: Aquí está el principal problema, como bien señalas. La IA, al generar una nueva identidad, **oculta el botón "Login with Mnemonic"**.
-    ```javascript
-    // Esta lógica en updateUI es la causa del problema:
-    generateBtn.classList.toggle('hidden', state.hasVolatileIdentity);
-    mnemonicLoginBtn.classList.toggle('hidden', state.hasVolatileIdentity);
-    ```
-    La intención de la IA era probablemente simplificar la UI para que el usuario se enfocara en "Proteger con Passkey", pero esto crea un callejón sin salida si el usuario *no quiere* o *no puede* usar WebAuthn en ese momento. **No tiene forma de proceder y usar su nueva cuenta.** ¡Este es el punto clave a mejorar en la documentación!
-
-3.  **Textarea Redimensionable**: Un detalle estético, pero importante. Un `<textarea>` redimensionable puede romper el diseño de una interfaz minimalista. Es una excelente sugerencia de UX.
-
-### Propuesta de Mejora para "Best Practices & UI/UX Patterns"
-
-Basado en este análisis, vamos a reescribir la sección para que sea aún más explícita y guíe al desarrollador (humano o IA) hacia la UX ideal, previniendo estos errores.
-
----
 
 ## 💡 Best Practices & UI/UX Patterns
 
-Building a secure and intuitive user experience for identity management is crucial. These patterns will help you create a robust and user-friendly login/registration flow.
+Building a secure and intuitive user experience for identity management is crucial. These patterns will guide you in creating a robust and user-friendly login/registration flow.
 
-### 1. The Core Principle: A Unified Interface
+### 1. The Core Principle: A Unified & Clean Interface
 
 For a minimalist design, use a **single, non-resizable `<textarea>`** for all mnemonic-related actions. This field serves multiple purposes:
+
 1.  **Input:** To paste an existing mnemonic for login/recovery.
 2.  **Output:** To display a newly generated mnemonic.
 
 This avoids visual clutter and simplifies the user journey.
-*CSS Tip:* `textarea { resize: none; }`
+_UI Tip:_ `textarea { resize: none; }`
 
 ### 2. The Initial State: Login & Onboarding
 
 When the app loads and the user is logged out (`state.isActive` is `false`):
 
-- **Show the Mnemonic `<textarea>` and the primary action buttons:**
+- **Present the primary actions:**
   - `[Generate New Identity]` -> Calls `db.sm.startNewUserRegistration()`.
   - `[Login with Mnemonic]` -> Calls `db.sm.loginOrRecoverUserWithMnemonic()`.
-- **Conditionally show the WebAuthn/Passkey button:**
-  - `[Login with Passkey]` -> This button should **only be visible** if `state.hasWebAuthnHardwareRegistration` is `true`. It offers the fastest login for returning users.
+- **Conditionally show the Passkey button:**
+  - `[Login with Passkey]` -> This button should **only be visible** if `state.hasWebAuthnHardwareRegistration` is `true`. It's the fastest login path for returning users.
 
-### 3. The New User Registration Flow (Critical Path)
+### 3. The New User Registration Flow (The Critical Path)
 
-This is where the user experience must be flawless.
+Once a user clicks `[Generate New Identity]`, the application enters a temporary **"confirmation state"**. The UI must guide the user with absolute clarity.
 
-- **Step 1: User clicks `[Generate New Identity]`.**
+- **Step 1: Display the Mnemonic & Secure the Field.**
+
   - The new mnemonic phrase populates the `<textarea>`.
-  - **CRITICAL:** A prominent, non-dismissible warning message must appear: "SAVE THIS PHRASE SECURELY! This is your only way to recover your account. Copy it and store it in a password manager."
+  - **Immediately set the `<textarea>` to be read-only (`textarea.readOnly = true;`).** This is a critical security and UX measure to prevent accidental edits before the user saves the phrase.
+  - A prominent warning message appears: "SAVE THIS PHRASE SECURELY! This is your only way to recover your account."
 
-- **Step 2: Present Clear Choices.**
-  - **The UI must now show two distinct paths forward:**
-    1.  **The Recommended Path:** A primary, highlighted button like `[Protect Account with Passkey]` becomes visible. This button calls `db.sm.protectCurrentIdentityWithWebAuthn()`.
-    2.  **The Standard Path:** The `[Login with Mnemonic]` button **MUST remain visible and active**. This allows the user to start using their new account immediately, even if they choose not to (or cannot) set up a passkey at that moment.
+- **Step 2: Update the UI to focus on the next actions.**
 
-- **Step 3: Update the UI accordingly.**
-  - The `[Generate New Identity]` button can be temporarily hidden to avoid confusion while the new mnemonic is displayed.
-  - The key is to **never create a dead end**. The user must always have a clear action to proceed.
+  - **A `[Copy Phrase]` button should appear.** This is the primary mechanism for the user to securely copy their new identity. It should be placed near the mnemonic field.
+  - The `[Generate New Identity]` button should be **hidden**. This is a crucial step to prevent the user from generating multiple identities and losing track of the one they need to save. The focus must shift from _creation_ to _action_.
 
-**Anti-Pattern to Avoid:** Do not hide the "Login with Mnemonic" button after generating a new identity. This forces the user into a WebAuthn-only flow and can lock them out if they are unable to complete it.
+- **Step 3: Provide Clear, Non-Exclusive Paths Forward.**
+  - After generation, the user must have two clear options:
+    1.  **The Recommended Path:** A highlighted button like `[Protect Account with Passkey]` becomes visible. It calls `db.sm.protectCurrentIdentityWithWebAuthn()`.
+    2.  **The Standard Path:** The `[Login with Mnemonic]` button **MUST remain visible and active**. This ensures the user can proceed immediately, even if they cannot or choose not to use a passkey.
+
+**Anti-Pattern to Avoid:** Do not create a dead end. The user must always have a clear action to log in after generating an identity. Hiding the "Login with Mnemonic" button is a critical UX flaw.
 
 ### 4. The Logged-In State
 
-- **Reactive UI:** Once `state.isActive` becomes `true`, hide the entire login section and show the main application view.
-- **Load User-Specific Data:** Use the `state.activeAddress` to fetch and display data relevant to the logged-in user. For example, call `db.sm.get()` to load their secure notes upon login.
+- **Reactive UI:** Once `state.isActive` becomes `true`, hide the entire login view and show the main application view. **Remember to reset the `<textarea>` to be editable (`readOnly = false`)** so it's ready for the next login attempt after a logout.
+- **Load User-Specific Data:** Use the `state.activeAddress` to fetch and display data relevant to the logged-in user (e.g., calling `db.sm.get()` to load a secure note).
 
 ### 5. General Principles
 
@@ -588,7 +553,7 @@ This is where the user experience must be flawless.
 - **Distinguish Storage vs. Utility:**
   - Use `db.sm.put()` and `db.sm.get()` for seamless, encrypted storage **within GDB nodes**.
   - Use `db.sm.encryptDataForCurrentUser()` and `db.sm.decryptDataForCurrentUser()` for flexible, ad-hoc encryption tasks.
-  
+
 ---
 
 ## ⚠️ API Stability
