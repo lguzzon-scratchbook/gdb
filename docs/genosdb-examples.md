@@ -79,9 +79,6 @@ RBAC Simple WebAuthn Security.
 ### [SM Encryption Example](https://estebanrfp.github.io/gdb/examples/encryption.html)
 SM Encryption & Decryption Example
 
-### [GenosDB Security Bed (v2)](https://estebanrfp.github.io/gdb/examples/audit.html)
-SM RBAC Security Audit Example
-
 ### [AI-powered Oplog Audit Module](https://estebanrfp.github.io/gdb/examples/todolist-audit.html)
 Provides real-time auditing of oplog entries using AI to detect patterns, prohibited content, and support data
 
