@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GDB RBAC - WebAuthn Demo (Register, Login, Logout)</title>
-
+    <title>GDB RBAC - WebAuthn Demo</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -32,35 +31,39 @@
             color: white; 
             border: none; 
             padding: 10px 15px; 
-            margin: 10px 0; 
+            margin-top: 10px;
             border-radius: 5px; 
             cursor: pointer; 
             font-size: 16px;
             display: block;
             width: 100%;
+            box-sizing: border-box;
         }
-        button.secondary {
-            background-color: #6c757d;
+        button.secondary { background-color: #6c757d; }
+        button.recommended { background-color: #28a745; }
+        button:hover { background-color: #1558b0; }
+        button.secondary:hover { background-color: #5a6268; }
+        button.recommended:hover { background-color: #218838; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        .status { 
+            margin-bottom: 15px; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            background-color: #e9ecef;
+            word-wrap: break-word;
+            text-align: center;
         }
-        button.secondary:hover {
-            background-color: #5a6268;
-        }
-        button:hover { 
-            background-color: #1558b0; 
-        }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        .info, .status { 
-            margin-top: 15px; 
+        .info-box {
+             margin-top: 15px; 
             padding: 10px; 
             border: 1px solid #ddd; 
             border-radius: 5px; 
             background-color: #e9ecef;
             word-wrap: break-word;
         }
-        .info code {
+        .info-box code {
             background-color: #d4d4d4;
             padding: 2px 4px;
             border-radius: 3px;
@@ -72,57 +75,65 @@
             background-color: #fddede;
             padding: 10px;
             border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .hidden { display: none; }
+        .button-group {
+            display: flex;
+            gap: 10px;
             margin-top: 10px;
         }
-        .hidden {
-            display: none;
-        }
-        .auth-actions, .session-actions {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            resize: none; /* Recommended best practice */
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WebAuthn Demo</h1>
-        <p>Register a new identity, protect it with WebAuthn, log out, and log back in using WebAuthn.</p>
+        
+        <div id="statusArea" class="status">Awaiting initialization...</div>
 
-        <div id="statusArea" class="status">Status: Awaiting initialization...</div>
+        <!-- LOGIN / REGISTER VIEW -->
+        <div id="loginView">
+            <p>Paste your mnemonic phrase to log in, or generate a new identity.</p>
+            <textarea id="mnemonicTextarea" rows="3" placeholder="Enter your 12-word mnemonic phrase here..."></textarea>
 
-        <!-- Actions when NOT logged in -->
-        <div id="notLoggedInSection">
-            <div class="auth-actions">
-                <h3>New User?</h3>
-                <button id="btnGenerateIdentity">1. Generate New ETH Identity</button>
-                <div id="identityDetails" class="info hidden">
-                    <p><strong>New Ethereum Address:</strong> <code id="ethAddress"></code></p>
-                    <p><strong>Your Mnemonic Phrase:</strong> <code id="mnemonicPhrase"></code></p>
-                    <div class="warning">
-                        ⚠️ IMPORTANT: Securely save this Mnemonic Phrase!
+            <div id="actionButtons">
+                <!-- Shown in default state -->
+                <button id="btnGenerate">Generate New Identity</button>
+                <button id="btnLoginMnemonic">Login with Mnemonic</button>
+                <button id="btnLoginPasskey" class="secondary">Login with Passkey</button>
+
+                <!-- Shown after generating an identity -->
+                <div id="newIdentityActions" class="hidden">
+                    <div class="warning">⚠️ SAVE THIS PHRASE SECURELY!</div>
+                    <div class="button-group">
+                        <button id="btnCopyMnemonic" class="secondary">Copy Phrase</button>
                     </div>
+                    <button id="btnProtectPasskey" class="recommended">Protect Account with Passkey (Recommended)</button>
                 </div>
-                <button id="btnProtectWebAuthn" disabled>2. Protect Current Identity with WebAuthn & Login</button>
-            </div>
-
-            <div class="auth-actions">
-                <h3>Existing User with WebAuthn?</h3>
-                <button id="btnLoginWebAuthn" disabled>Login with WebAuthn</button>
             </div>
         </div>
 
-        <!-- Actions when logged in -->
-        <div id="loggedInSection" class="hidden">
-            <div class="info">
+        <!-- LOGGED IN VIEW -->
+        <div id="appView" class="hidden">
+            <h3>Session Active</h3>
+            <div class="info-box">
                 <p><strong>Logged In As:</strong> <code id="loggedInUserAddress"></code></p>
-                <p>Session protected by WebAuthn: <span id="sessionWebAuthnStatus"></span></p>
+                <p><strong>Session protected by Passkey:</strong> <span id="sessionWebAuthnStatus"></span></p>
             </div>
-            <div class="session-actions">
-                <button id="btnLogout" class="secondary">Logout</button>
-            </div>
+            <button id="btnLogout" class="secondary">Logout</button>
         </div>
-
     </div>
 
     <script type="module">
@@ -130,178 +141,139 @@
 
         // DOM Elements
         const statusArea = document.getElementById('statusArea');
-        const notLoggedInSection = document.getElementById('notLoggedInSection');
-        const loggedInSection = document.getElementById('loggedInSection');
+        const loginView = document.getElementById('loginView');
+        const appView = document.getElementById('appView');
+        const mnemonicTextarea = document.getElementById('mnemonicTextarea');
         
-        const btnGenerateIdentity = document.getElementById('btnGenerateIdentity');
-        const identityDetailsDiv = document.getElementById('identityDetails');
-        const ethAddressElem = document.getElementById('ethAddress');
-        const mnemonicPhraseElem = document.getElementById('mnemonicPhrase');
-        const btnProtectWebAuthn = document.getElementById('btnProtectWebAuthn');
-        const btnLoginWebAuthn = document.getElementById('btnLoginWebAuthn');
-        
-        const loggedInUserAddressElem = document.getElementById('loggedInUserAddress');
-        const sessionWebAuthnStatusElem = document.getElementById('sessionWebAuthnStatus');
+        // Buttons
+        const btnGenerate = document.getElementById('btnGenerate');
+        const btnLoginMnemonic = document.getElementById('btnLoginMnemonic');
+        const btnLoginPasskey = document.getElementById('btnLoginPasskey');
+        const newIdentityActions = document.getElementById('newIdentityActions');
+        const btnCopyMnemonic = document.getElementById('btnCopyMnemonic');
+        const btnProtectPasskey = document.getElementById('btnProtectPasskey');
         const btnLogout = document.getElementById('btnLogout');
 
-        let volatileIdentity = null; // Stores { address, mnemonic, privateKey }
-
-        function updateStatus(message, isError = false) {
-            statusArea.textContent = `Status: ${message}`;
-            statusArea.style.color = isError ? '#d93025' : '#333';
-            statusArea.style.backgroundColor = isError ? '#fddede' : '#e9ecef';
-            console.log(message);
-        }
-
-        // Main UI update function based on security state
-        function updateUI(securityState) {
-            if (!securityState) {
-                updateStatus("Security context not active or state unavailable.", true);
-                return;
-            }
-
-            if (securityState.isActive) {
-                notLoggedInSection.classList.add('hidden');
-                loggedInSection.classList.remove('hidden');
-                identityDetailsDiv.classList.add('hidden'); // Hide registration details
-
-                loggedInUserAddressElem.textContent = securityState.activeAddress;
-                sessionWebAuthnStatusElem.textContent = securityState.isWebAuthnProtected ? "Yes" : "No (Mnemonic/Other)";
-                updateStatus(`Logged in as ${securityState.activeAddress.substring(0,10)}...`);
-            } else {
-                notLoggedInSection.classList.remove('hidden');
-                loggedInSection.classList.add('hidden');
-                
-                btnGenerateIdentity.disabled = false;
-                // Enable WebAuthn login button only if a registration exists for this site
-                btnLoginWebAuthn.disabled = !securityState.hasWebAuthnHardwareRegistration;
-                updateStatus(securityState.hasWebAuthnHardwareRegistration ? "Ready. Or login with WebAuthn if registered." : "Ready for new identity generation.");
-            }
-
-            // Handle volatile identity display (newly generated, not yet protected)
-            if (securityState.hasVolatileIdentity && !securityState.isActive) {
-                identityDetailsDiv.classList.remove('hidden');
-                btnProtectWebAuthn.disabled = false;
-            } else {
-                identityDetailsDiv.classList.add('hidden');
-                if (!securityState.isActive) { // Only re-enable if not logged in
-                    btnProtectWebAuthn.disabled = true;
-                }
-            }
-        }
+        // Display elements
+        const loggedInUserAddress = document.getElementById('loggedInUserAddress');
+        const sessionWebAuthnStatus = document.getElementById('sessionWebAuthnStatus');
 
         let db = null;
         
+        // --- Single Source of Truth for UI Updates ---
+        function updateUI(state) {
+            if (!state) return;
+
+            // --- Logged-In State ---
+            if (state.isActive) {
+                loginView.classList.add('hidden');
+                appView.classList.remove('hidden');
+
+                loggedInUserAddress.textContent = state.activeAddress;
+                sessionWebAuthnStatus.textContent = state.isWebAuthnProtected ? "Yes" : "No";
+                statusArea.textContent = `Logged in as ${state.activeAddress.substring(0,10)}...`;
+
+                // Reset textarea for next session
+                mnemonicTextarea.value = '';
+                mnemonicTextarea.readOnly = false;
+                return;
+            }
+
+            // --- Logged-Out State ---
+            loginView.classList.remove('hidden');
+            appView.classList.add('hidden');
+
+            // Conditionally enable Passkey login button
+            btnLoginPasskey.disabled = !state.hasWebAuthnHardwareRegistration;
+            statusArea.textContent = state.hasWebAuthnHardwareRegistration 
+                ? "Ready. Login with Mnemonic or Passkey." 
+                : "Ready. Login with Mnemonic or create a new identity.";
+
+            // --- "Confirmation State" after generating a new identity ---
+            if (state.hasVolatileIdentity) {
+                // Hide default buttons
+                btnGenerate.classList.add('hidden');
+                
+                // Show confirmation-specific actions
+                newIdentityActions.classList.remove('hidden');
+                
+                // Populate and lock the textarea
+                mnemonicTextarea.value = db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery();
+                mnemonicTextarea.readOnly = true;
+                
+                statusArea.textContent = "New identity generated. SAVE YOUR MNEMONIC.";
+            } 
+            // --- Default Logged-Out State ---
+            else {
+                // Show default buttons
+                btnGenerate.classList.remove('hidden');
+
+                // Hide confirmation-specific actions
+                newIdentityActions.classList.add('hidden');
+
+                // Ensure textarea is clear and editable
+                if (document.activeElement !== mnemonicTextarea) {
+                    mnemonicTextarea.value = '';
+                }
+                mnemonicTextarea.readOnly = false;
+            }
+        }
+
         async function initializeApp() {            
             try {
-                updateStatus("Initializing GDB...");
+                statusArea.textContent = "Initializing GDB...";
 
-                db = await gdb("webAuthnDemoDB_v2", {
+                db = await gdb("webAuthnDemoDB", {
                     rtc: true,
                     sm: {
-                        superAdmins: ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+                        superAdmins: ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"], // Replace with your actual superadmin
                     }
                 });
 
-                updateStatus("GDB ready. Initializing RBAC Security Context...");
-                
-                // Set the callback that will manage UI updates
+                // The callback is our single source of truth. It will be called automatically
+                // after initialization (and after any silent WebAuthn resume).
                 db.sm.setSecurityStateChangeCallback(updateUI);
 
-                // Manually trigger an initial UI update based on the current state
-                // This is important because createSecurityContext might silently log in a user via WebAuthn
-                const initialState = {
-                    isActive: db.sm.isSecurityActive(),
-                    activeAddress: db.sm.getActiveEthAddress(),
-                    isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn(),
-                    hasVolatileIdentity: !!(volatileIdentity || db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery()),
-                    hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration()
-                };
-                updateUI(initialState); // This will correctly set button states on page load
-
-                updateStatus("RBAC Initialized. " + (initialState.hasWebAuthnHardwareRegistration ? "WebAuthn registration found. " : "No prior WebAuthn registration found. ") + "Ready.");
-
-
             } catch (error) {
-                updateStatus(`Initialization Error: ${error.message}`, true);
+                statusArea.textContent = `Initialization Error: ${error.message}`;
                 console.error("Initialization failed:", error);
             }
         }
 
-        btnGenerateIdentity.addEventListener('click', async () => {
-            try {
-                updateStatus("Generating new identity...");
-                // This will also clear any existing session, if any
-                volatileIdentity = await db.sm.startNewUserRegistration(); 
-                
-                if (volatileIdentity) {
-                    ethAddressElem.textContent = volatileIdentity.address;
-                    mnemonicPhraseElem.textContent = volatileIdentity.mnemonic;
-                    // The securityStateChangeCallback will handle showing identityDetailsDiv
-                    updateStatus("New identity generated. SAVE YOUR MNEMONIC.");
-                } else {
-                    updateStatus("Failed to generate new identity.", true);
-                }
-            } catch (error) {
-                updateStatus(`Error generating identity: ${error.message}`, true);
+        // --- Event Listeners (simple and clean) ---
+        btnGenerate.addEventListener('click', () => {
+            db.sm.startNewUserRegistration().catch(err => console.error(err));
+        });
+
+        btnLoginMnemonic.addEventListener('click', () => {
+            const mnemonic = mnemonicTextarea.value.trim();
+            if (mnemonic) {
+                db.sm.loginOrRecoverUserWithMnemonic(mnemonic).catch(err => console.error(err));
+            } else {
+                statusArea.textContent = "Please enter a mnemonic phrase.";
             }
         });
 
-        btnProtectWebAuthn.addEventListener('click', async () => {
-            if (!volatileIdentity || !volatileIdentity.privateKey) {
-                updateStatus("No identity to protect. Please generate one first.", true);
-                return;
-            }
-            try {
-                updateStatus("Starting WebAuthn registration... Follow browser prompts.");
-                const protectedAddress = await db.sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey); 
-                
-                if (protectedAddress) {
-                    updateStatus(`Identity ${protectedAddress} protected with WebAuthn & session started!`);
-                    volatileIdentity = null; // Clear after protection
-                    // UI updates via securityStateChangeCallback
-                } else {
-                    updateStatus("WebAuthn protection failed. User cancelled or error.", true);
-                }
-            } catch (error) {
-                updateStatus(`WebAuthn protection error: ${error.message}`, true);
-            }
+        btnLoginPasskey.addEventListener('click', () => {
+            db.sm.loginCurrentUserWithWebAuthn().catch(err => console.error(err));
         });
 
-        btnLoginWebAuthn.addEventListener('click', async () => {
-            try {
-                updateStatus("Attempting WebAuthn login... Follow browser prompts.");
-                const loggedInAddress = await db.sm.loginCurrentUserWithWebAuthn();
-                if (loggedInAddress) {
-                    updateStatus(`Successfully logged in with WebAuthn as ${loggedInAddress}!`);
-                    // UI updates via securityStateChangeCallback
-                } else {
-                    updateStatus("WebAuthn login failed. No registration or user cancelled.", true);
-                }
-            } catch (error) {
-                updateStatus(`WebAuthn login error: ${error.message}`, true);
-            }
+        btnCopyMnemonic.addEventListener('click', () => {
+            navigator.clipboard.writeText(mnemonicTextarea.value).then(() => {
+                statusArea.textContent = "Mnemonic copied to clipboard!";
+            }).catch(err => {
+                statusArea.textContent = "Failed to copy.";
+                console.error('Copy failed', err);
+            });
+        });
+
+        btnProtectPasskey.addEventListener('click', () => {
+            // No need to pass a private key; the SM uses the one from the volatile session.
+            db.sm.protectCurrentIdentityWithWebAuthn().catch(err => console.error(err));
         });
         
-        btnLogout.addEventListener('click', async () => {
-            try {
-                updateStatus("Logging out...");
-                await db.sm.clearSecurity();
-                updateStatus("Successfully logged out.");
-                volatileIdentity = null; // Ensure no lingering volatile identity
-                // UI updates via securityStateChangeCallback. Force one if needed.
-                 const refreshedState = { // Re-fetch state after logout
-                    isActive: db.sm.isSecurityActive(),
-                    activeAddress: db.sm.getActiveEthAddress(),
-                    isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn(),
-                    hasVolatileIdentity: false, 
-                    hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration()
-                };
-                updateUI(refreshedState);
-
-            } catch (error) {
-                updateStatus(`Logout error: ${error.message}`, true);
-            }
+        btnLogout.addEventListener('click', () => {
+            db.sm.clearSecurity().catch(err => console.error(err));
         });
 
         initializeApp();
