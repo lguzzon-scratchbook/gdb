@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,7 +43,7 @@
             gap: 1rem;
             width: 100%;
         }
-        
+
         h1 {
             font-weight: 600;
             margin-bottom: 1rem;
@@ -66,9 +67,10 @@
             line-height: 1.5;
             background-color: #fff;
         }
-        
+
         textarea:read-only {
-            background-color: #e9ecef; /* Visual cue that it's read-only */
+            background-color: #e9ecef;
+            /* Visual cue that it's read-only */
         }
 
         .button-group {
@@ -97,9 +99,9 @@
         button.secondary {
             background-color: #6c757d;
         }
-        
+
         button.secondary:hover {
-             background-color: #5a6268;
+            background-color: #5a6268;
         }
 
         .warning-message {
@@ -110,7 +112,7 @@
             font-size: 0.9rem;
             border: 1px solid #ffeeba;
         }
-        
+
         /* App View */
         .status-bar {
             font-size: 0.9rem;
@@ -118,14 +120,14 @@
             word-break: break-all;
             margin-bottom: 1rem;
         }
-        
+
         .note-container {
             width: 100%;
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
         }
-        
+
         .note-container input {
             width: 100%;
             padding: 0.75rem;
@@ -134,7 +136,7 @@
             font-size: 1rem;
             box-sizing: border-box;
         }
-        
+
         .note-display {
             min-height: 50px;
             padding: 1rem;
@@ -144,13 +146,14 @@
             text-align: left;
             word-wrap: break-word;
         }
-        
+
         .note-display.success {
-             background-color: var(--success-bg);
-             color: var(--success-text);
+            background-color: var(--success-bg);
+            color: var(--success-text);
         }
     </style>
 </head>
+
 <body>
 
     <main>
@@ -158,11 +161,13 @@
         <div id="login-view" class="view">
             <h1>Secure Notes</h1>
             <p>Generate an identity or log in with your mnemonic phrase.</p>
-            
-            <textarea id="mnemonic-area" placeholder="Enter your 12-word recovery phrase here to log in, or generate a new one."></textarea>
-            
+
+            <textarea id="mnemonic-area"
+                placeholder="Enter your 12-word recovery phrase here to log in, or generate a new one."></textarea>
+
             <div id="warning-message" class="warning-message hidden">
-                <strong>SAVE THIS PHRASE!</strong> This is your only way to recover your account. Store it securely in a password manager.
+                <strong>SAVE THIS PHRASE!</strong> This is your only way to recover your account. Store it securely in a
+                password manager.
             </div>
 
             <div class="button-group">
@@ -180,17 +185,18 @@
             <div class="status-bar">
                 Logged in as: <span id="user-address"></span>
             </div>
-            
+
             <div class="note-container">
-                 <input type="text" id="note-input" placeholder="Type your secret note...">
-                 <button id="save-note-btn">Save Encrypted Note</button>
-                 <button id="load-note-btn" class="secondary">Load Encrypted Note</button>
+                <input type="text" id="note-id-input" placeholder="Note title (ID)...">
+                <input type="text" id="note-input" placeholder="Type your secret note content...">
+                <button id="save-note-btn">Save Encrypted Note</button>
+                <button id="load-note-btn" class="secondary">Load Encrypted Note</button>
             </div>
-           
+
             <div id="note-display" class="note-display">
                 Your decrypted note will appear here.
             </div>
-            
+
             <button id="logout-btn" class="secondary">Logout</button>
         </div>
     </main>
@@ -209,13 +215,14 @@
         const protectPasskeyBtn = document.getElementById('protect-passkey-btn');
         const copyPhraseBtn = document.getElementById('copy-phrase-btn'); // NEW
         const userAddressSpan = document.getElementById('user-address');
+        const noteIdInput = document.getElementById('note-id-input');
         const noteInput = document.getElementById('note-input');
         const saveNoteBtn = document.getElementById('save-note-btn');
         const loadNoteBtn = document.getElementById('load-note-btn');
         const noteDisplay = document.getElementById('note-display');
         const logoutBtn = document.getElementById('logout-btn');
 
-        const NOTE_ID = 'my-secret-note';
+        // Note ID is provided by the user via the UI (note title)
 
         async function main() {
             const db = await gdb("secure-notes-db-v2", {
@@ -229,16 +236,17 @@
             function updateUI(state) {
                 loginView.classList.toggle('hidden', state.isActive);
                 appView.classList.toggle('hidden', !state.isActive);
-                
+
                 if (state.isActive) {
                     userAddressSpan.textContent = state.activeAddress;
+                    noteIdInput.value = '';
                     noteInput.value = '';
                     noteDisplay.textContent = 'Load your note to see its content.';
                     noteDisplay.classList.remove('success');
-                } 
+                }
                 else {
                     const inRegistrationFlow = state.hasVolatileIdentity;
-                    
+
                     // --- NEW UX LOGIC ---
                     // Make textarea read-only during registration to prevent accidental edits.
                     mnemonicArea.readOnly = inRegistrationFlow;
@@ -246,7 +254,7 @@
                     generateBtn.classList.toggle('hidden', inRegistrationFlow);
                     // Show the dedicated copy button only during registration.
                     copyPhraseBtn.classList.toggle('hidden', !inRegistrationFlow);
-                    
+
                     // --- EXISTING UX LOGIC ---
                     webauthnLoginBtn.classList.toggle('hidden', !state.hasWebAuthnHardwareRegistration);
                     warningMessage.classList.toggle('hidden', !inRegistrationFlow);
@@ -259,7 +267,7 @@
                     }
                 }
             }
-            
+
             generateBtn.addEventListener('click', async () => {
                 try {
                     const newIdentity = await db.sm.startNewUserRegistration();
@@ -268,7 +276,7 @@
                     }
                 } catch (e) { alert(`Error generating identity: ${e.message}`); }
             });
-            
+
             // NEW: One-click copy listener
             copyPhraseBtn.addEventListener('click', () => {
                 navigator.clipboard.writeText(mnemonicArea.value).then(() => {
@@ -286,20 +294,20 @@
                     alert('Please enter a valid 12-word mnemonic phrase.');
                     return;
                 }
-                try { await db.sm.loginOrRecoverUserWithMnemonic(mnemonic); } 
+                try { await db.sm.loginOrRecoverUserWithMnemonic(mnemonic); }
                 catch (e) { alert(`Login failed: ${e.message}`); }
             });
 
             webauthnLoginBtn.addEventListener('click', async () => {
-                try { await db.sm.loginCurrentUserWithWebAuthn(); } 
-                catch (e) { if (e.name !== 'NotAllowedError') { alert(`Passkey login failed: ${e.message}`); }}
+                try { await db.sm.loginCurrentUserWithWebAuthn(); }
+                catch (e) { if (e.name !== 'NotAllowedError') { alert(`Passkey login failed: ${e.message}`); } }
             });
-            
+
             protectPasskeyBtn.addEventListener('click', async () => {
                 try {
                     const address = await db.sm.protectCurrentIdentityWithWebAuthn();
                     if (address) { alert(`Account protected with Passkey for address: ${address}`); }
-                } catch (e) { if (e.name !== 'NotAllowedError') { alert(`Could not protect with Passkey: ${e.message}`); }}
+                } catch (e) { if (e.name !== 'NotAllowedError') { alert(`Could not protect with Passkey: ${e.message}`); } }
             });
 
             logoutBtn.addEventListener('click', async () => {
@@ -307,29 +315,33 @@
             });
 
             saveNoteBtn.addEventListener('click', async () => {
+                const id = noteIdInput.value.trim();
                 const noteContent = noteInput.value.trim();
-                if (!noteContent) return;
+                if (!id) { alert('Please enter a note title (ID).'); return; }
+                if (!noteContent) { alert('Please enter note content.'); return; }
                 try {
-                    await db.sm.put({ content: noteContent }, NOTE_ID);
+                    await db.sm.put({ content: noteContent }, id);
                     noteDisplay.textContent = 'Note saved and encrypted successfully!';
                     noteDisplay.classList.add('success');
                 } catch (e) { alert(`Error saving note: ${e.message}`); }
             });
-            
+
             loadNoteBtn.addEventListener('click', async () => {
+                const id = noteIdInput.value.trim();
+                if (!id) { alert('Please enter a note title (ID) to load.'); return; }
                 try {
-                    const { result: node } = await db.sm.get(NOTE_ID);
+                    const { result: node } = await db.sm.get(id);
                     if (node && node.decrypted) {
                         noteDisplay.textContent = `Decrypted Note: ${node.value.content}`;
                         noteDisplay.classList.add('success');
                     } else if (node) {
-                         noteDisplay.textContent = 'Could not decrypt note. You might not be the owner.';
-                         noteDisplay.classList.remove('success');
+                        noteDisplay.textContent = 'Could not decrypt note. You might not be the owner.';
+                        noteDisplay.classList.remove('success');
                     } else {
                         noteDisplay.textContent = 'No note found. Save one first!';
                         noteDisplay.classList.remove('success');
                     }
-                } catch(e) { alert(`Error loading note: ${e.message}`); }
+                } catch (e) { alert(`Error loading note: ${e.message}`); }
             });
 
             db.sm.setSecurityStateChangeCallback(updateUI);
@@ -338,4 +350,5 @@
         main().catch(console.error);
     </script>
 </body>
+
 </html>
