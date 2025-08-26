@@ -7,9 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.6] - 2025-08-25
+## [0.9.7] - 2025-08-26
 
-## [0.9.6] - YYYY-MM-DD
+### Added
+
+- **Autonomous Governance Engine (`governanceRules`):** Introduced a new, optional Governance Module that allows for the automatic enforcement of high-level business logic and data policies across the database. The engine is configured by passing a `governanceRules` array in the `sm` options. Operated exclusively by a logged-in `superadmin`, the engine periodically evaluates these rules, leveraging the full power of the `gdb.map` query engine to identify and act upon nodes that meet specific criteria.
+
+### Changed
+
+- **`sm` Configuration Extended for Governance:** The Security Manager configuration object now accepts a `governanceRules` property. This array of rule objects allows developers to define conditional logic using the same query syntax as `gdb.map`, enabling powerful, declarative data policies (e.g., role promotions, state changes, etc.).
+
+### Improved
+
+- **Hybrid Query Architecture for Governance Rules:** The governance engine employs a highly efficient hybrid strategy for rule evaluation. It first uses `gdb.map` to perform an optimized pre-filtering of candidate nodes based on indexable `value` properties (like `role`). It then applies more complex, non-indexable checks (such as time-based conditions on `node.timestamp.physical`) in-memory on the much smaller, pre-filtered set. This approach minimizes computational load while enabling sophisticated, multi-faceted rule definitions.
+
+### Security
+
+- **Strict Super Admin Control Over Governance:** The governance engine is designed as a trusted system component. It can only be activated and operated by a `superadmin` user who has successfully authenticated. This ensures that all automated data transformations are initiated and controlled exclusively by the highest authority within the network, maintaining a clear and secure chain of command.
+
+## [0.9.6] - 2025-08-25
 
 ### Security
 
