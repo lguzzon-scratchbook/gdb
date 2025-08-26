@@ -6,6 +6,8 @@ Welcome to the official technical documentation for GenosDB.
 
   - 📘 [GDB API Reference](genosdb-api-reference.md) (Detailed API documentation)
   - 🤝 [Distributed Trust Model](genosdb-distributed-trust-model.md) (P2P trust via cryptographic identity, signed ops, and RBAC enforcement)
+  - 🔒 [Zero Trust Security Model](zero-trust-security-model.md) (Understanding GenosDB Zero-Trust Security Model: From Guest to SuperAdmin)
+ 
   - 🧪 [GenosDB Examples](genosdb-examples.md) (Live demos and community projects)
   - ✨ [GenosDB Features](genosdb-features.md) (Comprehensive feature overview and architecture)
   - ↔️ [Cursor-Based-Pagination](cursor‐based-pagination.md) (Efficient paging with $after/$before/$limit)
