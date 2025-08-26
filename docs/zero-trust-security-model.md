@@ -1,4 +1,4 @@
-## Understanding GDB's Zero-Trust Security Model: From Guest to SuperAdmin
+## Understanding GenosDB Zero-Trust Security Model: From Guest to SuperAdmin
 
 In a decentralized system, robust security isn't a feature—it's the foundation. Our GenosDB (GDB) Security Manager (SM) is built on a "zero-trust with a single welcome exception" principle. Every action must be cryptographically signed and explicitly authorized. There are no shortcuts.
 
