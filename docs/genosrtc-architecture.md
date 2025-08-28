@@ -34,7 +34,10 @@ Unlike traditional WebRTC implementations that rely on a custom, centralized Web
     3.  It announces its presence in this topic, effectively saying, "I am here and ready to connect."
     4.  It listens for announcements from other peers in the same topic.
     5.  Once two peers discover each other, they use the Nostr relay as a secure message bus to exchange the WebRTC session descriptions (offer/answer) and network candidates required to form a direct P2P link.
--   **Advantages**: This decentralized approach makes the system more resilient, censorship-resistant, and removes the need for developers to deploy and maintain their own signaling infrastructure. The architecture is also adaptive, capable of identifying and avoiding non-performant or restrictive relays.
+-   **Key Advantages**: This decentralized approach provides several architectural benefits:
+    -   **Resilience and Censorship Resistance**: By relying on a distributed network of relays, the system avoids a single point of failure and is inherently more robust against network disruptions or censorship.
+    -   **Zero Infrastructure Overhead**: Developers are freed from the complexity and cost of deploying, scaling, and maintaining their own signaling servers.
+    -   **Adaptive Network Intelligence**: The architecture is not passive; it actively manages its connections to the Nostr network. It can identify non-performant or restrictive relays—for example, those requiring Proof-of-Work (PoW)—and dynamically adapt. Upon detecting a PoW requirement or other connection-blocking issue, the system automatically disconnects from that specific relay and excludes it from future use during the session. This self-healing behavior ensures that resources are focused on healthy signaling paths, dramatically increasing the reliability and speed of peer discovery.
 
 ### 2. P2P Transport Layer (WebRTC)
 
