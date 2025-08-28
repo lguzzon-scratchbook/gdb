@@ -358,18 +358,17 @@
                         customRoles: CHAT_APP_ROLES,
                     }
                 });
-                sm = db.sm
 
                 statusBar.textContent = "Status: DB ready. Initializing security context...";
     
-                sm.setSecurityStateChangeCallback(updateUI);
+                db.sm.setSecurityStateChangeCallback(updateUI);
                 
                 const initialState = {
-                    isActive: sm.isSecurityActive(),
-                    activeAddress: sm.getActiveEthAddress(),
-                    isWebAuthnProtected: sm.isCurrentSessionProtectedByWebAuthn(),
-                    hasVolatileIdentity: !!sm.getMnemonicForDisplayAfterRegistrationOrRecovery(),
-                    hasWebAuthnHardwareRegistration: sm.hasExistingWebAuthnRegistration()
+                    isActive: db.sm.isSecurityActive(),
+                    activeAddress: db.sm.getActiveEthAddress(),
+                    isWebAuthnProtected: db.sm.isCurrentSessionProtectedByWebAuthn(),
+                    hasVolatileIdentity: !!db.sm.getMnemonicForDisplayAfterRegistrationOrRecovery(),
+                    hasWebAuthnHardwareRegistration: db.sm.hasExistingWebAuthnRegistration()
                 };
                 updateUI(initialState);
                 // Do NOT trigger interactive WebAuthn login here.
@@ -384,7 +383,7 @@
         }
         btnRegisterNew.onclick = async () => {
             try {
-                volatileIdentity = await sm.startNewUserRegistration();
+                volatileIdentity = await db.sm.startNewUserRegistration();
                 if (volatileIdentity) {
                     newEthAddressElem.textContent = volatileIdentity.address;
                     newMnemonicElem.textContent = volatileIdentity.mnemonic;
@@ -416,7 +415,7 @@
                 return;
             }
             try {
-                const protectedAddress = await sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
+                const protectedAddress = await db.sm.protectCurrentIdentityWithWebAuthn(volatileIdentity.privateKey);
                 if (protectedAddress) {
                     alert(`Identity ${protectedAddress} protected with WebAuthn. Session started!`);
                     volatileIdentity = null;
@@ -430,7 +429,7 @@
         };
         btnLoginWebAuthn.onclick = async () => {
             try {
-                const loggedInAddress = await sm.loginCurrentUserWithWebAuthn();
+                const loggedInAddress = await db.sm.loginCurrentUserWithWebAuthn();
                 if (!loggedInAddress) {
                     alert("WebAuthn login failed. Did you register WebAuthn on this site?");
                 }
@@ -454,7 +453,7 @@
             // Enable login but do not start session automatically
             btnLoginMnemonic.disabled = false;
             try {
-                const hasReg = sm.hasExistingWebAuthnRegistration();
+                const hasReg = db.sm.hasExistingWebAuthnRegistration();
                 // If device has no WebAuthn registration, offer to register
                 btnRegisterWebAuthn.style.display = hasReg ? 'none' : '';
                 btnRegisterWebAuthn.disabled = !!hasReg;
@@ -463,9 +462,9 @@
                 btnRegisterWebAuthn.onclick = async () => {
                     // To register, we need the private key; prompt a quick, temporary login then protect.
                     try {
-                        const identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
+                        const identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
                         if (!identity) return;
-                        const addr = await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                        const addr = await db.sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
                         if (!addr) return; // Registration failed (error already alerted by SWM)
                         alert('WebAuthn registered successfully.');
                         btnRegisterWebAuthn.style.display = 'none';
@@ -484,7 +483,7 @@
             if (!mnemonic) return;
             let identity;
             try {
-                identity = await sm.loginOrRecoverUserWithMnemonic(mnemonic);
+                identity = await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
             } catch { }
             if (!identity) return;
             console.log(`Session started with mnemonic for address ${identity.address}`);
@@ -496,13 +495,13 @@
             }
             inputMnemonic.value = '';
             try {
-                const hasReg = sm.hasExistingWebAuthnRegistration();
+                const hasReg = db.sm.hasExistingWebAuthnRegistration();
                 if (!hasReg) {
                     btnRegisterWebAuthn.style.display = '';
                     btnRegisterWebAuthn.disabled = false;
                     btnRegisterWebAuthn.onclick = async () => {
                         try {
-                            const addr = await sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
+                            const addr = await db.sm.protectCurrentIdentityWithWebAuthn(identity.privateKey);
                             if (!addr) return; // Registration failed (error already alerted by SWM)
                             alert('WebAuthn registered successfully.');
                             btnRegisterWebAuthn.style.display = 'none';
@@ -517,7 +516,7 @@
         };
         btnLogout.onclick = async () => {
             try {
-                await sm.clearSecurity();
+                await db.sm.clearSecurity();
             } catch (error) {
                 console.error("Logout error:", error);
                 alert(`Error logout: ${error.message}`);
@@ -559,10 +558,10 @@
         window.deleteMessage = async (id) => {
             if (!confirm("Delete this message?")) return;
             try {
-                const active = sm.getActiveEthAddress();
+                const active = db.sm.getActiveEthAddress();
                 if (!active) { alert('Login required.'); return; }
                 if (!isSuperadminAddress(active)) {
-                    await sm.executeWithPermission('delete');
+                    await db.sm.executeWithPermission('delete');
                 }
                 await db.remove(id);
             } catch (error) {
@@ -591,8 +590,8 @@
             const text = inputMessage.value.trim();
             if (!text) return;
             try {
-                const senderAddress = sm.getActiveEthAddress();
-                if (!sm.isSecurityActive() || !senderAddress) {
+                const senderAddress = db.sm.getActiveEthAddress();
+                if (!db.sm.isSecurityActive() || !senderAddress) {
                     alert('Login required to send messages.');
                     return;
                 }
