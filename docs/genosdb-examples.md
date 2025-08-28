@@ -60,6 +60,10 @@ Each participant can start or stop location sharing, track their own path, and f
 ### [Real-Time collaborative rich‑text editor powered by GenosDB](https://estebanrfp.github.io/gdb/examples/collab.html)
 A real-time collaborative rich‑text editor powered by GenosDB: live typing sync, remote cursors/selections, RBAC + WebAuthn auth, Markdown/HTML split preview with draggable splitter, version history panel, file sharing, and video room.
 
+### [Secure, Decentralized & Collaborative Notes App powered by GenosDB](https://estebanrfp.github.io/gdb/examples/notesdev.html)
+Secure, Decentralized & Collaborative Notes App powered by GenosDB
+A minimalist and secure note-taking app showcasing decentralized identity management (Mnemonic & WebAuthn Passkeys), real-time note sharing with granular read/write permissions enforced via P2P security middleware, live full-text search, and a responsive UI with light/dark modes.
+
 ---
 
 ## Security Manager (SM) Examples
