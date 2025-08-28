@@ -1,4 +1,4 @@
-# GenosRTC: Architecture Overview
+# GenosDB: GenosRTC Module Architecture Overview
 
 ## Introduction
 
