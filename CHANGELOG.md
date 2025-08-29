@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.8] - 2025-08-30
+
+### Improved
+- **Instantaneous P2P Network Startup:** The GenosRTC signaling layer has been completely re-architected to a non-blocking, hybrid model. The system now connects immediately to a base set of relays (either user-provided or a built-in default list) without any initial network delay, resulting in a significantly faster application startup and peer discovery process.
+- **Proactive Network Resilience:** A smart, dynamic fallback mechanism has been introduced. In parallel to the initial connection, the system schedules a connection to a secondary set of community-vetted relays from a local cache. The delay for this fallback is intelligently adjusted based on the health of the initial connections, ensuring the peer network proactively strengthens itself and remains robust even if primary relays fail.
+- **Efficient Relay Management:** The system now actively manages its relay connections. It automatically detects and disconnects from relays that require Proof-of-Work (PoW) or are unresponsive, ensuring that signaling resources are always focused on the healthiest and most performant communication paths.
+
+### Changed
+- **Removed Blocking Relay Fetch:** The previous architecture, which relied on a blocking `fetch` call to retrieve a list of relays at startup, has been eliminated. The new non-blocking approach ensures that the application's initialization is never delayed by slow or unavailable network resources.
+
+### Fixed
+- **Security Manager Decryption Bug:** Fixed an issue in `sm.js` where the `get` function incorrectly referenced `ssm.signer` (a non-existent property), preventing decryption of user-owned data even when the session was active. This caused failures in applications like `sm-auth-demo.html` when loading encrypted notes. The fix updates the verification to use `ssm.localUserEthAddress`, ensuring proper session checks and maintaining zero-trust security without exposing sensitive internals.
+
 ## [0.9.7] - 2025-08-26
 
 ### Added
