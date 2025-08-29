@@ -26,19 +26,21 @@ GenosRTC is composed of several distinct logical layers that work together to es
 
 ### 1. Signaling Layer (Peer Discovery)
 
-Unlike traditional WebRTC implementations that rely on a custom, centralized WebSocket server for signaling, **GenosRTC utilizes the decentralized Nostr (Notes and Other Stuff from Transmitted Relays) network**. This layer is architected with a sophisticated, multi-tiered strategy for selecting relays, ensuring maximum flexibility and resilience.
+Unlike traditional WebRTC implementations that rely on a custom, centralized WebSocket server for signaling, **GenosRTC utilizes the decentralized Nostr (Notes and Other Stuff from Transmitted Relays) network**. This layer is architected with a sophisticated, hybrid strategy for selecting relays, ensuring an instant startup, maximum flexibility, and proactive resilience.
 
 -   **Function**: The signaling layer is responsible for the "handshake" process where peers discover each other and exchange the necessary metadata (like network addresses and media capabilities) to establish a direct connection.
--   **Relay Selection Mechanism**: GenosRTC employs a hierarchical strategy to determine which Nostr relays to connect to, prioritizing user control and defaulting to a robust, community-driven approach.
+-   **Relay Selection Mechanism**: GenosRTC employs a hybrid, non-blocking strategy to determine which Nostr relays to connect to. This approach prioritizes immediate connectivity while building a resilient network in the background.
 
-    1.  **Developer-Provided Relays (Highest Priority)**: Developers have ultimate control. By passing a `relayUrls` array during GDB initialization (e.g., `gdb('dbName', { rtc: { relayUrls: [...] } })`), they can force GenosRTC to use a specific, custom set of relays. This is ideal for private networks, testing environments, or applications that rely on a curated list of high-performance relays. When this option is used, the dynamic loading mechanism is bypassed entirely for maximum efficiency.
+    1.  **Developer-Provided or Built-in Relays (Instant Connection)**: The initial connection is always immediate.
+        -   **Developer Control (Highest Priority)**: Developers can pass a `relayUrls` array during GDB initialization (e.g., `gdb('dbName', { rtc: { relayUrls: [...] } })`). GenosRTC will use this custom set of relays for its primary, instant connection attempt. This is ideal for private networks or applications that rely on a curated list of high-performance relays.
+        -   **Default Behavior**: If no custom list is provided, GenosRTC immediately connects to a built-in, hardcoded list of historically stable relays. This strategy eliminates any network latency for fetching remote lists, guaranteeing the fastest possible application startup.
 
-    2.  **Dynamic Community List (Default Behavior)**: If no custom list is provided, GenosRTC defaults to its most powerful feature: it dynamically fetches a list of recommended relays. This list is maintained in a public GitHub repository, making it a community-driven resource. Developers worldwide can submit Pull Requests to add new, reliable relays or remove defunct ones. This crowdsourced approach ensures the default relay list remains fresh, diverse, and decentralized.
+    2.  **Dynamic Fallback Relays (Proactive Resilience)**: In parallel to the immediate connection attempt, GenosRTC activates a smart, non-blocking fallback mechanism to ensure long-term connectivity.
+        -   It loads an extended list of relays from the browser's local storage. This local cache is periodically and automatically updated in the background by fetching verified online relays from community sources like `nostr.watch`.
+        -   It then schedules a connection to these fallback relays with a dynamic delay. This delay is intelligently calculated: it is shorter if few initial connections were successful and longer if the network is already robust. This optimizes resource usage while proactively strengthening the connection mesh.
 
-    3.  **Embedded Fallback List (Maximum Resilience)**: As a final safety net, GenosRTC includes a built-in, hardcoded list of historically stable relays. This list is only used if the dynamic fetching process fails for any reason (e.g., a temporary network issue, a CDN outage, or an invalid remote file). This fallback mechanism ensures that even in adverse conditions, GenosRTC can still attempt to establish signaling connections, making the entire system exceptionally robust.
-
--   **Key Advantages**: This multi-layered, decentralized approach provides several architectural benefits:
-    -   **Resilience and Censorship Resistance**: By defaulting to a distributed, community-vetted list of relays and including a built-in fallback, the system avoids a single point of failure and is inherently more robust against network disruptions or censorship.
+-   **Key Advantages**: This multi-layered, hybrid approach provides several architectural benefits:
+    -   **Instant Startup & Resilience**: By connecting to a base list of relays instantly and scheduling fallbacks in the background, the system offers an immediate user experience without sacrificing long-term robustness. It avoids any single point of failure and is inherently more resilient to network disruptions or censorship.
     -   **Zero Infrastructure Overhead**: Developers are freed from the complexity and cost of deploying, scaling, and maintaining their own signaling servers, yet they retain the option to use them if needed.
     -   **Adaptive Network Intelligence**: The architecture is not passive; it actively manages its connections to the Nostr network. It can identify non-performant or restrictive relays—for example, those requiring Proof-of-Work (PoW)—and dynamically adapt. Upon detecting a PoW requirement or other connection-blocking issue, the system automatically disconnects from that specific relay and excludes it from future use during the session. This self-healing behavior ensures that resources are focused on healthy signaling paths, dramatically increasing the reliability and speed of peer discovery.
 
@@ -77,8 +79,8 @@ Once a P2P connection is established, GenosRTC provides two distinct, high-level
 From an architectural perspective, the typical flow for a peer is as follows:
 
 1.  **Initialization**: A client instantiates `GDB` with `rtc: true`, joining a specific room and optionally providing a custom list of relays.
-2.  **Discovery**: The client connects to the Nostr network using a strategically chosen set of relays (user-provided, dynamic, or fallback) and subscribes to the room's topic, discovering other peers.
-3.  **Signaling Handshake**: The client securely exchanges connection offers, answers, and network candidates with other peers via the Nostr relays.
+2.  **Discovery**: The client instantly connects to the Nostr network using its base relays (user-provided or built-in) and subscribes to the room's topic. In parallel, it schedules connections to fallback relays to ensure resilience.
+3.  **Signaling Handshake**: The client securely exchanges connection offers, answers, and network candidates with other peers via the established Nostr relay connections.
 4.  **Direct Connection**: A direct `RTCPeerConnection` is established with each peer. The signaling relay is no longer needed for communication between these two peers.
 5.  **Communication**: The application uses the high-level Data Channel and Media Stream APIs to send and receive information directly with other peers.
 6.  **Disconnection**: When a user leaves the room (e.g., closes the tab or calls `db.room.leave()`), the connections are torn down, and a `peer:leave` event is broadcast to the remaining peers.
