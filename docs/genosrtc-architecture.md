@@ -2,7 +2,7 @@
 
 ## Introduction
 
-**GenosRTC** is the integrated peer-to-peer (P2P) communication module within the GenosDB (`GDB`) ecosystem. It is designed to provide developers with a high-level, robust, and decentralized framework for building real-time applications directly in the browser. By abstracting the complexities of WebRTC and leveraging a decentralized signaling network, GenosRTC enables seamless data, audio, and video streaming between peers.
+**GenosRTC** is the integrated peer-to-peer (P2P) communication module within the GenosDB (`GDB`) ecosystem. It is designed to provide developers with a high-level, robust, and decentralized framework for building real-time applications directly in the browser. By abstracting the complexities of WebRTC and leveraging a resilient, community-maintained signaling network, GenosRTC enables seamless data, audio, and video streaming between peers.
 
 The core architectural goal of GenosRTC is to deliver a "serverless" communication model where peers connect directly to one another, minimizing latency, enhancing privacy, and eliminating the need for centralized data-handling servers.
 
@@ -16,6 +16,7 @@ The design of GenosRTC is guided by several key principles:
 2.  **Simplicity through Abstraction**: GenosRTC exposes a clean, event-driven API (`db.room`) that hides the intricate low-level details of WebRTC, such as ICE negotiation, session description protocols (SDP), and connection state management. This allows developers to focus on application logic rather than P2P plumbing.
 3.  **Room-Based Scoping**: All P2P interactions are scoped within a logical "room." This concept provides a natural container for managing a group of connected peers, simplifying session management, broadcasting, and peer lifecycle events. Architecturally, the room ID (which corresponds to the GDB database name) acts as a shared topic for discovery.
 4.  **Secure by Design**: Communication is designed to be private and secure, with built-in support for end-to-end encryption for both signaling messages and data channel communications.
+5.  **Community-Driven Infrastructure**: The module's health and decentralization are enhanced by relying on a publicly maintained list of signaling relays. This allows the global developer community to contribute to the network's resilience by suggesting and vetting relays, ensuring the network remains robust and distributed over time.
 
 ---
 
@@ -25,18 +26,20 @@ GenosRTC is composed of several distinct logical layers that work together to es
 
 ### 1. Signaling Layer (Peer Discovery)
 
-Unlike traditional WebRTC implementations that rely on a custom, centralized WebSocket server for signaling, **GenosRTC utilizes the decentralized Nostr (Notes and Other Stuff from Transmitted Relays) network**.
+Unlike traditional WebRTC implementations that rely on a custom, centralized WebSocket server for signaling, **GenosRTC utilizes the decentralized Nostr (Notes and Other Stuff from Transmitted Relays) network**. This layer is architected with a sophisticated, multi-tiered strategy for selecting relays, ensuring maximum flexibility and resilience.
 
 -   **Function**: The signaling layer is responsible for the "handshake" process where peers discover each other and exchange the necessary metadata (like network addresses and media capabilities) to establish a direct connection.
--   **Mechanism**:
-    1.  When a peer initializes a `GDB` instance with `rtc: true`, it connects to a set of Nostr relays.
-    2.  It subscribes to a specific "topic" derived from the room ID.
-    3.  It announces its presence in this topic, effectively saying, "I am here and ready to connect."
-    4.  It listens for announcements from other peers in the same topic.
-    5.  Once two peers discover each other, they use the Nostr relay as a secure message bus to exchange the WebRTC session descriptions (offer/answer) and network candidates required to form a direct P2P link.
--   **Key Advantages**: This decentralized approach provides several architectural benefits:
-    -   **Resilience and Censorship Resistance**: By relying on a distributed network of relays, the system avoids a single point of failure and is inherently more robust against network disruptions or censorship.
-    -   **Zero Infrastructure Overhead**: Developers are freed from the complexity and cost of deploying, scaling, and maintaining their own signaling servers.
+-   **Relay Selection Mechanism**: GenosRTC employs a hierarchical strategy to determine which Nostr relays to connect to, prioritizing user control and defaulting to a robust, community-driven approach.
+
+    1.  **Developer-Provided Relays (Highest Priority)**: Developers have ultimate control. By passing a `relayUrls` array during GDB initialization (e.g., `gdb('dbName', { rtc: { relayUrls: [...] } })`), they can force GenosRTC to use a specific, custom set of relays. This is ideal for private networks, testing environments, or applications that rely on a curated list of high-performance relays. When this option is used, the dynamic loading mechanism is bypassed entirely for maximum efficiency.
+
+    2.  **Dynamic Community List (Default Behavior)**: If no custom list is provided, GenosRTC defaults to its most powerful feature: it dynamically fetches a list of recommended relays. This list is maintained in a public GitHub repository, making it a community-driven resource. Developers worldwide can submit Pull Requests to add new, reliable relays or remove defunct ones. This crowdsourced approach ensures the default relay list remains fresh, diverse, and decentralized.
+
+    3.  **Embedded Fallback List (Maximum Resilience)**: As a final safety net, GenosRTC includes a built-in, hardcoded list of historically stable relays. This list is only used if the dynamic fetching process fails for any reason (e.g., a temporary network issue, a CDN outage, or an invalid remote file). This fallback mechanism ensures that even in adverse conditions, GenosRTC can still attempt to establish signaling connections, making the entire system exceptionally robust.
+
+-   **Key Advantages**: This multi-layered, decentralized approach provides several architectural benefits:
+    -   **Resilience and Censorship Resistance**: By defaulting to a distributed, community-vetted list of relays and including a built-in fallback, the system avoids a single point of failure and is inherently more robust against network disruptions or censorship.
+    -   **Zero Infrastructure Overhead**: Developers are freed from the complexity and cost of deploying, scaling, and maintaining their own signaling servers, yet they retain the option to use them if needed.
     -   **Adaptive Network Intelligence**: The architecture is not passive; it actively manages its connections to the Nostr network. It can identify non-performant or restrictive relays—for example, those requiring Proof-of-Work (PoW)—and dynamically adapt. Upon detecting a PoW requirement or other connection-blocking issue, the system automatically disconnects from that specific relay and excludes it from future use during the session. This self-healing behavior ensures that resources are focused on healthy signaling paths, dramatically increasing the reliability and speed of peer discovery.
 
 ### 2. P2P Transport Layer (WebRTC)
@@ -73,8 +76,8 @@ Once a P2P connection is established, GenosRTC provides two distinct, high-level
 
 From an architectural perspective, the typical flow for a peer is as follows:
 
-1.  **Initialization**: A client instantiates `GDB` with `rtc: true`, joining a specific room.
-2.  **Discovery**: The client connects to the Nostr network and subscribes to the room's topic, discovering other peers.
+1.  **Initialization**: A client instantiates `GDB` with `rtc: true`, joining a specific room and optionally providing a custom list of relays.
+2.  **Discovery**: The client connects to the Nostr network using a strategically chosen set of relays (user-provided, dynamic, or fallback) and subscribes to the room's topic, discovering other peers.
 3.  **Signaling Handshake**: The client securely exchanges connection offers, answers, and network candidates with other peers via the Nostr relays.
 4.  **Direct Connection**: A direct `RTCPeerConnection` is established with each peer. The signaling relay is no longer needed for communication between these two peers.
 5.  **Communication**: The application uses the high-level Data Channel and Media Stream APIs to send and receive information directly with other peers.
