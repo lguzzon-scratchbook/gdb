@@ -8,9 +8,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - run: curl -fsSL https://bun.sh/install | bash  # Install bun
-      - run: export PATH="$HOME/.bun/bin:$PATH"  # Add bun to PATH
       - run: npm install --legacy-peer-deps  # Install dependencies for gdb with legacy peer deps
-      - run: npm run build  # Build the bundle to dist/index.js
       - run: cd tests && npm install --legacy-peer-deps  # Install dependencies for tests
-      - run: cd tests && npm test  # Run tests from gdb/tests
+      - run: cd tests && npm test  # Run tests from gdb/tests, using the existing bundle in dist/
