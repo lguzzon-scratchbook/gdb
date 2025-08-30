@@ -7,7 +7,8 @@
   "module": "./dist/index.js",
   "scripts": {
     "build": "bun esbun.js",
-    "dev": "bun run --watch"
+    "dev": "bun run --watch",
+    "test": "vitest"
   },
   "files": [
     "dist"
@@ -43,8 +44,11 @@
   },
   "dependencies": {
     "@msgpack/msgpack": "3.1.2",
+    "@vitest/ui": "3.2.4",
     "ethers": "6.15.0",
-    "pako": "2.1.0"
+    "jsdom": "26.1.0",
+    "pako": "2.1.0",
+    "vitest": "3.2.4"
   },
   "devDependencies": {
     "eslint": "9.32.0",
