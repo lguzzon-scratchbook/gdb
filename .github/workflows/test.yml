@@ -10,4 +10,4 @@ jobs:
           node-version: '18'
       - run: npm install --legacy-peer-deps  # Install dependencies for gdb with legacy peer deps
       - run: cd tests && npm install --legacy-peer-deps  # Install dependencies for tests
-      - run: cd tests && npm test  # Run tests from gdb/tests, using the existing bundle in dist/
+      - run: cd tests && npx vitest run # Run tests with default verbose reporter
