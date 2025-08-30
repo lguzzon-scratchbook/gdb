@@ -8,7 +8,7 @@
   "scripts": {
     "build": "bun esbun.js",
     "dev": "bun run --watch",
-    "test": "vitest run --reporter=json --outputFile=tests/test-results.json"
+    "test": "vitest run --reporter=verbose --reporter=json --outputFile=tests/test-results.json"
   },
   "files": [
     "dist"
