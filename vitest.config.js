@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./setupTests.js'],
-    reporter: 'json'  // Simplifica a string
+    reporter: ['verbose']  // Simplifica a string
   },
   resolve: {
     alias: {
