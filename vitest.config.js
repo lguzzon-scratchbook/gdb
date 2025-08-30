@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./setupTests.js'],
-    reporter: 'verbose',
+    reporter: 'html',
     afterEach: async () => {
       // Close all IndexedDB connections to prevent conflicts
       if (typeof indexedDB !== 'undefined') {
