@@ -5,8 +5,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./setupTests.js']  // Path correcto
-
+    setupFiles: ['./setupTests.js'],
+    reporter: ['json', { outputFile: 'results.json' }]
   },
   resolve: {
     alias: {
