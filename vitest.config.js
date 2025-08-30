@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./setupTests.js'],
-    reporter: ['json', { outputFile: 'results.json' }]  // Esto está bien, pero verifica si Vitest lo soporta
+    reporter: 'json'  // Simplifica a string
   },
   resolve: {
     alias: {
