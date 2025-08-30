@@ -6,7 +6,19 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./setupTests.js'],
-    reporter: ['verbose']  // Simplifica a string
+    reporter: 'verbose',
+    afterEach: async () => {
+      // Close all IndexedDB connections to prevent conflicts
+      if (typeof indexedDB !== 'undefined') {
+        indexedDB.databases().then(databases => {
+          databases.forEach(db => {
+            if (db.name.startsWith('test-db')) {
+              indexedDB.deleteDatabase(db.name);
+            }
+          });
+        });
+      }
+    },
   },
   resolve: {
     alias: {
