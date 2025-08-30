@@ -12,6 +12,7 @@ A lightweight, decentralized graph database designed for modern web applications
 
 ![Downloads on NPM](https://img.shields.io/npm/dw/genosdb)
 [![](https://data.jsdelivr.com/v1/package/npm/genosdb/badge)](https://www.jsdelivr.com/package/npm/genosdb)
+[![Tests](https://github.com/estebanrfp/gdb/actions/workflows/test.yml/badge.svg)](https://github.com/estebanrfp/gdb/actions?query=workflow:Tests)
 
 ![Project Status](https://img.shields.io/badge/state-development-green)
 
