@@ -20,13 +20,30 @@ To empower developers to build secure, real-time decentralized applications—fr
 - **Technical overview**: [See features](https://medium.com/genosdb/technical-features-of-genosdb-gdb-307fe8cc6618), [See P2P protocol](https://medium.com/genosdb/designing-a-next-generation-p2p-protocol-architecture-for-genosdb-4833c1f6e069).
 - **Limitations**: Beta with potential API changes. Source code private to protect IP, but functional builds are free.
 
+## Achievements (Historical Milestones)
+Based on our [CHANGELOG.md](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md), here are key features and enhancements that have shaped GenosDB's evolution:
+- **v0.9.8 (Aug 2025)**: Instantaneous P2P network startup with hybrid relay management for faster peer discovery and resilience.
+- **v0.9.7 (Aug 2025)**: Autonomous Governance Engine for automated enforcement of business logic and data policies.
+- **v0.9.6 (Aug 2025)**: Secure-by-default user onboarding with instantaneous superadmin recognition.
+- **v0.9.5 (Aug 2025)**: Streamlined API encapsulation and reduced bundle size for better performance.
+- **v0.8.0 (Aug 2025)**: Unprecedented write performance handling tens of thousands of operations per second.
+- **v0.7.0 (Aug 2025)**: Migration to async factory function for robust initialization and extensibility.
+- **v0.6.0 (Aug 2025)**: New channel-based communication architecture for reliable real-time data exchange.
+- **v0.5.0 (Aug 2025)**: Recursive graph traversal queries with `$edge` operator for complex multi-hop logic.
+- **v0.4.0 (Aug 2025)**: Delta synchronization engine with compressed payloads and full-state fallback for efficient P2P sync ([See article](https://medium.com/genosdb/genosdb-v0-4-0-introducing-oplog-driven-intelligent-delta-sync-and-full-state-fallback-741fe8ff132c)).
+- **v0.3.0 (Aug 2025)**: Improved internal write operations with upsert logic for better data handling.
+- **v0.2.0 (Jul 2025)**: Renamed to GDB for clarity and core graph operations foundation.
+- **v0.0.31 (Mar 2025)**: Introduction of `put()` method and link functionality for node relationships.
+
+These milestones demonstrate steady progress in performance, security, and usability. See [CHANGELOG.md](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) for full details.
+
 ## Roadmap
 ### Short Term (Q3-Q4 2025)
 - [x] Publish practical tutorials on Medium for chat, Kanban, to-do lists, and streaming ([See articles](https://medium.com/genosdb)).
 - [ ] Launch public demo of the 3D metaverse with Babylon.js and GenosDB ([See upcoming article](https://medium.com/genosdb)).
 - [x] Release a technical whitepaper on GenosDB architecture ([Inspired by](https://github.com/estebanrfp/gdb/blob/main/WHITEPAPER.md)).
 - [x] Add GIFs/videos of demos (including metaverse) to README and docs ([See technical features](https://medium.com/genosdb/technical-features-of-genosdb-gdb-307fe8cc6618)).
-- [x] Optimize GenosRTC for mobile browsers (iOS/Android).
+- [x] Optimize GenosRTC for mobile browsers (iOS/Android). See [CHANGELOG.md](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) for recent optimizations.
 
 ### Mid Term (Q1-Q2 2026)
 - [ ] Release v1.0 with stable API and SemVer versioning.
@@ -52,3 +69,5 @@ Although the source code is private, you can help GenosDB:
 ## Notes
 - This roadmap will be updated quarterly based on feedback and progress.
 - Thank you for supporting GenosDB and our decentralized metaverse!
+
+This roadmap is informed by our [CHANGELOG.md](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) and community feedback.
