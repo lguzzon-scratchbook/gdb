@@ -315,13 +315,13 @@ See [Medium](https://medium.com/genosdb/most-popular-peer-to-peer-distributed-da
 
 ### 10.2 Mid Term (Q1-Q2 2026)
 - Release v1.0 with stable API.
-- Add framework integrations (React, Vue, Svelte).
-- Explore smart contract-based RBAC verification.
+- Enhance module ecosystem (e.g., advanced AI Audit prompts, geo-query optimizations).
+- Improve documentation and community tutorials.
 
 ### 10.3 Long Term (2026+)
-- Integrate with IPFS, Filecoin, and ENS.
-- Support multi-language SDKs (Python, Go, Rust).
-- Conduct external security audits.
+- Expand Web3 integrations within Nostr ecosystem.
+- Develop enterprise-grade features like advanced audit logging and compliance tools.
+- Conduct external security audits and performance benchmarks.
 
 See [ROADMAP.md](https://github.com/estebanrfp/gdb/blob/main/ROADMAP.md) for details.
 
