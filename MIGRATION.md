@@ -106,7 +106,7 @@ const sm = db.sm; // provided by SM module
 ```
 
 Key points:
-- `sm` is injected when passing `{ sm: true }` at initialization. Access it via `db.sm`.
+- `sm` is injected when passing `{ sm: { superAdmins: ['0x1...', '0x2...'] } }` at initialization. Access it via `db.sm`.
 - Internals expected by SM (now exposed): `db.hybridClock`, `db.graph`, `db.syncChannel`.
 - Standardized actions (recommended): `read`, `write`, `link`, `sync`, `delete`.
 
@@ -157,9 +157,6 @@ import { gdb } from 'genosdb';
   - Ensure you call `await gdb(...)` before `db.map(...)`.
   - Confirm your `query`/$limit doesn’t filter out all nodes.
 
-- `db.ready` compatibility
-  - Might exist, but not recommended. Prefer `await gdb(...)`.
-
 ---
 
 ## Migration checklist
@@ -167,8 +164,8 @@ import { gdb } from 'genosdb';
 1) Replace all occurrences of `new GDB(name, options)` with `await gdb(name, options)`.
 2) Ensure the first use of `db` always happens after `await gdb(...)`.
 3) If you use SM:
-   - Initialize with `{ sm: true }`.
-   - Call `await sm.createSecurityContext(db, SUPERADMIN_ADDRESSES)`.
+   - Initialize with `{ sm: { superAdmins: ['0x1...', '0x2...'] } }` (mandatory `superAdmins` array).
+   - The security context is set up automatically; no additional calls needed.
 4) Review RBAC and use standardized actions (`read`, `write`, `link`, `sync`, `delete`).
 5) Test end-to-end: initial load, `put`, update, `remove`, `link`, and P2P sync when applicable.
 
