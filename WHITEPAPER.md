@@ -144,9 +144,15 @@ await db.put("post1", { content: "spam text" }); // Triggers audit
 ```
 
 ## 5. Real-Time P2P Streaming (GenosRTC)
-GenosRTC, exposed via `db.room`, enables real-time P2P communication using WebRTC. It supports data channels for structured data, and audio/video streaming.
+GenosRTC, exposed via `db.room`, enables real-time P2P communication using WebRTC. It supports data channels for structured data, and audio/video streaming. Its architecture prioritizes decentralization, simplicity, and security, abstracting WebRTC complexities while leveraging Nostr for peer discovery and end-to-end encryption.
 
-### 5.1 Data Channels
+### 5.1 Architectural Principles
+- **Decentralization First**: Direct peer connections via WebRTC, with Nostr relays for discovery (no central servers).
+- **Simplicity through Abstraction**: Clean API hides low-level details like ICE negotiation and SDP.
+- **Room-Based Scoping**: Logical rooms for managing peer groups, with the database name as room ID.
+- **Secure by Design**: End-to-end encryption for signaling and data channels.
+
+### 5.2 Data Channels
 Named channels allow sending JSON, strings, or binary data to all or specific peers.
 
 **Example (Chat Application)**:
@@ -159,7 +165,7 @@ chatChannel.on("message", (msg, peerId) => {
 chatChannel.send({ text: "Hello, everyone!" });
 ```
 
-### 5.2 Media Streams
+### 5.3 Media Streams
 GenosRTC supports P2P audio and video streaming, with methods like `addStream`, `removeStream`, and `replaceTrack`.
 
 **Example (Video Streaming)**:
@@ -175,7 +181,7 @@ db.room.on("stream:add", (stream, peerId) => {
 });
 ```
 
-### 5.3 File Transfer
+### 5.4 File Transfer
 Data channels support file transfers with metadata, with recommendations for chunking files larger than 256KB.
 
 **Example (File Sharing)**:
@@ -233,8 +239,32 @@ await db.sm.executeWithPermission("write");
 const id = await db.put({ x: 10 });
 ```
 
-## 7. Synchronization and Conflict Resolution
+## 7. Distributed Trust Model
+GenosDB's distributed trust model addresses the core challenge of peer-to-peer networks: how to establish trust without a central authority. It relies on three foundational principles—cryptographic identity, verifiable actions, and a shared constitution—to create emergent security.
+
+### 7.1 Core Principles
+- **Cryptographic Identity**: Each user is identified by an Ethereum address, secured by a private key (protected via WebAuthn or mnemonics). All actions are tied to this identity.
+- **Verifiable Actions**: Every operation is digitally signed, ensuring authenticity and integrity. Unsigned or invalid operations are discarded.
+- **Shared Constitution**: Rules (roles, permissions) are embedded in the software and consistent across all nodes, enforced locally by each peer.
+
+### 7.2 Resolving the Trust Paradox
+The "chicken-and-egg" problem—how a new user joins without permission—is solved with a "zero-trust with a single welcome exception." New users can perform one `write` operation to create their profile, but the system overrides any self-assigned roles to `guest`, preventing privilege escalation. Honest nodes reject invalid operations, maintaining network integrity.
+
+### 7.3 Defense Against Manipulation
+- **Scenario A**: A guest attempts self-promotion. Peers verify the signature and role, rejecting the operation.
+- **Scenario B**: A malicious peer alters local code. Network peers still enforce rules, as authority is cryptographic, not local.
+- **Superadmins**: Statically defined in configuration, bypassing the distributed database for initial trust.
+
+This model ensures emergent security: rules reside in code, actions are verified by proofs, and each peer enforces independently, eliminating the need for central servers.
+
+## 8. Synchronization and Conflict Resolution
 GenosDB uses an oplog for delta synchronization, storing recent operations (default: 20) in `localStorage`. Conflicts are resolved using LWW-CRDTs with Hybrid Logical Clocks, capped at a 2-hour drift.
+
+### 8.1 Hybrid Delta Protocol
+The synchronization engine switches between modes for efficiency:
+- **Delta Sync**: Shares recent changes (hydrated operations) for active peers, minimizing bandwidth.
+- **Full-State Fallback**: Transmits entire graph state when peers are too far behind, ensuring consistency.
+- **Triggers**: Fallback occurs if a peer's timestamp is older than the oplog's oldest entry or for new peers.
 
 **Example (Oplog Sync)**:
 ```javascript
@@ -295,6 +325,9 @@ See [Medium](https://medium.com/genosdb/most-popular-peer-to-peer-distributed-da
 
 See [ROADMAP.md](https://github.com/estebanrfp/gdb/blob/main/ROADMAP.md) for details.
 
+### 10.4 Current Project Status
+GenosDB is in active beta, with core features like CRUD operations, P2P synchronization, and RBAC implemented. Public unit tests ensure reliability, and the project focuses on hardening for v1.0. No major pending features; emphasis on testing and stability.
+
 ## 11. Building Trust Through Transparency and Testing
 GenosDB prioritizes trust in a decentralized ecosystem by sharing comprehensive public unit tests and documentation, while protecting intellectual property through non-disclosure of source code. The project distributes free minified bundles via NPM and CDN, allowing unrestricted access to its modules without compromising proprietary algorithms.
 
@@ -303,10 +336,10 @@ GenosDB prioritizes trust in a decentralized ecosystem by sharing comprehensive 
 - **Transparency in Functionality**: By providing detailed API references, architecture docs, and examples, developers can validate GenosDB's capabilities independently.
 - **Security Audits**: Future external audits will further reinforce confidence, targeting zero-trust implementation and cryptographic integrity.
 
-### 11.2 Intellectual Property Protection
-- **Minified Distribution**: Only optimized, production-ready bundles are shared, ensuring performance while safeguarding core code.
-- **Free Access Model**: All modules are available at no cost, promoting adoption and community-driven innovation.
-- **Future Acquisition Appeal**: This model positions GenosDB as an attractive asset for enterprises seeking proven, scalable decentralized solutions without exposing sensitive IP.
+### 11.2 Intellectual Property Protection and Free Distribution
+- **Source Code Not Included**: To maintain a client-based distributed model and ensure integrity, only minified bundles are distributed. This protects proprietary algorithms while enabling production use.
+- **Free Access Model**: All modules are available at no cost via NPM and CDN, promoting adoption without barriers. The minified output is optimized for performance, reducing size and improving load times.
+- **Future Acquisition Appeal**: This model positions GenosDB as an attractive asset for enterprises seeking proven, scalable decentralized solutions without exposing sensitive IP. With a beta status and active testing, it demonstrates reliability and readiness for enterprise integration.
 
 ## 12. Conclusion
 GenosDB is a powerful, developer-friendly platform for decentralized Web3 applications, combining a flexible graph database, real-time P2P streaming, advanced query capabilities, and robust security. Its modular design and rich ecosystem make it ideal for collaborative tools, streaming platforms, and data-driven applications. With a focus on future adoption, GenosDB offers strong points like zero-trust security, efficient synchronization, and free distribution, backed by public tests for unwavering confidence. Join the community (@estebanrfp) to build the future of Web3.
@@ -324,3 +357,6 @@ GenosDB is a powerful, developer-friendly platform for decentralized Web3 applic
 4. estebanrfp, “GenosDB and the Nostr Network,” Medium, 2025. [Link](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)
 5. estebanrfp, “GenosDB v0.4.0: Oplog-Driven Delta Sync,” Medium, 2025. [Link](https://medium.com/genosdb/genosdb-v0-4-0-introducing-oplog-driven-intelligent-delta-sync-and-full-state-fallback-741fe8ff132c)
 6. GenosDB Public Test Results, GitHub, 2025. [Link](https://estebanrfp.github.io/gdb/tests/html/test-results.html)
+7. GenosDB Zero-Trust Security Model, GitHub Docs, 2025. [Link](https://github.com/estebanrfp/gdb/blob/main/docs/zero-trust-security-model.md)
+8. GenosDB Hybrid Delta Protocol, GitHub Docs, 2025. [Link](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-hybrid-delta-protocol.md)
+9. GenosRTC Architecture, GitHub Docs, 2025. [Link](https://github.com/estebanrfp/gdb/blob/main/docs/genosrtc-architecture.md)
