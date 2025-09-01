@@ -5,10 +5,12 @@
 ## Abstract
 GenosDB is a lightweight, decentralized peer-to-peer (P2P) graph database designed for real-time Web3 applications. Built with modern web technologies, it integrates a flexible graph data model, real-time P2P synchronization via GenosRTC, advanced query capabilities, and robust security through Role-Based Access Control (RBAC) and WebAuthn authentication. Its modular architecture leverages WebRTC, Nostr, MessagePack, and Last-Write-Wins (LWW) Conflict-Free Replicated Data Types (CRDTs) to ensure scalability, performance, and developer simplicity. This whitepaper explores GenosDB’s architecture, query system, extensible modules, security features, and use cases, positioning it as a cornerstone for decentralized applications like collaborative tools, real-time streaming platforms, and distributed data systems.
 
+To protect intellectual property, the source code is not publicly shared; instead, GenosDB is distributed as a free minified bundle via NPM and CDN, along with comprehensive public documentation and unit tests. This approach builds trust through transparency in functionality and rigorous testing, while safeguarding proprietary algorithms. With a focus on future adoption, GenosDB offers a compelling solution for enterprises and developers seeking secure, scalable, and cost-effective decentralized data management.
+
 ## 1. Introduction
 The Web3 era demands decentralized, serverless data management solutions that prioritize real-time performance, security, and scalability. Traditional databases, reliant on centralized infrastructure, are ill-suited for P2P applications requiring low-latency synchronization and trustless operation. GenosDB addresses these challenges with a browser-native graph database that leverages WebRTC for P2P communication, Nostr for peer discovery, and LWW-CRDTs for conflict resolution. Its intuitive API, advanced query capabilities, modular extensibility, and cryptographic security make it ideal for building secure, scalable Web3 applications with minimal complexity.
 
-This whitepaper details GenosDB’s technical architecture, query system, module ecosystem, and practical applications, drawing from its public APIs and documentation ([github.com/estebanrfp/gdb](https://github.com/estebanrfp/gdb)). By offering free minified builds via NPM and CDN, and fostering an active community (@estebanrfp), GenosDB aims to accelerate Web3 adoption while protecting its core intellectual property.
+This whitepaper details GenosDB’s technical architecture, query system, module ecosystem, and practical applications, drawing from its public APIs and documentation ([github.com/estebanrfp/gdb](https://github.com/estebanrfp/gdb)). To protect intellectual property, the source code is not shared publicly; instead, GenosDB is offered as a free minified bundle via NPM and CDN, enabling unrestricted use while maintaining proprietary control over core algorithms. Public unit tests and comprehensive documentation ensure transparency and build confidence in its reliability. By fostering an active community (@estebanrfp), GenosDB aims to accelerate Web3 adoption, positioning itself as a future leader in decentralized data solutions for acquisition and enterprise integration.
 
 ## 2. Architecture
 GenosDB’s architecture is modular and optimized for browser environments, integrating a graph database engine, P2P streaming, security, and persistence layers.
@@ -106,7 +108,7 @@ const results = await db.map({
 GenosDB’s extensibility is driven by its modular design, allowing developers to enable optional features during initialization. Modules are activated via the `options` parameter in the `gdb` factory function.
 
 ### 4.1 Available Modules
-- **Security Module (SM)**: Enabled with `sm: true` or `{ sm: { superAdmins: ["0x1234..."], customRoles: {...} } }`. Provides RBAC and WebAuthn (see Section 6).
+- **Security Module (SM)**: Enabled with `{ sm: { superAdmins: ["0x1234..."] } }` (mandatory `superAdmins` array for initialization). Provides RBAC and WebAuthn (see Section 6).
 - **Radix Indexer**: Enabled with `rx: true`. Uses a Radix Tree for prefix-based indexing, stored in OPFS, and enhances queries with `$startsWith`.
 - **Inverted Index**: Enabled with `ii: true`. Supports full-text search and indexing of node values.
 - **Geo Module**: Enabled with `geo: true`. Adds geospatial indexing and queries for location-based applications.
@@ -194,17 +196,17 @@ fileChannel.on("message", ({ metadata, payload }) => {
 ```
 
 ## 6. Security
-The Security Module (SM) ensures trust and access control in P2P environments.
+The Security Module (SM) ensures trust and access control in P2P environments through a zero-trust model, where every action must be cryptographically signed and explicitly authorized. There are no shortcuts—each operation is verified against a shared constitution embedded in the software.
 
 ### 6.1 Role-Based Access Control (RBAC)
-RBAC defines hierarchical roles with permissions:
-- **guest**: `read`, `sync`
-- **user**: `write`, `link`, `sync`
-- **manager**: `publish`, inherits `user`
-- **admin**: `delete`, inherits `manager`
-- **superadmin**: `assignRole`, `deleteAny`, inherits `admin`
+RBAC defines hierarchical roles with permissions, enforced via cryptographic signatures:
+- **guest**: `read`, `sync` (limited bootstrap exception for self-registration).
+- **user**: `write`, `link`, `sync`.
+- **manager**: `publish`, inherits `user`.
+- **admin**: `delete`, inherits `manager`.
+- **superadmin**: `assignRole`, `deleteAny`, inherits `admin`.
 
-Roles are stored in the graph and synchronized P2P, with `superadmin` addresses configured at initialization.
+Roles are stored in the graph and synchronized P2P, with `superadmin` addresses configured at initialization. The system prevents self-privilege escalation, ensuring only verified actions proceed.
 
 **Example (Role Assignment)**:
 ```javascript
@@ -293,8 +295,21 @@ See [Medium](https://medium.com/genosdb/most-popular-peer-to-peer-distributed-da
 
 See [ROADMAP.md](https://github.com/estebanrfp/gdb/blob/main/ROADMAP.md) for details.
 
-## 11. Conclusion
-GenosDB is a powerful, developer-friendly platform for decentralized Web3 applications, combining a flexible graph database, real-time P2P streaming, advanced query capabilities, and robust security. Its modular design and rich ecosystem make it ideal for collaborative tools, streaming platforms, and data-driven applications. Join the community (@estebanrfp) to build the future of Web3.
+## 11. Building Trust Through Transparency and Testing
+GenosDB prioritizes trust in a decentralized ecosystem by sharing comprehensive public unit tests and documentation, while protecting intellectual property through non-disclosure of source code. The project distributes free minified bundles via NPM and CDN, allowing unrestricted access to its modules without compromising proprietary algorithms.
+
+### 11.1 Public Unit Tests and Validation
+- **Comprehensive Test Suite**: Publicly available unit tests cover core functionalities, P2P synchronization, security modules, and conflict resolution. These tests are run via GitHub Actions, with results published at [estebanrfp.github.io/gdb/tests/html/test-results.html](https://estebanrfp.github.io/gdb/tests/html/test-results.html).
+- **Transparency in Functionality**: By providing detailed API references, architecture docs, and examples, developers can validate GenosDB's capabilities independently.
+- **Security Audits**: Future external audits will further reinforce confidence, targeting zero-trust implementation and cryptographic integrity.
+
+### 11.2 Intellectual Property Protection
+- **Minified Distribution**: Only optimized, production-ready bundles are shared, ensuring performance while safeguarding core code.
+- **Free Access Model**: All modules are available at no cost, promoting adoption and community-driven innovation.
+- **Future Acquisition Appeal**: This model positions GenosDB as an attractive asset for enterprises seeking proven, scalable decentralized solutions without exposing sensitive IP.
+
+## 12. Conclusion
+GenosDB is a powerful, developer-friendly platform for decentralized Web3 applications, combining a flexible graph database, real-time P2P streaming, advanced query capabilities, and robust security. Its modular design and rich ecosystem make it ideal for collaborative tools, streaming platforms, and data-driven applications. With a focus on future adoption, GenosDB offers strong points like zero-trust security, efficient synchronization, and free distribution, backed by public tests for unwavering confidence. Join the community (@estebanrfp) to build the future of Web3.
 
 **Get Started**:
 - Repository: [github.com/estebanrfp/gdb](https://github.com/estebanrfp/gdb)
@@ -308,3 +323,4 @@ GenosDB is a powerful, developer-friendly platform for decentralized Web3 applic
 3. estebanrfp, “How GenosDB Solved the Distributed Trust Paradox,” Medium, 2025. [Link](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318)
 4. estebanrfp, “GenosDB and the Nostr Network,” Medium, 2025. [Link](https://medium.com/genosdb/genosdb-and-the-nostr-network-powering-the-future-of-decentralized-data-93db03b7c2d7)
 5. estebanrfp, “GenosDB v0.4.0: Oplog-Driven Delta Sync,” Medium, 2025. [Link](https://medium.com/genosdb/genosdb-v0-4-0-introducing-oplog-driven-intelligent-delta-sync-and-full-state-fallback-741fe8ff132c)
+6. GenosDB Public Test Results, GitHub, 2025. [Link](https://estebanrfp.github.io/gdb/tests/html/test-results.html)
