@@ -101,6 +101,11 @@ Ideal for evaluating throughput, latency, and the stability of GDB in demanding 
 ### [GenosDB - Query Playground](https://estebanrfp.github.io/gdb/examples/sandbox.html)
 A testing environment to experiment with GDB Operators and IA examples
 
+### [Edge Operator Testbed](https://estebanrfp.github.io/gdb/examples/edge-operator-testbed.html)
+`$edge` Operator Testbed environment to experiment with GenosDB Operators
+
+examples/edges-operator-testbed.html
+
 ### [Data Relationships](https://estebanrfp.github.io/gdb/examples/relations.html)
 Visualization of graph relations in realtime.
 
