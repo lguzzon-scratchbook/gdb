@@ -462,6 +462,113 @@ try {
 
 ---
 
+## 🔐 Access Control Lists (ACLs)
+
+The ACL submodule provides fine-grained, node-level permissions within GDB. To enable it, set `acls: true` in the SM configuration.
+
+#### Example: Enabling ACLs
+
+```javascript
+const db = await gdb("my-db", {
+  rtc: true,
+  sm: {
+    superAdmins: ["0x1...", "0x2..."],
+    acls: true, // Enable ACL submodule
+  },
+})
+```
+
+### Key Features
+
+- **Node Ownership**: The creator of a node is automatically the owner with full permissions.
+- **Granular Permissions**: Grant/revoke specific permissions ('read', 'write', 'delete') per user per node.
+- **Automatic Enforcement**: Middleware validates permissions before operations are applied.
+- **Integration with Roles**: ACL permissions are checked in addition to RBAC roles.
+
+### `db.sm.acls.set(value, id?)`
+
+Creates or updates a node with ACL enforcement. The current user becomes the owner with full permissions.
+
+- **Signature**: `(value: any, id?: string): Promise<string>`
+- **Parameters**:
+  - `value` `{any}` – The data to store. Must be JSON-serializable.
+  - `id` `{string}` _(optional)_ – The ID for the node. If not provided, a new unique ID will be generated.
+- **Returns**: `{Promise<string>}` – The `id` of the created/updated node.
+
+#### Example
+
+```javascript
+// Assuming user is logged in
+const noteData = { title: "My Note", content: "Secret content" }
+
+try {
+  const noteId = await db.sm.acls.set(noteData)
+  console.log(`Note created with ACLs: ${noteId}`)
+} catch (error) {
+  console.error("Failed to create note:", error.message)
+}
+```
+
+### `db.sm.acls.grant(nodeId, userAddress, permission)`
+
+Grants a specific permission to a user for a node. Only the owner can grant permissions.
+
+- **Signature**: `(nodeId: string, userAddress: string, permission: string): Promise<void>`
+- **Parameters**:
+  - `nodeId` `{string}` – The ID of the node.
+  - `userAddress` `{string}` – The Ethereum address of the user to grant permission to.
+  - `permission` `{string}` – The permission to grant ('read', 'write', 'delete').
+- **Returns**: `{Promise<void>}`
+
+#### Example
+
+```javascript
+const noteId = "some_note_id"
+const collaboratorAddress = "0xCollaboratorAddress..."
+
+try {
+  await db.sm.acls.grant(noteId, collaboratorAddress, "write")
+  console.log(`Granted write permission to ${collaboratorAddress} for note ${noteId}`)
+} catch (error) {
+  console.error("Failed to grant permission:", error.message)
+}
+```
+
+### `db.sm.acls.revoke(nodeId, userAddress, permission)`
+
+Revokes a specific permission from a user for a node. Only the owner can revoke permissions.
+
+- **Signature**: `(nodeId: string, userAddress: string, permission: string): Promise<void>`
+- **Parameters**:
+  - `nodeId` `{string}` – The ID of the node.
+  - `userAddress` `{string}` – The Ethereum address of the user to revoke permission from.
+  - `permission` `{string}` – The permission to revoke ('read', 'write', 'delete').
+- **Returns**: `{Promise<void>}`
+
+#### Example
+
+```javascript
+const noteId = "some_note_id"
+const collaboratorAddress = "0xCollaboratorAddress..."
+
+try {
+  await db.sm.acls.revoke(noteId, collaboratorAddress, "write")
+  console.log(`Revoked write permission from ${collaboratorAddress} for note ${noteId}`)
+} catch (error) {
+  console.error("Failed to revoke permission:", error.message)
+}
+```
+
+### Permission Levels
+
+- **'read'**: Allows viewing the node's value and edges.
+- **'write'**: Allows updating the node's value and creating edges.
+- **'delete'**: Allows removing the node.
+
+Owners have all permissions by default and cannot have their permissions revoked.
+
+---
+
 ## ℹ️ UI State & Helper Functions
 
 These are utility functions for querying the current security state, often used for updating user interfaces. All are accessed via `db.sm`.
