@@ -35,3 +35,9 @@ Import directly from the package:
 import { gdb } from "genosdb";
 
 const db = await gdb("my-db", { rtc: true });
+
+```
+
+## 📖 Learn More About Our Initiative
+
+For a deeper understanding of why GenosDB's source code is not publicly available and our commitment to quality and sustainability, read our [PHILOSOPHY.md](https://github.com/estebanrfp/gdb/blob/main/PHILOSOPHY.md).
