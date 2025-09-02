@@ -799,13 +799,25 @@
         async function setupNoteSubscriptions(searchTerm = '') {
             cleanupNoteSubscriptions();
 
-            const baseQuery = { type: 'note' };
-            if (searchTerm) baseQuery.$text = searchTerm;
-
-            const myNotesSub = await db.map({ query: { ...baseQuery, owner: currentUserAddress } }, updateNoteCache);
+            // --- MI NOTAS ---
+            const myNotesConditions = [
+                { type: 'note' },
+                { owner: currentUserAddress }
+            ];
+            if (searchTerm) {
+                myNotesConditions.push({ $text: searchTerm });
+            }
+            const myNotesQuery = { $and: myNotesConditions };
+            const myNotesSub = await db.map({ query: myNotesQuery }, updateNoteCache);
             myNotesUnsubscribe = myNotesSub.unsubscribe;
 
-            const sharedNotesSub = await db.map({ query: baseQuery }, (event) => {
+            // --- NOTAS COMPARTIDAS ---
+            const sharedNotesConditions = [{ type: 'note' }];
+            if (searchTerm) {
+                sharedNotesConditions.push({ $text: searchTerm });
+            }
+            const sharedNotesQuery = { $and: sharedNotesConditions };
+            const sharedNotesSub = await db.map({ query: sharedNotesQuery }, (event) => {
                 if (event.value && event.value.collaborators && event.value.collaborators[currentUserAddress]) {
                     updateNoteCache(event);
                 } else if (notesCache.has(event.id) && notesCache.get(event.id)?.value?.owner !== currentUserAddress) {
@@ -827,10 +839,8 @@
                 type: 'note',
                 title: 'New Note',
                 content: '# Welcome to your new note!\n\nStart typing here. Markdown is supported.',
-                owner: currentUserAddress,
-                collaborators: {}
             };
-            const id = await db.put(newNote);
+            const id = await db.sm.acls.set(newNote);
             selectNote(id);
         }
 
@@ -851,7 +861,7 @@
                 title: dom.noteTitleInput.value,
                 content: dom.noteContentInput.value,
             };
-            await db.put(updatedNote, activeNoteId);
+            await db.sm.acls.set(updatedNote, activeNoteId);
         }, 500);
 
         async function deleteNote() {
@@ -859,7 +869,7 @@
             const noteIdToDelete = activeNoteId;
             activeNoteId = null;
             showEditor(false);
-            await db.remove(noteIdToDelete);
+            await db.sm.acls.delete(noteIdToDelete);
         }
 
         async function addCollaborator() {
@@ -867,26 +877,13 @@
             const permission = dom.sharePermissionSelect.value;
             if (!address || !activeNoteId) return;
 
-            const note = notesCache.get(activeNoteId);
-            if (!note || !note.value) return;
-
-            const updatedCollaborators = { ...note.value.collaborators, [address]: permission };
-            const updatedNote = { ...note.value, collaborators: updatedCollaborators };
-            await db.put(updatedNote, activeNoteId);
+            await db.sm.acls.grant(activeNoteId, address, permission);
 
             dom.shareAddressInput.value = '';
-            // No need to call renderShareModal() here, the realtime update via db.map will trigger it.
         }
 
         async function removeCollaborator(address) {
-            const note = notesCache.get(activeNoteId);
-            if (!note || !note.value) return;
-
-            const updatedCollaborators = { ...note.value.collaborators };
-            delete updatedCollaborators[address];
-
-            const updatedNote = { ...note.value, collaborators: updatedCollaborators };
-            await db.put(updatedNote, activeNoteId);
+            await db.sm.acls.revoke(activeNoteId, address);
         }
 
         // --- APP INITIALIZATION & EVENT LISTENERS ---
@@ -906,25 +903,13 @@
                     sm: {
                         superAdmins: SUPERADMIN_ADDRESSES,
                         customRoles: CUSTOM_ROLES,
+                        acls: true, // Activar módulo ACLs
                     },
                 });
 
-                db.use(async (operations) => {
-                    const filteredOps = [];
-                    for (const op of operations) {
-                        if (op.type !== 'put' || !op.id) { filteredOps.push(op); continue; }
-                        const { result: node } = await db.get(op.id);
-                        if (!node || node.value.type !== 'note') { filteredOps.push(op); continue; }
+                console.log(db.sm.acls)
 
-                        const { owner, collaborators = {} } = node.value;
-                        if (op.signer === owner || collaborators[op.signer] === 'write') {
-                            filteredOps.push(op);
-                        } else {
-                            console.warn(`[SECURITY] Blocked unauthorized update on note ${op.id} from ${op.signer}`);
-                        }
-                    }
-                    return filteredOps;
-                });
+                // Middleware manual eliminado: ahora manejado por el módulo ACLs
 
                 db.sm.setSecurityStateChangeCallback(handleSecurityStateChange);
 
