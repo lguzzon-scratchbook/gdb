@@ -75,3 +75,5 @@ And to the entire developer community, I invite you to use GenosDB. Try it, push
 I hope this tool serves you well. And, above all, **I am looking forward to seeing what you build with it.**
 
 Thank you for reading.
+
+Esteban Fuster Pozzi (estebanrfp)
