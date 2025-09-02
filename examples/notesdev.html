@@ -436,6 +436,7 @@
             font-size: 0.8em;
             font-family: monospace;
             word-break: break-all;
+            cursor: pointer;
         }
 
         .collaborator-item button {
@@ -754,11 +755,15 @@
                 item.className = 'collaborator-item';
                 item.innerHTML = `
                     <div>
-                        <span>${truncateAddress(address)}</span>
+                        <span data-address="${address}">${truncateAddress(address)}</span>
                         <small>(${permission})</small>
                     </div>
                     <button data-address="${address}">X</button>
                 `;
+                item.querySelector('span').onclick = () => {
+                    dom.shareAddressInput.value = address;
+                    dom.sharePermissionSelect.value = permission;
+                };
                 item.querySelector('button').onclick = () => removeCollaborator(address);
                 dom.collaboratorsContainer.appendChild(item);
             }
@@ -880,10 +885,22 @@
             await db.sm.acls.grant(activeNoteId, address, permission);
 
             dom.shareAddressInput.value = '';
+            // Actualizar el cache con el estado más reciente del nodo
+            const { result: updatedNote } = await db.get(activeNoteId);
+            if (updatedNote) {
+                notesCache.set(activeNoteId, { id: activeNoteId, value: updatedNote.value, timestamp: updatedNote.timestamp });
+            }
+            renderShareModal();
         }
 
         async function removeCollaborator(address) {
             await db.sm.acls.revoke(activeNoteId, address);
+            // Actualizar el cache con el estado más reciente del nodo
+            const { result: updatedNote } = await db.get(activeNoteId);
+            if (updatedNote) {
+                notesCache.set(activeNoteId, { id: activeNoteId, value: updatedNote.value, timestamp: updatedNote.timestamp });
+            }
+            renderShareModal();
         }
 
         // --- APP INITIALIZATION & EVENT LISTENERS ---
