@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2025-09-02  <!-- Usa la fecha actual -->
+
+### Added
+- **Access Control Lists (ACLs) Module:** Introduced a new optional ACL submodule for the Security Manager (`sm`). This feature enables node-level permissions (read/write) for collaborative applications. Users can grant/revoke access to specific nodes, with automatic enforcement via middleware. Configured via `acls: true` in SM options. Compatible with existing roles and P2P sync.
+
+### Improved
+- **Security Manager Extensibility:** Enhanced `sm.js` initialization to support dynamic module attachment (e.g., ACLs), ensuring `gdb.sm` is extensible before loading submodules. This resolves potential "object not extensible" errors and improves module loading reliability.
+
+### Fixed
+- **Module Loading Synchronization:** Fixed async timing issues in `gdb.js` and `sm.js` where submodules (like ACLs) could fail to attach due to premature object freezing. Now uses `await` for proper sequencing.
+
+### Notes
+- ACLs is backward-compatible and opt-in. Existing apps continue working without changes.
+- Tested with `notesdev.html` for collaborative note sharing with permissions.
+
 ## [0.9.8] - 2025-08-30
 
 ### Improved
