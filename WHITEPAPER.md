@@ -239,6 +239,17 @@ await db.sm.executeWithPermission("write");
 const id = await db.put({ x: 10 });
 ```
 
+### 6.4 Access Control Lists (ACLs)
+ACLs provide fine-grained, node-level permissions as an optional extension to RBAC, allowing owners to grant specific permissions ('read', 'write', 'delete') to other users for individual nodes. This complements the global role hierarchy by enabling per-node access control, where node creators automatically become owners with full permissions. ACL checks are performed in addition to RBAC, ensuring multi-layered security. Enabled with `acls: true` in the SM configuration, ACLs register middleware for automatic enforcement on all database operations.
+
+**Example (ACL Management)**:
+```javascript
+const db = await gdb("secure-db", { rtc: true, sm: { superAdmins: ["0x1234..."], acls: true } });
+const nodeId = await db.sm.acls.set({ content: "Private Note" });
+await db.sm.acls.grant(nodeId, "0x5678...", "read");
+await db.sm.acls.revoke(nodeId, "0x5678...", "write");
+```
+
 ## 7. Distributed Trust Model
 GenosDB's distributed trust model addresses the core challenge of peer-to-peer networks: how to establish trust without a central authority. It relies on three foundational principles—cryptographic identity, verifiable actions, and a shared constitution—to create emergent security.
 
