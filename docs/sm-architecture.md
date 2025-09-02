@@ -40,6 +40,14 @@ The SM relies on a combination of Ethereum-based cryptographic identities, the W
     *   **Role Assignment:** Users (identified by their Ethereum address) are assigned roles, and these assignments are stored as nodes within GDB itself, making them part of the synchronized state. The `db.sm.assignRole()` function is used for this purpose.
     *   **Authorization:** Before executing a restricted action, the SM uses `db.sm.executeWithPermission(permissionName)` to check if the current user's role grants the necessary permission. This check is also performed automatically on incoming operations from peers.
 
+5.  **Access Control Lists (ACLs) - Optional Extension**
+    *   **Node-Level Permissions:** ACLs provide fine-grained, per-node access control beyond global RBAC roles. Each node can have its own set of permissions granted to specific users.
+    *   **Ownership Model:** The creator of a node automatically becomes the owner with full permissions (`read`, `write`, `delete`). Owners can grant or revoke permissions to other users for their nodes.
+    *   **Permission Types:** Supports granular permissions: `'read'` (view node), `'write'` (update node), `'delete'` (remove node).
+    *   **Integration with RBAC:** ACL checks are performed in addition to RBAC. A user must have both the role permission and the ACL permission for the operation.
+    *   **Automatic Middleware:** When enabled (`acls: true` in SM config), ACLs register middleware that enforces permissions on all database operations.
+    *   **API Methods:** Exposed via `db.sm.acls.set()`, `db.sm.acls.grant()`, and `db.sm.acls.revoke()` for creating nodes with ACLs and managing permissions.
+
 **P2P Security Flow:**
 
 1.  A user on **Peer A** logs in (e.g., via `db.sm.loginCurrentUserWithWebAuthn()`), activating their signing capabilities.
