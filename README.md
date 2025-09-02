@@ -212,11 +212,6 @@ We value community contributions and discussions! Here's how you can get involve
 - **Ask questions or share ideas**: Join our [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions).
 - **Real-time chat**: For quick conversations, join us on [Gitter](https://app.gitter.im/#/room/#GDB:gitter.im).
 
-  Here’s how you can participate in the Gitter room:
-  
-  - `[DEV]`: Discussions about project development, new features, and technical improvements.
-  - `[ANNOUNCEMENT]`: Official updates, new releases, and important news about GDB.
-  - `[HELP]`: Technical support and troubleshooting for GDB-related questions.
 
 Feel free to ask questions, share ideas, or just say hello! 👋
 
