@@ -65,6 +65,7 @@ GenosDB is in active beta and soon will deliver its first stable release, v1.0.0
   - Performance optimization.
   - **Intelligent Hybrid Synchronization:**
     GenosDB overcomes the limitations of naive P2P sync with an intelligent, dual-mode engine. It automatically exchanges tiny, compressed Deltas between active peers using a sliding-window Oplog for blazing-fast, low-latency updates. For peers that are too far out of sync, it seamlessly switches to a robust Full-State Fallback, guaranteeing absolute data consistency for everyone, no matter how long they've been offline.
+  - **Access Control Lists (ACLs):** Optional submodule for fine-grained, node-level permissions, allowing owners to grant/revoke specific permissions ('read', 'write', 'delete') to other users per node, complementing the existing RBAC system.
 
 - **Pending Features**:
   - No major features are currently pending. The project has entered a hardening phase with a focus on rigorous testing and stability improvements.
