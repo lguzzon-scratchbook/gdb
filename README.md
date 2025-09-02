@@ -141,10 +141,14 @@ We’ve created a collection of interactive examples to help you understand how 
 👉 [Explore /docs/Examples](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-examples.md)
 
 ## Roadmap & Whitepaper
-
-- [View Roadmap](./ROADMAP.md)
-- [View Whitepaper](./WHITEPAPER.md)
-- [View Philosophy](./PHILOSOPHY.md)
+- 🧭 [ROADMAP.md](./ROADMAP.md) (Planned features and milestones)
+- 📄 [WHITEPAPER.md](./WHITEPAPER.md) (Architecture and design paper)
+- 📜 [PHILOSOPHY.md](./PHILOSOPHY.md) (Project philosophy, founder history, and coreprinciples)
+- 🏠 [README.md](./README.md) (Project overview, installation, and docs)
+- 🧾 [CHANGELOG.md](./CHANGELOG.md) (Release notes and version history)
+- 🤝 [CONTRIBUTING.md](./CONTRIBUTING.md) (How to contribute examples and guidelines)
+- 🔀 [MIGRATION.md](./MIGRATION.md) (Migrate from "new GDB()" to "await gdb(..)")
+- 🛡️ [SECURITY.md](./SECURITY.md) (Security policy and vulnerability reporting)
 
 ---
 
