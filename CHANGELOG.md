@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.2] - 2025-09-03
+
+### Fixed
+- **Role Propagation Issue:** Resolved a critical bug where roles assigned by superadmins could be lost during P2P synchronization due to timestamp conflicts. The issue has been fixed to ensure roles propagate correctly across peers without being overwritten.
+
+### Improved
+- **Conflict Resolution for Roles:** Enhanced the LWW strategy to handle role assignments more effectively, maintaining Zero Trust while fixing propagation in distributed scenarios.
+
+### Notes
+- This fix ensures that once a superadmin assigns a role, it persists and propagates reliably, even in complex P2P networks with multiple
+
 ## [0.10.0] - 2025-09-02  <!-- Usa la fecha actual -->
 
 ### Added
