@@ -537,7 +537,7 @@
                 messagesContainer.appendChild(msgElement);
             }
             msgElement.className = value.sender === currentUserAddress ? 'message own' : 'message other';
-            const senderShort = value.sender ? `${value.sender.substring(0, 6)}...${value.sender.slice(-4)}` : 'Unknown';
+            const senderShort = value.sender ? db.sm.abbrAddr(value.sender) : 'Unknown';
             const messageDate = value.timestamp ? new Date(value.timestamp).toLocaleString() : 'No date';
             const role = value.role || (value.sender === currentUserAddress ? currentUserRole : '');
             const canDelete = (value.sender === currentUserAddress)
