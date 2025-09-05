@@ -194,13 +194,13 @@
         // --- Security State Handler ---
         function securityUpdateHandler(state) {
             log(
-                `SM Security Update: Active=${state.isActive}, Address=${state.activeAddress || 'N/A'}, WebAuthnProtected=${state.isWebAuthnProtected}`
+                `SM Security Update: Active=${state.isActive}, Address=${state.abbrAddr || 'N/A'}, WebAuthnProtected=${state.isWebAuthnProtected}`
             );
 
             if (state.isActive && state.activeAddress) {
                 loginSection.classList.add('hidden');
                 appSection.classList.remove('hidden');
-                currentUserDisplay.textContent = `${state.activeAddress.substring(0, 10)}...`
+                currentUserDisplay.textContent = `${state.abbrAddr}`
                     + (state.isWebAuthnProtected ? " 🔒" : "");
             } else {
                 loginSection.classList.remove('hidden');
@@ -222,7 +222,7 @@
 
             // Silent WebAuthn resume message
             if (state.isActive && state.isWebAuthnProtected && state.activeAddress) {
-                log(`Silent WebAuthn session resumed for ${state.activeAddress}`, 'success');
+                log(`Silent WebAuthn session resumed for ${state.abbrAddr}`, 'success');
             }
         }
 
