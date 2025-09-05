@@ -8,14 +8,14 @@ const mockPeer = {
 };
 
 test('CRDT: Add operation', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido: rtc en lugar de crdt
   const id = await db.put({ name: 'Item1' });
   const { result } = await db.get(id);
   expect(result.value.name).toBe('Item1');
 });
 
 test('CRDT: Update operation with merge', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db.put({ name: 'Item1', version: 1 });
   await db.put({ name: 'Item1 Updated', version: 2 }, id);
   const { result } = await db.get(id);
@@ -23,7 +23,7 @@ test('CRDT: Update operation with merge', async () => {
 });
 
 test('CRDT: Delete operation', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db.put({ name: 'Item1' });
   await db.remove(id);
   const { result } = await db.get(id);
@@ -31,7 +31,7 @@ test('CRDT: Delete operation', async () => {
 });
 
 test('Conflict Resolution: Version Merge', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db.put({ name: 'Item', version: 1 });
   // Simulates conflict: put with higher version
   await db.put({ name: 'Item Modified', version: 2 }, id);
@@ -40,14 +40,14 @@ test('Conflict Resolution: Version Merge', async () => {
 });
 
 test('Scenario: Offline/Online Synchronization', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id1 = await db.put({ name: 'Offline Item' });
   const { result } = await db.get(id1);
   expect(result.value.name).toBe('Offline Item');
 });
 
 test('Scenario: Conflict in links (link)', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id1 = await db.put({ name: 'Node1' });
   const id2 = await db.put({ name: 'Node2' });
   await db.link(id1, id2);
@@ -58,7 +58,7 @@ test('Scenario: Conflict in links (link)', async () => {
 });
 
 test('Scenario: Concurrent operations in map', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   await db.put({ type: 'user', name: 'Ana' });
   await db.put({ type: 'user', name: 'Bob' });
   const { results } = await db.map({ query: { type: 'user' } });
@@ -69,7 +69,7 @@ test('Scenario: Concurrent operations in map', async () => {
 });
 
 test('Scenario: Conflict rollback', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db.put({ name: 'Original' });
   await db.put({ name: 'Conflicted', version: 1 }, id);
   await db.remove(id);
@@ -79,15 +79,15 @@ test('Scenario: Conflict rollback', async () => {
 });
 
 test('Scenario: Integrity validation in CRDT', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db.put({ name: 'Valid Item' });
   const { result } = await db.get(id);
   expect(result.value.name).toBe('Valid Item');
 });
 
 test('CRDTs with real peers: Synchronization between peers', async () => {
-  const db1 = await gdb('test-db', { crdt: true });
-  const db2 = await gdb('test-db', { crdt: true });
+  const db1 = await gdb('test-db', { rtc: true });  // Corregido
+  const db2 = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db1.put({ name: 'Shared Item' });
   // Simulates sync
   await db2.put({ name: 'Shared Item' }, id);
@@ -96,7 +96,7 @@ test('CRDTs with real peers: Synchronization between peers', async () => {
 });
 
 test('CRDTs with real peers: Conflict and resolution', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db.put({ name: 'Item', version: 1 });
   // Simulates peer1 update
   await db.put({ name: 'Item Peer1', version: 2 }, id);
@@ -107,8 +107,8 @@ test('CRDTs with real peers: Conflict and resolution', async () => {
 });
 
 test('CRDTs with real peers: Concurrent operations', async () => {
-  const db1 = await gdb('test-db', { crdt: true });
-  const db2 = await gdb('test-db', { crdt: true });
+  const db1 = await gdb('test-db', { rtc: true });  // Corregido
+  const db2 = await gdb('test-db', { rtc: true });  // Corregido
   await db1.put({ type: 'user', name: 'Ana' });
   await db2.put({ type: 'user', name: 'Bob' });
   const { results: db1Results } = await db1.map({ query: { type: 'user' } });
@@ -118,7 +118,7 @@ test('CRDTs with real peers: Concurrent operations', async () => {
 });
 
 test('CRDTs with real peers: Disconnection and reconnection', async () => {
-  const db = await gdb('test-db', { crdt: true });
+  const db = await gdb('test-db', { rtc: true });  // Corregido
   const id = await db.put({ name: 'Offline Item' });
   // Simulates disconnection: offline update
   await db.put({ name: 'Offline Update' }, id);
