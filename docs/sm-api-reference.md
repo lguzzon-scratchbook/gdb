@@ -154,6 +154,7 @@ Sets a callback function to be notified of changes in the security state. This i
     - `securityState` `{Object}`:
       - `isActive` `{boolean}` – True if a local user session is active with signing capabilities.
       - `activeAddress` `{string | null}` – The Ethereum address of the currently active user (if any), or `null`.
+      - `abbrAddr` `{string}` – An abbreviated version of the active address (e.g., "0x1234...abcd"), ready for display. Returns 'N/A' if no address is active.
       - `isWebAuthnProtected` `{boolean}` – True if the current active session was initiated or is protected by WebAuthn.
       - `hasVolatileIdentity` `{boolean}` – True if a new ETH identity has been generated (e.g., via `startNewUserRegistration`) and is held in memory but not yet secured by WebAuthn.
       - `hasWebAuthnHardwareRegistration` `{boolean}` – True if WebAuthn registration details are found in localStorage for this browser/domain, indicating a WebAuthn credential exists.
@@ -167,7 +168,8 @@ db.sm.setSecurityStateChangeCallback((securityState) => {
   // Example UI update:
   const statusDisplay = document.getElementById("statusDisplay")
   if (securityState.isActive) {
-    statusDisplay.textContent = `Logged in as: ${securityState.activeAddress}`
+    // Use the pre-formatted abbreviated address for display
+    statusDisplay.textContent = `Logged in as: ${securityState.abbrAddr}`
   } else {
     statusDisplay.textContent =
       "Logged out. WebAuthn available: " +
@@ -204,12 +206,6 @@ try {
   console.error("Failed to generate new identity:", error)
 }
 ```
-
----
-
-## 🆔 Identity Management
-
-_(This section remains conceptually the same, but all calls are now prefixed with `db.sm.`)_
 
 ---
 
@@ -528,7 +524,9 @@ const collaboratorAddress = "0xCollaboratorAddress..."
 
 try {
   await db.sm.acls.grant(noteId, collaboratorAddress, "write")
-  console.log(`Granted write permission to ${collaboratorAddress} for note ${noteId}`)
+  console.log(
+    `Granted write permission to ${collaboratorAddress} for note ${noteId}`
+  )
 } catch (error) {
   console.error("Failed to grant permission:", error.message)
 }
@@ -553,7 +551,9 @@ const collaboratorAddress = "0xCollaboratorAddress..."
 
 try {
   await db.sm.acls.revoke(noteId, collaboratorAddress, "write")
-  console.log(`Revoked write permission from ${collaboratorAddress} for note ${noteId}`)
+  console.log(
+    `Revoked write permission from ${collaboratorAddress} for note ${noteId}`
+  )
 } catch (error) {
   console.error("Failed to revoke permission:", error.message)
 }
@@ -593,6 +593,25 @@ These are utility functions for querying the current security state, often used 
 
 - **Returns**: `{string | null}` – The mnemonic phrase if a new identity was just generated or recovered and is held in volatile memory. Returns `null` once the session is purely WebAuthn-based or if no such mnemonic is available.
 - **Caution**: Displaying mnemonic phrases should be done with extreme care.
+
+---
+
+### `abbrAddr(address)`
+
+A utility function to get a shortened, display-friendly version of an Ethereum address.
+
+- **Signature**: `(address: string): string`
+- **Parameters**:
+  - `address` `{string}` – The full Ethereum address to abbreviate.
+- **Returns**: `{string}` – The abbreviated address (e.g., "0x1234...abcd"). Returns an empty string or may error if the input is not a valid address string.
+
+#### Example
+
+```javascript
+const fullAddress = "0x1234567890123456789012345678901234567890"
+const shortAddress = db.sm.abbrAddr(fullAddress)
+console.log(shortAddress) // "0x1234...7890"
+```
 
 ---
 
@@ -651,7 +670,21 @@ Once a user clicks `[Generate New Identity]`, the application enters a temporary
 ### 4. The Logged-In State
 
 - **Reactive UI:** Once `state.isActive` becomes `true`, hide the entire login view and show the main application view. **Remember to reset the `<textarea>` to be editable (`readOnly = false`)** so it's ready for the next login attempt after a logout.
-- **Load User-Specific Data:** Use the `state.activeAddress` to fetch and display data relevant to the logged-in user (e.g., calling `db.sm.get()` to load a secure note).
+
+- **Display User Identity Clearly:** When showing the user's address in the UI, avoid displaying the full 42-character string, which is hard to read and takes up too much space.
+
+  - **Use the provided `state.abbrAddr` property.** The state callback conveniently provides a pre-formatted, abbreviated address (e.g., `0x1234...abcd`) ready for display.
+  - This improves readability and provides a better user experience.
+
+  ```javascript
+  // In your state change callback
+  db.sm.setSecurityStateChangeCallback((state) => {
+    if (state.isActive) {
+      // ✅ Best Practice: Use the provided abbreviated address
+      statusDisplay.textContent = `Logged in as: ${state.abbrAddr}`
+    }
+  })
+  ```
 
 ### 5. General Principles
 
