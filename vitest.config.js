@@ -11,6 +11,7 @@ export default defineConfig({
       enabled: true,
       headless: true,
       provider: 'playwright',
+      instances: [{ browser: 'chromium' }],
     },
     afterEach: async () => {
       // Close all IndexedDB connections to prevent conflicts
