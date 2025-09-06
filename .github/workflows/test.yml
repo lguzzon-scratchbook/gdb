@@ -1,13 +1,20 @@
 name: Tests
 on: [push, pull_request]
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Cambia a macos-latest si prefieres Mac
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - run: npm install --legacy-peer-deps  # Install dependencies for gdb with legacy peer deps
-      - run: cd tests && npm install --legacy-peer-deps  # Install dependencies for tests
-      - run: cd tests && npx vitest run # Run tests with default verbose reporter
+          cache: 'npm'  # Cache para node_modules
+      - run: npm install --legacy-peer-deps
+      - run: cd tests && npm install --legacy-peer-deps
+      - uses: actions/cache@v3  # Cache para navegadores de Playwright
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+      - run: npx playwright install  # Instala navegadores para tests
+      - run: cd tests && npx vitest run --browser  # Ejecuta tests en navegador
