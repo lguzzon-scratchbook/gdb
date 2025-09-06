@@ -14,20 +14,13 @@ A lightweight, decentralized graph database designed for modern web applications
 [![](https://data.jsdelivr.com/v1/package/npm/genosdb/badge)](https://www.jsdelivr.com/package/npm/genosdb)
 [![Tests](https://github.com/estebanrfp/gdb/actions/workflows/test.yml/badge.svg)](https://estebanrfp.github.io/gdb/tests/html/test-results.html)
 
-![Project Status](https://img.shields.io/badge/state-development-green)
-
-<!-- [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/estebanrfp/gdb&build=dist) -->
+![Project Status](https://img.shields.io/badge/status-stable--beta-blue)
 
 ![NPM Unpacked Size (with version)](https://img.shields.io/npm/unpacked-size/genosdb/latest)
 
 ![npm package minimized gzipped size](https://img.shields.io/bundlejs/size/genosdb)
 
 [![Liberapay receiving](https://img.shields.io/liberapay/receives/estebanrfp.svg?logo=liberapay)](https://liberapay.com/estebanrfp/donate)
-
-
-> ✅ GenosDB uses network access by design for real-time P2P synchronization 👉 { rtc: true }
-
-> ⚠️ Migration Guide: The class-based API `new GDB()` has been removed. Please migrate to the async factory function. See the guide: [MIGRATION.md](./MIGRATION.md)
 
 <!-- ### Nostr.band Followers
 
@@ -43,17 +36,16 @@ A lightweight, decentralized graph database designed for modern web applications
 - **Powerful & Flexible Queries:** Supports standard CRUD operations for nodes and relationships, plus advanced, multi-hop recursive graph traversals to discover deep connections.
 - **Real-time Synchronization:**
     - **Between Devices (P2P):** Employs an intelligent hybrid system (via GenosRTC) that combines real-time delta updates with a full-state fallback to ensure data consistency across all peers.
+
+      **Note:** To enable P2P synchronization, initialize the database with the `{ rtc: true }` option.
     - **Between Tabs:** Uses BroadcastChannel for instant, local synchronization.
 - **Optimized Data Handling:** Efficiently serializes data with MessagePack and compresses it with Pako to reduce storage footprint and network payload.
 - **Extensible & Modular:** The core is lightweight, but its capabilities can be easily extended with external modules for features like advanced indexing (e.g., Radix Tree).
 
-## Warning
-
-GenosDB is in active beta and soon will deliver its first stable release, v1.0.0. See the [Project Status](#project-status) section for the latest updates.
-
 ## Project Status
 
-- **Phase**: Beta
+- **Phase**: Stable Beta
+- **Current Focus**: The project has completed its major feature development and has entered a hardening phase. Our current focus is on rigorous testing, performance tuning, and solidifying API stability for the first stable release.
 - **Completed Features**:
   - Basic queries.
   - Advanced queries.
@@ -67,10 +59,10 @@ GenosDB is in active beta and soon will deliver its first stable release, v1.0.0
     GenosDB overcomes the limitations of naive P2P sync with an intelligent, dual-mode engine. It automatically exchanges tiny, compressed Deltas between active peers using a sliding-window Oplog for blazing-fast, low-latency updates. For peers that are too far out of sync, it seamlessly switches to a robust Full-State Fallback, guaranteeing absolute data consistency for everyone, no matter how long they've been offline.
   - **Access Control Lists (ACLs):** Optional submodule for fine-grained, node-level permissions, allowing owners to grant/revoke specific permissions ('read', 'write', 'delete') to other users per node, complementing the existing RBAC system.
 
-- **Pending Features**:
-  - No major features are currently pending. The project has entered a hardening phase with a focus on rigorous testing and stability improvements.
+### 🧪 API Status: Stable Beta
 
-> ⚠️ The API is under active development and may change without notice. Use fixed versions and check the [CHANGELOG](CHANGELOG.md) before upgrading.
+> The GenosDB API is currently in a stable beta. We are actively adding features and improving stability.
+> We recommend checking the [CHANGELOG](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) as we continue to refine the API for its first stable release.
 
 ### ✅ **Role Based Access Control (RBAC)**
 
@@ -87,17 +79,9 @@ GenosDB is in active beta and soon will deliver its first stable release, v1.0.0
 - Secure storage of roles in internal graph
 - [Security Manager (SM Architecture)](https://github.com/estebanrfp/gdb/blob/main/docs/sm-architecture.md)
 
-> **Important Notice**: This project has progressed from its active development phase and is now in the beta stage. While it is functional and stable in controlled environments, it is recommended to evaluate its suitability for production based on the specific needs of your environment. For more details, please refer to the [Project Status](#project-status)
+## A Note on P2P System Reliability
 
-## ⚠️ Reliability Notice
-
-This is a distributed database (P2P + CRDT); therefore:  
-• In extreme conditions (network failures, partial synchronization, or unconventional usage), unexpected behavior may occur.  
-• Any reported issues will be prioritized and resolved in upcoming patch versions.
-
-The project has achieved the expected stability goals (such as conflict resolution, synchronization, and distributed storage), without intending to ignore the limitations inherent to distributed technologies (P2P + CRDT).
-
-GenosDB has been rigorously tested with our common usage examples in such environments, demonstrating greater stability than many other well-known distributed databases.
+GenosDB operates in a real-world P2P environment, which exposes the system to network uncertainties by design. Our engineering focus is on mitigating these uncertainties within our software through robust conflict resolution (CRDTs) and synchronization logic. While we cannot control external network conditions, our commitment is to the continuous research and development required to ensure the highest possible resilience of the GenosDB engine.
 
 ---
 
@@ -141,14 +125,14 @@ We’ve created a collection of interactive examples to help you understand how 
 👉 [Explore /docs/Examples](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-examples.md)
 
 ## Roadmap & Whitepaper
-- 🧭 [ROADMAP.md](./ROADMAP.md) (Planned features and milestones)
-- 📄 [WHITEPAPER.md](./WHITEPAPER.md) (Architecture and design paper)
-- 📜 [PHILOSOPHY.md](./PHILOSOPHY.md) (Project philosophy, founder history, and coreprinciples)
-- 🏠 [README.md](./README.md) (Project overview, installation, and docs)
-- 🧾 [CHANGELOG.md](./CHANGELOG.md) (Release notes and version history)
-- 🤝 [CONTRIBUTING.md](./CONTRIBUTING.md) (How to contribute examples and guidelines)
-- 🔀 [MIGRATION.md](./MIGRATION.md) (Migrate from "new GDB()" to "await gdb(..)")
-- 🛡️ [SECURITY.md](./SECURITY.md) (Security policy and vulnerability reporting)
+- 🧭 [ROADMAP.md](https://github.com/estebanrfp/gdb/blob/main/ROADMAP.md) (Planned features and milestones)
+- 📄 [WHITEPAPER.md](https://github.com/estebanrfp/gdb/blob/main/WHITEPAPER.md) (Architecture and design paper)
+- 📜 [PHILOSOPHY.md](https://github.com/estebanrfp/gdb/blob/main/PHILOSOPHY.md) (Project philosophy, founder history, and coreprinciples)
+- 🏠 [README.md](https://github.com/estebanrfp/gdb/blob/main/README.md) (Project overview, installation, and docs)
+- 🧾 [CHANGELOG.md](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) (Release notes and version history)
+- 🤝 [CONTRIBUTING.md](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md) (How to contribute examples and guidelines)
+- 🔀 [MIGRATION.md](https://github.com/estebanrfp/gdb/blob/main/MIGRATION.md) (Migrate from "new GDB()" to "await gdb(..)")
+- 🛡️ [SECURITY.md](https://github.com/estebanrfp/gdb/blob/main/SECURITY.md) (Security policy and vulnerability reporting)
 
 ---
 
@@ -207,7 +191,7 @@ This graphical view is especially useful for new contributors or anyone looking 
 
 ## Contributing
 
-We welcome contributions to improve this project! Please read our [Contribution Guidelines](CONTRIBUTING.md) for details on how to get started.
+We welcome contributions to improve this project! Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md) for details on how to get started.
 
 
 ## Community
@@ -220,13 +204,13 @@ We value community contributions and discussions! Here's how you can get involve
 
 Feel free to ask questions, share ideas, or just say hello! 👋
 
-For more details on contributing, check out our [Contributing Guidelines](CONTRIBUTING.md).
+For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md).
 
 ## Licenses
 
-This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](THIRD_PARTY_LICENSES.md).
+This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](https://github.com/estebanrfp/gdb/blob/main/THIRD_PARTY_LICENSES.md).
 
-The source code of this project is licensed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](LICENSE) file.
+The source code of this project is licensed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](https://github.com/estebanrfp/gdb/blob/main/LICENSE) file.
 
 ## Maintenance
 
