@@ -250,9 +250,6 @@
     <script type="module">
         import { gdb } from "../dist/index.js";
 
-        // Minimal configuration
-        const SUPERADMIN_ADDRESSES = ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"];
-
         // Simplified DOM references
         const elements = {
             authSection: document.getElementById('authSection'),
@@ -275,17 +272,24 @@
         };
 
         // Simple state
-        let db;
+
         let currentUserAddress = null;
         let unsubscribeMessages = null;
 
         // Minimal initialization
         elements.statusBar.textContent = "Initializing...";
 
-        db = await gdb("rbacChatAppDB", {
+        const db = await gdb("rbacChatAppDB", {
             rtc: true,
             sm: {
-                superAdmins: SUPERADMIN_ADDRESSES,
+                superAdmins: ["0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"],
+                customRoles: {
+                    superadmin: { can: ["assignRole", "deleteAny"], inherits: ["admin"] },
+                    admin: { can: ["delete"], inherits: ["manager"] },
+                    manager: { can: ["publish"], inherits: ["user"] },
+                    user: { can: ["write", "link", "sync"], inherits: ["guest"] },
+                    guest: { can: ["read", "sync", "write"] }, // Guests can read and receive syncs
+                }
             }
         });
 
@@ -495,8 +499,10 @@
                     // It's normal for the message not to exist if deleted by another user
                     // Try to delete it anyway in case it exists in the database
                     try {
+                        await db.sm.executeWithPermission('delete');
                         await db.remove(messageId);
                     } catch (removeError) {
+                        alert('You need permissions to clear message');
                         // Silence deletion errors if the message no longer exists
                     }
                     return;
