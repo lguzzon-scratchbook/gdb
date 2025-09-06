@@ -434,9 +434,9 @@ db.room.on("stream:add", (stream, peerId) => {
 
 ---
 
-## ⚠️ API Stability
+## 🧪 API Status: Stable Beta
 
-> This API is under active development. **Breaking changes may occur** in future versions.  
-> Check the [CHANGELOG](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) for updates. Use at your own risk in production environments.
+> The GenosDB API is currently in a stable beta. We are actively adding features and improving stability.
+> We recommend checking the [CHANGELOG](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) as we continue to refine the API for its first stable release.
 
 ---
