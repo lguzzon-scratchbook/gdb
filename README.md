@@ -1,6 +1,6 @@
 # GenosDB (GDB) – Decentralized P2P Graph Database
 
-A lightweight, decentralized graph database designed for modern web applications, offering real-time peer-to-peer synchronization, WebAuthn-based authentication, role-based access control (RBAC), and efficient local storage utilizing OPFS.
+A lightweight, decentralized graph database designed for modern web applications, offering real-time peer-to-peer synchronization, SM (Security Manager) Provides WebAuthn-based authentication, role-based access control (RBAC), Access Control Lists (ACLs), and efficient local storage utilizing OPFS.
 
 ![GenosDB](https://i.imgur.com/7Xqrht1.png)
 
@@ -122,7 +122,7 @@ We’ve created a collection of interactive examples to help you understand how 
 
 👉 [Explore /docs/Examples](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-examples.md)
 
-## Roadmap & Whitepaper
+## Project Documentation
 - 🧭 [ROADMAP.md](https://github.com/estebanrfp/gdb/blob/main/ROADMAP.md) (Planned features and milestones)
 - 📄 [WHITEPAPER.md](https://github.com/estebanrfp/gdb/blob/main/WHITEPAPER.md) (Architecture and design paper)
 - 📜 [PHILOSOPHY.md](https://github.com/estebanrfp/gdb/blob/main/PHILOSOPHY.md) (Project philosophy, founder history, and coreprinciples)
