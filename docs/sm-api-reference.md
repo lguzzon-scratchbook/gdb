@@ -1,4 +1,4 @@
-> SM (Security Manager) Provides Role-Based Access Control (RBAC), identity management (WebAuthn, Mnemonic), and security features for GDB instances. This system enables fine-grained permission control over data operations in a distributed P2P environment.
+> SM (Security Manager) Provides Role-Based Access Control (RBAC), Access Control Lists (ACLs), identity management (WebAuthn, Mnemonic), and security features for GDB instances. This system enables fine-grained permission control over data operations in a distributed P2P environment.
 
 ## 📥 How to Use
 
