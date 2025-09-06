@@ -14,9 +14,4 @@ jobs:
           version: latest
       - run: pnpm install --no-frozen-lockfile
       - run: cd tests && pnpm install --no-frozen-lockfile
-      - uses: actions/cache@v3  # Cache para navegadores de Playwright
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
-      - run: npx playwright install  # Instala navegadores para tests
-      - run: npx vitest run --browser --dir tests  # Ejecuta tests en navegador
+      - run: npx vitest run --dir tests  # Ejecuta tests
