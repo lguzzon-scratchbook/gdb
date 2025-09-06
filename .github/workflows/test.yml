@@ -19,4 +19,4 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
       - run: npx playwright install  # Instala navegadores para tests
-      - run: cd tests && npx vitest run --browser  # Ejecuta tests en navegador
+      - run: npx vitest run --browser --dir tests  # Ejecuta tests en navegador
