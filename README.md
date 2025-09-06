@@ -7,7 +7,7 @@ A lightweight, decentralized graph database designed for modern web applications
 ---
 
 [![NPM Version](https://img.shields.io/npm/v/genosdb.svg?style=for-the-badge)](https://www.npmjs.org/package/genosdb)
-[![NPM License](https://img.shields.io/npm/l/genosdb.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary-blue.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
 
 
 ![Downloads on NPM](https://img.shields.io/npm/dw/genosdb)
@@ -171,8 +171,6 @@ Below is a list of internal dependencies and their purposes within the project:
 
 ## Repository Diagram
 
-The project includes an interactive visualization of the repository’s history and structure, which you can explore by clicking the following link: gdb repository diagram.
-
 The project includes an interactive visualization of the repository's history and structure, which you can explore here:  
 
 [gdb repository diagram](https://gitdiagram.com/estebanrfp/gdb)  
@@ -189,8 +187,13 @@ This graphical view is especially useful for new contributors or anyone looking 
 
 ## Contributing
 
-We welcome contributions to improve this project! Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md) for details on how to get started.
+We value community contributions and welcome your help in improving GenosDB! Currently, contributions are focused on:
 
+- 📝 Improving our documentation.
+- 💡 Submitting usage examples and tutorials.
+- 🐞 Reporting bugs or suggesting new features.
+
+Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md) for more details. We do not accept pull requests for the core source code at this time.
 
 ## Community
 
@@ -204,11 +207,18 @@ Feel free to ask questions, share ideas, or just say hello! 👋
 
 For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md).
 
-## Licenses
 
-This project includes third-party dependencies with their respective licenses. For detailed information, see the [Licenses page](https://github.com/estebanrfp/gdb/blob/main/THIRD_PARTY_LICENSES.md).
+## License
 
-The source code of this project is licensed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](https://github.com/estebanrfp/gdb/blob/main/LICENSE) file.
+### Project License
+
+The minified builds of GenosDB (GDB) are provided free of charge (`Freeware`) for both personal and commercial use. You are welcome to integrate these builds into your applications without cost.
+
+However, the source code for GenosDB is proprietary and is not available under an open-source license. You do not have the right to decompile, reverse-engineer, or modify the core source code.
+
+### Third-Party Licenses
+
+This project includes third-party dependencies with their own respective licenses. For detailed information, see the [Third-Party Licenses page](https://github.com/estebanrfp/gdb/blob/main/THIRD_PARTY_LICENSES.md).
 
 ## Maintenance
 
@@ -216,7 +226,7 @@ This repository provides minified builds of GenosDB (GDB), a decentralized P2P g
 
 ## Author
 
-[Esteban Fuster Pozzi (@estebanrfp)](https://estebanrfp.com) — Full Stack JavaScript Developer and creator of [GenosDB (GDB)](https://www.npmjs.com/package/genosdb), an open-source real-time graph database built entirely with modern vanilla JavaScript.
+[Esteban Fuster Pozzi (@estebanrfp)](https://estebanrfp.com) — Full Stack JavaScript Developer and creator of [GenosDB (GDB)](https://www.npmjs.com/package/genosdb), a free-to-use real-time graph database built entirely with modern vanilla JavaScript.
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_shield&issueType=security)
 
