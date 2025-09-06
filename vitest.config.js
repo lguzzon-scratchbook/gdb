@@ -7,6 +7,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./setupTests.js'],
     reporter: 'html',
+    browser: {
+      enabled: true,
+      headless: true,
+      provider: 'playwright',
+    },
     afterEach: async () => {
       // Close all IndexedDB connections to prevent conflicts
       if (typeof indexedDB !== 'undefined') {
