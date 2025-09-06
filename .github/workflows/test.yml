@@ -9,12 +9,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'  # Cache para node_modules
-      - run: npm install --legacy-peer-deps
-      - run: cd tests && npm install --legacy-peer-deps
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - run: cd tests && pnpm install --frozen-lockfile
       - uses: actions/cache@v3  # Cache para navegadores de Playwright
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
       - run: npx playwright install  # Instala navegadores para tests
       - run: cd tests && npx vitest run --browser  # Ejecuta tests en navegador
