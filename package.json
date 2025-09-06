@@ -51,10 +51,12 @@
     "vitest": "3.2.4"
   },
   "devDependencies": {
+    "@vitest/browser": "^3.2.4",
     "eslint": "9.32.0",
     "eslint-config-standard": "17.1.0",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-n": "17.21.3",
-    "eslint-plugin-promise": "7.2.1"
+    "eslint-plugin-promise": "7.2.1",
+    "playwright": "^1.40.0"
   }
 }
