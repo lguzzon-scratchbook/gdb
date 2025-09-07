@@ -440,3 +440,145 @@ db.room.on("stream:add", (stream, peerId) => {
 > We recommend checking the [CHANGELOG](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) as we continue to refine the API for its first stable release.
 
 ---
+
+## 💡 Best Practices & UI/UX Patterns
+
+### 1. Embrace Top-level `await` for Cleaner Code
+
+GenosDB is initialized using an **Async Factory Function**: `await gdb(...)`. In modern environments like `<script type="module">`, you should leverage **Top-level `await`**.
+
+This allows you to use `await` directly at the top level of your script, avoiding unnecessary `async` function wrappers and leading to simpler, more readable code.
+
+**Recommended Practice: Direct Initialization**
+
+Initialize the database and set up your listeners directly. The code flows naturally from top to bottom.
+
+```javascript
+// Inside <script type="module">
+import { gdb } from "genosdb";
+
+// 1. Initialize the database directly.
+const db = await gdb("my-app");
+
+// 2. Set up real-time listeners immediately after.
+await db.map({ query: { type: "user" } }, (event) => {
+  console.log(`User event: ${event.action}`, event.value);
+  // Update UI based on the event
+});
+
+// The 'db' instance is now ready for use anywhere else in your script.
+```
+
+Only wrap logic in an `async` function when it needs to be triggered by a user action that occurs after the initial page load, like a button click.
+
+### 2. Use Destructuring in Callbacks for Clarity
+
+The event object passed to your `db.map()` callback contains properties like `id`, `value`, and `action`. Using JavaScript's object destructuring directly in the function signature makes your code more readable and self-documenting.
+
+**Recommended Practice:** Extract only the properties you need.
+
+```javascript
+// ✅ Clear and direct
+await db.map({ query: { type: "post" } }, ({ id, value, action }) => {
+  if (action === "added") {
+    console.log(`New post added with ID ${id}:`, value.title);
+  }
+});
+```
+
+This makes it immediately clear which parts of the event your logic depends on.
+
+---
+
+### 3. Always Clean Up Subscriptions to Prevent Memory Leaks
+
+When you use `db.map()` with a callback, it creates an active listener that runs until you stop it. Failing to stop the listener when it's no longer needed (e.g., when a user navigates away) will cause memory leaks.
+
+**Recommended Practice:** Always store the returned `unsubscribe` function and call it when the component or view is destroyed.
+
+```javascript
+// 1. Store the function when you subscribe.
+const { unsubscribe } = await db.map(
+  { query: { type: "task" } },
+  (event) => { /* ... update UI ... */ }
+);
+
+// 2. Call it when you're done.
+// For example, in a Single-Page Application (SPA) when a component unmounts:
+// onCleanup(() => {
+//   unsubscribe();
+//   console.log("Task listener stopped.");
+// });
+```
+
+This is crucial for building stable, long-running applications.
+
+### 4. Distinguish Between Persistent State and Ephemeral Events
+
+GenosDB offers two distinct channels for P2P communication. Using the right one is crucial for performance and building a scalable application.
+
+Ask yourself: **"Does this data need to survive a page refresh?"**
+
+#### 1. Database Sync (for Persistent State)
+
+If the answer is **YES**, use the core database methods. This is for data that represents the shared state of your application.
+
+-   **Use:** `db.put()`, `db.link()`, `db.remove()`
+-   **Examples:** User profiles, document content, to-do list items.
+
+```javascript
+// This data is saved and synced permanently.
+await db.put({ type: 'todo', text: 'Buy milk', completed: false });
+```
+
+#### 2. Real-time Messaging with `db.room` (for Ephemeral Events)
+
+If the answer is **NO**, use `db.room`. This is for high-frequency, temporary messages that do not need to be stored.
+
+-   **Use:** `db.room.channel(...).send()`
+-   **Examples:** Live cursor positions, "user is typing" notifications, temporary alerts.
+
+```javascript
+// This message is sent to peers but does NOT touch the database.
+const cursorChannel = db.room.channel("cursors");
+cursorChannel.send({ x: 120, y: 345 });
+```
+
+This distinction prevents you from overloading the database with temporary data and ensures your application remains fast and efficient.
+
+¡Entendido! Es una idea excelente. Es como establecer un "contrato" o una guía de estilo directamente en la documentación para que tanto los humanos como las IAs sepan cómo generar el mejor código posible para tu ecoservistema.
+
+Aquí tienes un párrafo que destila la esencia de tu prompt en un consejo conciso y potente, perfecto para cerrar la sección de "Best Practices".
+
+---
+
+### 5. Code for Modernity, Clarity, and Performance
+
+To get the most out of GenosDB, we recommend adopting a modern and efficient coding style. Prioritize ES2020+ features like `async/await`, destructuring, and optional chaining (`?.`) to write code that is both **compact and highly readable**.
+
+Emphasize immutability and favor high-performance patterns, such as using array methods (`.map`, `.filter`) over traditional loops. This approach not only improves the maintainability and reliability of your code but also guides AI-powered development tools to generate the most optimized and robust solutions for your application.
+
+---
+
+¡Excelente idea! Un buen final ata todos los cabos sueltos, gestiona las expectativas y anima al desarrollador a dar el siguiente paso.
+
+Aquí tienes una propuesta para una sección final que cumple con esos objetivos. Es motivadora, útil y establece el estado actual del proyecto.
+
+---
+
+### 🚀 What's Next? Your Journey with GenosDB
+
+You now have the tools and best practices to build powerful, real-time, and decentralized applications. Whether you're creating a collaborative tool, a social platform, or the next big P2P game, the reactive and simple API of GenosDB is designed to help you succeed.
+
+We're excited to see what you'll create. Here are some next steps to continue your journey:
+
+*   **📖 Explore Practical Examples:** Dive into our [examples guide](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-examples.md) to see complete, working code for common use cases.
+*   **🛰️ Master Real-Time Communication:** For advanced P2P features like video and audio streaming, consult the full **[GenosRTC API Reference](https://github.com/estebanrfp/gdb/blob/main/docs/genosdb-api-reference.md)**.
+*   **🐞 Report Bugs & Contribute:** Your feedback is invaluable. If you find a bug or have an idea, please [open an issue on GitHub](https://github.com/estebanrfp/gdb/issues). Contributions are always welcome!
+
+### 🧪 API Status: Stable Beta
+
+The GenosDB API is currently in a **stable beta**. We are actively adding features and improving stability. As we work towards our first major release, we recommend checking the [CHANGELOG](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md) for the latest updates.
+
+Happy hacking
+
