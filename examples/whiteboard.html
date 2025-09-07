@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenosDB - Collaborative Whiteboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --background: #1a1a1a;
+      --sidebar: #242424;
+      --surface: #333333;
+      --primary: #646cff;
+      --text-primary: rgba(255, 255, 255, 0.87);
+      --text-secondary: rgba(255, 255, 255, 0.6);
+      --border: #444444;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      margin: 0;
+      height: 100vh;
+      background-color: var(--background);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 280px;
+      padding: 24px;
+      background-color: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .main {
+      flex-grow: 1;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      background-color: var(--background);
+      cursor: crosshair;
+    }
+
+    canvas.grabbable {
+      cursor: grab;
+    }
+
+    canvas.grabbing {
+      cursor: grabbing;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+
+    .controls,
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .control-group button {
+      flex: 1;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      background-color: var(--surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #404040;
+      border-color: var(--primary);
+    }
+
+    button.danger {
+      color: #ff6b6b;
+    }
+
+    button.danger:hover {
+      background-color: #ff6b6b20;
+      border-color: #ff6b6b;
+    }
+
+    button svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    h3 {
+      margin: 10px 0 5px 0;
+      font-size: 1.1em;
+      color: var(--text-secondary);
+    }
+
+    #peers-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #peers-list li {
+      padding: 8px 4px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.9em;
+    }
+
+    .remote-cursor {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23646cff"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>');
+      background-size: contain;
+      pointer-events: none;
+      transition: top 0.1s, left 0.1s;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="sidebar">
+    <h2>P2P Whiteboard</h2>
+    <div class="controls">
+      <h3>Add Shape</h3>
+      <div class="control-group">
+        <button id="add-circle" title="Add Circle"><svg viewBox="0 0 24 24">
+            <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2z" />
+          </svg></button>
+        <button id="add-square" title="Add Square"><svg viewBox="0 0 24 24">
+            <path d="M3 3v18h18V3H3zm16 16H5V5h14v14z" />
+          </svg></button>
+        <button id="add-triangle" title="Add Triangle"><svg viewBox="0 0 24 24">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+          </svg></button>
+      </div>
+    </div>
+    <div class="actions">
+      <h3>Actions</h3>
+      <button id="clear-all" class="danger">Clear Board</button>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div>
+      <h3>Connected Peers:</h3>
+      <ul id="peers-list"></ul>
+    </div>
+  </div>
+
+  <div class="main">
+    <canvas id="whiteboard"></canvas>
+  </div>
+
+  <script type="module">
+    import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js";
+
+    // --- 1. SETUP & INITIALIZATION ---
+    const canvas = document.getElementById('whiteboard');
+    const ctx = canvas.getContext('2d');
+    const peersList = document.getElementById('peers-list');
+    const remoteCursorsContainer = document.querySelector('.main');
+
+    const shapes = new Map();
+    const peerData = new Map();
+    let draggedShapeId = null;
+    let dragOffsetX, dragOffsetY;
+
+    const db = await gdb("collab-board", { rtc: true });
+
+    // --- 2. PERSISTENT STATE MANAGEMENT (`db.map`) ---
+    const { unsubscribe } = await db.map({ query: { type: { $regex: '^shape' } } }, ({ id, value, action }) => {
+      switch (action) {
+        case 'initial':
+        case 'added':
+        case 'updated':
+          shapes.set(id, { id, ...value });
+          break;
+        case 'removed':
+          shapes.delete(id);
+          break;
+      }
+      render();
+    });
+    window.addEventListener('beforeunload', () => unsubscribe());
+
+    // --- 3. EPHEMERAL STATE MANAGEMENT (`db.room`) ---
+    const cursorChannel = db.room.channel("cursor-pos");
+    const dragChannel = db.room.channel("shape-drag");
+
+    // Cursors
+    db.room.on("peer:join", (peerId) => {
+      const cursorEl = document.createElement('div');
+      cursorEl.className = 'remote-cursor';
+      remoteCursorsContainer.appendChild(cursorEl);
+      peerData.set(peerId, { cursorEl });
+      updatePeersList();
+    });
+    db.room.on("peer:leave", (peerId) => {
+      if (peerData.has(peerId)) {
+        peerData.get(peerId).cursorEl.remove();
+        peerData.delete(peerId);
+      }
+      updatePeersList();
+    });
+    cursorChannel.on("message", (position, peerId) => {
+      if (peerData.has(peerId)) {
+        peerData.get(peerId).cursorEl.style.left = `${position.x}px`;
+        peerData.get(peerId).cursorEl.style.top = `${position.y}px`;
+      }
+    });
+    window.addEventListener("mousemove", (e) => cursorChannel.send({ x: e.clientX, y: e.clientY }));
+
+    // Real-time dragging
+    dragChannel.on("message", (data) => {
+      // Prevent receiving our own drag events
+      if (data.id === draggedShapeId) return;
+
+      const shape = shapes.get(data.id);
+      if (shape) {
+        shape.x = data.x;
+        shape.y = data.y;
+        render();
+      }
+    });
+
+    function updatePeersList() {
+      peersList.innerHTML = peerData.size === 0 ? '<li>You are alone...</li>' :
+        [...peerData.keys()].map(peerId => `<li>Peer: ${peerId.substring(0, 8)}...</li>`).join('');
+    }
+
+    // --- 4. RENDER & UI CONTROLS ---
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      shapes.forEach(shape => {
+        ctx.fillStyle = shape.color;
+        if (shape.type === 'shape/circle') {
+          ctx.beginPath();
+          ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (shape.type === 'shape/square') {
+          ctx.fillRect(shape.x - shape.size / 2, shape.y - shape.size / 2, shape.size, shape.size);
+        } else if (shape.type === 'shape/triangle') {
+          const h = shape.size * (Math.sqrt(3) / 2);
+          ctx.beginPath();
+          ctx.moveTo(shape.x, shape.y - h / 2);
+          ctx.lineTo(shape.x - shape.size / 2, shape.y + h / 2);
+          ctx.lineTo(shape.x + shape.size / 2, shape.y + h / 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+      });
+    }
+
+    const getRandomColor = () => `hsl(${Math.random() * 360}, 90%, 70%)`;
+    const createShape = (type, props) => {
+      db.put({
+        type: `shape/${type}`,
+        x: Math.random() * (canvas.width * 0.8) + (canvas.width * 0.1),
+        y: Math.random() * (canvas.height * 0.8) + (canvas.height * 0.1),
+        color: getRandomColor(),
+        ...props
+      });
+    };
+    document.getElementById('add-circle').onclick = () => createShape('circle', { radius: 35 });
+    document.getElementById('add-square').onclick = () => createShape('square', { size: 60 });
+    document.getElementById('add-triangle').onclick = () => createShape('triangle', { size: 70 });
+    document.getElementById('clear-all').onclick = async () => {
+      if (confirm('Are you sure you want to clear the board for everyone?')) await db.clear();
+    };
+
+    // --- 5. DRAG & DROP LOGIC (HYBRID MODEL) ---
+    function throttle(func, limit) {
+      let inThrottle;
+      return function (...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      }
+    }
+
+    const throttledDragSend = throttle((data) => {
+      dragChannel.send(data);
+    }, 30); // Send ephemeral updates every 30ms for smooth tracking
+
+    function getShapeAt(x, y) {
+      // ... (implementation is the same, can be collapsed for brevity)
+      return [...shapes.values()].reverse().find(shape => {
+        if (shape.type === 'shape/circle') {
+          return Math.sqrt((x - shape.x) ** 2 + (y - shape.y) ** 2) < shape.radius;
+        } else if (shape.type === 'shape/square') {
+          return Math.abs(x - shape.x) < shape.size / 2 && Math.abs(y - shape.y) < shape.size / 2;
+        } else if (shape.type === 'shape/triangle') {
+          const h = shape.size * (Math.sqrt(3) / 2);
+          const p0 = { x: shape.x, y: shape.y - h / 2 }, p1 = { x: shape.x - shape.size / 2, y: shape.y + h / 2 }, p2 = { x: shape.x + shape.size / 2, y: shape.y + h / 2 };
+          const A = 1 / 2 * (-p1.y * p2.x + p0.y * (-p1.x + p2.x) + p0.x * (p1.y - p2.y) + p1.x * p2.y);
+          const sign = A < 0 ? -1 : 1;
+          const s = (p0.y * p2.x - p0.x * p2.y + (p2.y - p0.y) * x + (p0.x - p2.x) * y) * sign;
+          const t = (p0.x * p1.y - p0.y * p1.x + (p0.y - p1.y) * x + (p1.x - p0.x) * y) * sign;
+          return s > 0 && t > 0 && (s + t) < 2 * A * sign;
+        }
+      });
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickedShape = getShapeAt(e.clientX - rect.left, e.clientY - rect.top);
+      if (clickedShape) {
+        draggedShapeId = clickedShape.id;
+        dragOffsetX = e.clientX - rect.left - clickedShape.x;
+        dragOffsetY = e.clientY - rect.top - clickedShape.y;
+        canvas.classList.add('grabbing');
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (draggedShapeId) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const shape = shapes.get(draggedShapeId);
+        if (!shape) return;
+
+        // 1. Update local state immediately for smooth UI
+        shape.x = mouseX - dragOffsetX;
+        shape.y = mouseY - dragOffsetY;
+        render();
+
+        // 2. Send throttled EPHEMERAL update to peers
+        throttledDragSend({ id: draggedShapeId, x: shape.x, y: shape.y });
+
+      } else {
+        const rect = canvas.getBoundingClientRect();
+        canvas.classList.toggle('grabbable', !!getShapeAt(e.clientX - rect.left, e.clientY - rect.top));
+      }
+    });
+
+    const onMouseUpOrLeave = () => {
+      if (draggedShapeId) {
+        // 3. On release, save the FINAL state to the database
+        const finalShape = shapes.get(draggedShapeId);
+        if (finalShape) {
+          const { id, ...value } = finalShape;
+          db.put(value, id);
+          console.log(`💾 Persisted final position for shape ${id}`);
+        }
+      }
+      draggedShapeId = null;
+      canvas.classList.remove('grabbing');
+    };
+    canvas.addEventListener('mouseup', onMouseUpOrLeave);
+    canvas.addEventListener('mouseleave', onMouseUpOrLeave);
+
+    canvas.addEventListener('dblclick', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const shapeToDelete = getShapeAt(e.clientX - rect.left, e.clientY - rect.top);
+      if (shapeToDelete) db.remove(shapeToDelete.id);
+    });
+
+    // --- 6. INITIALIZATION ---
+    function resizeCanvas() {
+      canvas.width = remoteCursorsContainer.clientWidth;
+      canvas.height = remoteCursorsContainer.clientHeight;
+      render();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    updatePeersList();
+
+    console.log("🚀 Collaborative Whiteboard initialized with GenosDB.");
+  </script>
+</body>
+
+</html>
