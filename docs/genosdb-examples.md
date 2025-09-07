@@ -35,6 +35,9 @@ A basic kanban with real-time updates.
 ### [Custom Cursor](https://estebanrfp.github.io/gdb/examples/cursor.html)
 Move your mouse cursor in realtime.
 
+### [P2P Collaborative Whiteboard](https://estebanrfp.github.io/gdb/examples/whiteboard.html)
+Build complex real-time apps without a backend. This collaborative whiteboard runs entirely peer-to-peer, powered by the simplicity of GenosDB.
+
 ### [Instant Search](https://estebanrfp.github.io/gdb/examples/search.html)
 Implementation of a quick search for GDB Operator testing.
 
