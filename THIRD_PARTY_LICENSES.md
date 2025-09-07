@@ -35,7 +35,3 @@ This project includes third-party dependencies with the following licenses:
 - **Full text**: [licenses/ethers-license.txt](licenses/ethers-license.txt)
 
 ---
-
-### Project License
-
-The source code of this project is licensed under the [MIT License](https://opensource.org/licenses/MIT). For more details, see the [LICENSE](LICENSE) file.
