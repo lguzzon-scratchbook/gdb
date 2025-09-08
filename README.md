@@ -232,8 +232,12 @@ This repository provides minified builds of GenosDB (GDB), a decentralized P2P g
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Festebanrfp%2Fgdb?ref=badge_large&issueType=license)
 
-## 💖 Support This Project
+---
 
-If you find this project useful and would like to support its development, please consider making a donation:
+## 🤝 Business Inquiries & Collaboration
 
-[![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/estebanrfp/donate)
+GenosDB is an independently developed project with a long-term vision to power the next generation of secure, decentralized, and real-time applications.
+
+For strategic partnerships, enterprise support inquiries, or discussions regarding the project's roadmap and future, please feel free to reach out directly.
+
+**Contact:** [estebanrfp@gmail.com](mailto:estebanrfp@gmail.com) or start a conversation in [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions).
