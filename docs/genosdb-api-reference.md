@@ -540,7 +540,7 @@ If the answer is **NO**, use `db.room`. This is for high-frequency, temporary me
 
 ```javascript
 // This message is sent to peers but does NOT touch the database.
-const cursorChannel = db.room.channel("cursors");
+const cursorChannel = db.room.channel("cursors"); // Channel identifier in UTF‑8 (max 12 bytes).
 cursorChannel.send({ x: 120, y: 345 });
 ```
 
