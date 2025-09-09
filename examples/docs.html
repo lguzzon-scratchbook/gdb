@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenosDB - Collaborative Editor ACLs Demo</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f4f7f9; color: #333; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 250px; background-color: #ffffff; border-right: 1px solid #e0e0e0; padding: 20px; display: flex; flex-direction: column; }
+        .main-content { flex-grow: 1; padding: 20px; display: flex; flex-direction: column; }
+        #app { display: none; width: 100%; height: 100%; }
+        #auth-view { padding: 40px; max-width: 500px; margin: auto; text-align: center; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #1a202c; }
+        textarea, input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: none; }
+        button { background-color: #4299e1; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin: 5px 0; transition: background-color 0.2s; }
+        button:hover { background-color: #3182ce; }
+        button.secondary { background-color: #718096; }
+        button.secondary:hover { background-color: #4a5568; }
+        button.danger { background-color: #e53e3e; }
+        button.danger:hover { background-color: #c53030; }
+        #doc-list { list-style-type: none; padding: 0; margin-top: 20px; }
+        #doc-list li { padding: 10px; cursor: pointer; border-radius: 4px; }
+        #doc-list li:hover { background-color: #edf2f7; }
+        #doc-list li.active { background-color: #bee3f8; font-weight: bold; }
+        #editor-view { display: none; flex-grow: 1; display: flex; flex-direction: column; }
+        #doc-content { flex-grow: 1; font-size: 16px; line-height: 1.6; }
+        .user-status { background-color: #e2e8f0; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 12px; word-wrap: break-word; }
+        .sharing-panel { margin-top: 20px; padding: 15px; background: #f9fafb; border: 1px solid #e0e0e0; border-radius: 4px; }
+        #collaborators-list { list-style-type: none; padding: 0; font-size: 14px; }
+        #collaborators-list li { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+        .user-addr { font-family: monospace; }
+        select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        hr { border: none; border-top: 1px solid #e0e0e0; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-view">
+        <h1>GenosDB Collaborative Editor</h1>
+        <p>Log in or create a new identity to get started.</p>
+        <textarea id="mnemonic-input" rows="3" placeholder="Paste your mnemonic phrase here..."></textarea>
+        <button id="login-btn">Login with Mnemonic</button>
+        <button id="generate-btn" class="secondary">Generate New Identity</button>
+        <div id="generated-info" style="display:none; margin-top: 15px; text-align: left; background: #fff9e6; padding: 10px; border-radius: 4px; font-size: 14px;">
+            <p><strong>Save this information securely!</strong> It's the only way to recover your account.</p>
+            <p><strong>Address:</strong> <code id="new-address" class="user-addr"></code></p>
+            <p><strong>Mnemonic:</strong> <code id="new-mnemonic"></code></p>
+        </div>
+    </div>
+
+    <div id="app" class="container">
+        <div class="sidebar">
+            <h2>Documents</h2>
+            <div id="user-status" class="user-status">Loading...</div>
+            <button id="new-doc-btn">New Document</button>
+            <button id="logout-btn" class="secondary">Log Out</button>
+            <hr>
+            <ul id="doc-list"></ul>
+        </div>
+        <div class="main-content">
+            <div id="editor-view">
+                <input type="text" id="doc-title" placeholder="Document title...">
+                <textarea id="doc-content" placeholder="Write something amazing..."></textarea>
+                <button id="save-btn" style="align-self: flex-end;">Save Changes</button>
+
+                <div id="sharing-panel" class="sharing-panel" style="display:none;">
+                    <h3>Manage Access</h3>
+                    <p>Only the owner can share or change permissions.</p>
+                    <input type="text" id="collaborator-address" placeholder="Collaborator's ETH address">
+                    <select id="permission-select">
+                        <option value="read">Read (read)</option>
+                        <option value="write">Write (write)</option>
+                    </select>
+                    <button id="share-btn">Share</button>
+                    <hr>
+                    <h4>Current Collaborators:</h4>
+                    <ul id="collaborators-list"></ul>
+                </div>
+            </div>
+            <div id="placeholder-view">
+                <h2>Select a document or create a new one.</h2>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js";
+
+        // --- Application State ---
+        let db;
+        let currentUserAddress = null;
+        let currentDocId = null;
+        let currentDocUnsubscribe = null;
+        const docListUnsubscribes = {};
+
+        // --- DOM Elements ---
+        const authView = document.getElementById('auth-view');
+        const appView = document.getElementById('app');
+        const userStatusEl = document.getElementById('user-status');
+        const mnemonicInput = document.getElementById('mnemonic-input');
+        const editorView = document.getElementById('editor-view');
+        const placeholderView = document.getElementById('placeholder-view');
+        const docListEl = document.getElementById('doc-list');
+        const docTitleEl = document.getElementById('doc-title');
+        const docContentEl = document.getElementById('doc-content');
+        const saveBtn = document.getElementById('save-btn');
+        const sharingPanel = document.getElementById('sharing-panel');
+        const collaboratorsListEl = document.getElementById('collaborators-list');
+
+        // --- Main Function ---
+        async function main() {
+            // Initialize GenosDB with SM and ACLs modules enabled
+            db = await gdb("collaborative-editor-acl-demo", {
+                rtc: true,
+                sm: {
+                    // At least one superAdmin is required, even if we don't use it for app logic.
+                    superAdmins: ["0x0000000000000000000000000000000000000000"],
+                    acls: true, // Enable the ACLs module!
+                },
+            });
+
+            // Callback to react to security state changes (login/logout)
+            db.sm.setSecurityStateChangeCallback(handleAuthStateChange);
+            
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('generate-btn').addEventListener('click', handleGenerateIdentity);
+            document.getElementById('login-btn').addEventListener('click', handleLogin);
+            document.getElementById('logout-btn').addEventListener('click', () => db.sm.clearSecurity());
+            document.getElementById('new-doc-btn').addEventListener('click', createNewDocument);
+            saveBtn.addEventListener('click', saveDocument);
+            document.getElementById('share-btn').addEventListener('click', shareDocument);
+        }
+
+        // --- Authentication Logic ---
+        function handleAuthStateChange(state) {
+            currentUserAddress = state.activeAddress;
+            if (state.isActive) {
+                authView.style.display = 'none';
+                appView.style.display = 'flex';
+                userStatusEl.innerHTML = `<strong>User:</strong> <span class="user-addr">${state.abbrAddr}</span>`;
+                loadAllDocuments();
+            } else {
+                authView.style.display = 'block';
+                appView.style.display = 'none';
+                resetUI();
+            }
+        }
+
+        async function handleGenerateIdentity() {
+            const identity = await db.sm.startNewUserRegistration();
+            if (identity) {
+                document.getElementById('generated-info').style.display = 'block';
+                document.getElementById('new-address').innerText = identity.address;
+                document.getElementById('new-mnemonic').innerText = identity.mnemonic;
+                mnemonicInput.value = identity.mnemonic;
+            }
+        }
+
+        async function handleLogin() {
+            const mnemonic = mnemonicInput.value.trim();
+            if (!mnemonic) {
+                alert("Please enter or generate a mnemonic phrase.");
+                return;
+            }
+            try {
+                await db.sm.loginOrRecoverUserWithMnemonic(mnemonic);
+                document.getElementById('generated-info').style.display = 'none';
+            } catch (e) {
+                alert("Invalid mnemonic. Please check the phrase.");
+            }
+        }
+
+        // --- Document Logic ---
+
+        function loadAllDocuments() {
+            // We use db.map to get all documents and subscribe to list changes
+            db.map({ query: { type: "document" } }, ({ id, value, action }) => {
+                if (action === 'initial' || action === 'added') {
+                    addDocumentToList(id, value.title);
+                } else if (action === 'updated') {
+                    const li = document.getElementById(`doc-${id}`);
+                    if (li) li.textContent = value.title;
+                } else if (action === 'removed') {
+                    const li = document.getElementById(`doc-${id}`);
+                    if (li) li.remove();
+                }
+            });
+        }
+
+        function addDocumentToList(id, title) {
+            if (document.getElementById(`doc-${id}`)) return; // Avoid duplicates
+            const li = document.createElement('li');
+            li.id = `doc-${id}`;
+            li.textContent = title;
+            li.addEventListener('click', () => loadDocumentIntoEditor(id));
+            docListEl.appendChild(li);
+        }
+
+        async function loadDocumentIntoEditor(docId) {
+            if (currentDocUnsubscribe) {
+                currentDocUnsubscribe(); // Stop listening for changes on the previous doc
+            }
+            currentDocId = docId;
+
+            // Mark the active doc in the list
+            document.querySelectorAll('#doc-list li').forEach(li => li.classList.remove('active'));
+            document.getElementById(`doc-${docId}`).classList.add('active');
+
+            editorView.style.display = 'flex';
+            placeholderView.style.display = 'none';
+
+            // We use db.get with a callback to get the doc and subscribe to its changes
+            const { unsubscribe } = await db.get(docId, (node) => {
+                if (!node) {
+                    resetUI();
+                    alert("This document has been deleted.");
+                    return;
+                }
+                renderEditor(node);
+            });
+            currentDocUnsubscribe = unsubscribe;
+        }
+
+        async function createNewDocument() {
+            const title = prompt("Title for the new document:", "Untitled Document");
+            if (!title) return;
+
+            // db.sm.acls.set creates a protected node.
+            // The current user automatically becomes the owner.
+            try {
+                const docId = await db.sm.acls.set({
+                    type: 'document',
+                    title: title,
+                    content: ''
+                });
+                loadDocumentIntoEditor(docId);
+            } catch (error) {
+                console.error("Error creating document:", error);
+                alert("Could not create document. Are you logged in?");
+            }
+        }
+
+        async function saveDocument() {
+            if (!currentDocId) return;
+
+            const { result: existingDoc } = await db.get(currentDocId);
+            if (!existingDoc) {
+                alert("The document no longer exists.");
+                return;
+            }
+
+            try {
+                // We use db.sm.acls.set to update. The ACLs middleware
+                // will automatically verify if the user has 'write' permission.
+                await db.sm.acls.set({
+                    ...existingDoc.value,
+                    title: docTitleEl.value,
+                    content: docContentEl.value
+                }, currentDocId);
+                alert("Document saved.");
+            } catch (error) {
+                console.error("Error saving:", error);
+                alert(`Error saving: ${error.message}`);
+            }
+        }
+
+        // --- Permissions (ACLs) Logic ---
+
+        function renderEditor(node) {
+            const { value } = node;
+            docTitleEl.value = value.title || '';
+            docContentEl.value = value.content || '';
+
+            // UI permission logic
+            const isOwner = value.owner === currentUserAddress;
+            const hasWritePermission = value.collaborators?.[currentUserAddress] === 'write';
+            const canWrite = isOwner || hasWritePermission;
+
+            // Enable/disable editing and saving
+            docTitleEl.disabled = !canWrite;
+            docContentEl.readOnly = !canWrite;
+            saveBtn.style.display = canWrite ? 'block' : 'none';
+
+            // Show the sharing panel only to the owner
+            sharingPanel.style.display = isOwner ? 'block' : 'none';
+            if (isOwner) {
+                renderCollaborators(value.collaborators || {});
+            }
+        }
+
+        function renderCollaborators(collaborators) {
+            collaboratorsListEl.innerHTML = '';
+            for (const addr in collaborators) {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="user-addr">${addr} (${collaborators[addr]})</span>
+                    <button class="danger revoke-btn" data-addr="${addr}">Revoke</button>
+                `;
+                collaboratorsListEl.appendChild(li);
+            }
+            // Add listeners to the new revoke buttons
+            document.querySelectorAll('.revoke-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => handleRevoke(e.target.dataset.addr));
+            });
+        }
+
+        async function shareDocument() {
+            const address = document.getElementById('collaborator-address').value.trim();
+            const permission = document.getElementById('permission-select').value;
+            
+            if (!currentDocId || !address) {
+                alert("Missing document ID or collaborator address.");
+                return;
+            }
+            
+            try {
+                // db.sm.acls.grant grants permissions. Only the owner can execute it.
+                await db.sm.acls.grant(currentDocId, address, permission);
+                alert(`'${permission}' permission granted to ${address}`);
+                document.getElementById('collaborator-address').value = '';
+            } catch(error) {
+                console.error("Error sharing:", error);
+                alert(`Error sharing: ${error.message}`);
+            }
+        }
+        
+        async function handleRevoke(address) {
+            if (!currentDocId || !address || !confirm(`Are you sure you want to revoke access for ${address}?`)) {
+                return;
+            }
+
+            try {
+                // db.sm.acls.revoke removes all permissions for a user. Only the owner can do this.
+                await db.sm.acls.revoke(currentDocId, address);
+                alert(`Access revoked for ${address}`);
+            } catch(error) {
+                console.error("Error revoking:", error);
+                alert(`Error revoking: ${error.message}`);
+            }
+        }
+
+        function resetUI() {
+            docListEl.innerHTML = '';
+            editorView.style.display = 'none';
+            placeholderView.style.display = 'block';
+            if (currentDocUnsubscribe) currentDocUnsubscribe();
+            currentDocId = null;
+            currentUserAddress = null;
+        }
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', main);
+    </script>
+</body>
+</html>
