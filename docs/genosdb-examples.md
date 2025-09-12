@@ -86,8 +86,8 @@ RBAC Simple WebAuthn Security.
 ### [SM Encryption Example](https://estebanrfp.github.io/gdb/examples/encryption.html)
 SM Encryption & Decryption Example
 
-### [AI-powered Oplog Audit Module](https://estebanrfp.github.io/gdb/examples/todolist-audit.html)
-Provides real-time auditing of oplog entries using AI to detect patterns, prohibited content, and support data
+### [Oplog Audit Module](https://estebanrfp.github.io/gdb/examples/todolist-audit.html)
+Provides real-time auditing of oplog entries, detect spam and prohibited content
 
 ### [SM Secure Notes](https://estebanrfp.github.io/gdb/examples/sm-secure-notes.html)
 A single-page HTML application demonstrating secure, real-time, peer-to-peer note sharing. It utilizes GenosDB and its SM module for identity management, implicit client-side encryption of notes, and secure P2P data synchronization.
@@ -102,7 +102,7 @@ Allows you to test mass insertions, real-time P2P synchronization, and subscript
 Ideal for evaluating throughput, latency, and the stability of GDB in demanding use cases.
 
 ### [GenosDB - Query Playground](https://estebanrfp.github.io/gdb/examples/sandbox.html)
-A testing environment to experiment with GDB Operators and IA examples
+A testing environment to experiment with GDB Operators and Natural Language for Queries examples
 
 ### [Edge Operator Testbed](https://estebanrfp.github.io/gdb/examples/edge-operator-testbed.html)
 `$edge` Operator Testbed environment to experiment with GenosDB Operators
