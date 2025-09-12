@@ -47,7 +47,6 @@ A lightweight, decentralized graph database designed for modern web applications
   - Advanced queries.
   - **Recursive Graph Traversal Queries:**
     Execute complex, multi-hop graph traversals using the recursive $edge operator. This operator uses the source nodes as a starting point to discover and return all connected nodes that match a powerful sub-query, regardless of their relational distance. The entire traversal logic is resolved within a single, declarative query, eliminating the need for manual, multi-step lookups in the application code. The query engine is designed to handle deeply nested relational paths with exceptional speed.
-  - Modules powered by AI.
   - Distributed storage.
   - Conflict resolution module (LWW).
   - Performance optimization.
