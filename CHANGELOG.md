@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2025-09-11
+### Added
+- Security: container signing for `deltaSync` and `fullStateSync` when SM is active; verification on reception if signatures are present. Backward compatible with unsigned containers.
+- Clear sync logs:
+  - 💥 [FALLBACK TRIGGERED] Peer is too far behind. Sending FULL state as deltas.
+  - 🚀 [DELTA SYNC SENDING] Found N new operations to send.
+
+### Changed
+- Sync protocol frozen (SM-agnostic):
+  - Removed the “peer ahead” heuristic.
+  - Send deltas only when there are operations since the peer’s timestamp.
+  - Fallback to `fullStateSync` only if the requester has no reference (null/undefined) or is too far behind (older than oplog’s oldest).
+  - `fullStateSync` is accepted when timestamps are equal; it is ignored only if local state is strictly newer.
+- Compression: both `deltaSync` and `fullStateSync` travel compressed (MessagePack + pako).
+- Core stays SM-agnostic: removed any governance-related mutation from delta handling.
+
+### Fixed
+- A–B–C propagation: preserved-signature relaying ensures role updates propagate even if the original signer goes offline.
+- Avoided unnecessary full fallback when peers are already up-to-date.
+
+### Notes
+- Existing apps remain compatible. Zero-trust is enforced at container level when signatures are present, without changing GDB’s wire protocol.
+
 ## [0.10.2] - 2025-09-03
 
 ### Fixed
