@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GDB Governance - Viewer</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+
+    }
+
+    h2#status {
+      background: #e3f2fd;
+      color: #0d47a1;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      margin: 10px 0 20px 0;
+      font-size: 1rem;
+    }
+
+    /* Role highlight */
+    .role-green {
+      color: #00a8ff;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    button {
+      margin: 5px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: #007bff;
+      color: #fff;
+      font-size: 0.95rem;
+      transition: background 0.2s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: #0056b3;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    #logout:not(:disabled) {
+      background: #dc3545;
+    }
+
+    #deleteDb:not(:disabled) {
+      background: #dc3545;
+    }
+
+    #deleteDb:hover:not(:disabled) {
+      background: #a71d2a;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      font-size: .9rem;
+      min-height: 70px;
+      box-sizing: border-box;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+
+    pre {
+      background: #222;
+      color: #eee;
+      padding: 12px;
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Governance Module - Viewer</h1>
+    <h2 id="status">Logged Out</h2>
+    <div>
+      <button id="init">Init System</button>
+      <button id="guest" disabled>New Guest</button>
+      <button id="login" disabled>Login Mnemonic</button>
+      <button id="logout" disabled>Logout</button>
+      <button id="deleteDb" disabled style="background: #dc3545;">🗑️</button>
+    </div>
+    <textarea id="mnemonic" placeholder="New mnemonic will appear here or paste one to log in"></textarea>
+    <h2>Log</h2>
+    <pre id="log">Logs will appear here...</pre>
+  </div>
+
+  <script type="module">
+    import { gdb } from "../dist/index.js"
+
+    const els = {
+      init: document.getElementById("init"),
+      guest: document.getElementById("guest"),
+      login: document.getElementById("login"),
+      logout: document.getElementById("logout"),
+      deleteDb: document.getElementById("deleteDb"),
+      mnemonic: document.getElementById("mnemonic"),
+      status: document.getElementById("status"),
+      log: document.getElementById("log")
+    }
+
+    // let db, unsub
+    let db, unsubscribeDb, unsubscribeUser;
+    // Cache de últimos valores por id para detectar cambios de rol
+    const cache = new Map()
+
+    const abbrAddr = address => `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+    const log = m => {
+      els.log.textContent += `[${new Date().toLocaleTimeString()}] ${m}\n`
+      els.log.scrollTop = els.log.scrollHeight
+    }
+
+    const setStatus = (addr = null, role = null) => {
+      if (addr && role) {
+        const isSuperAdmin = SUPERADMINS_ADDRESSES.some(
+          sa => sa && addr && sa.toLowerCase() === addr.toLowerCase()
+        )
+        const roleToDisplay = isSuperAdmin ? 'superadmin' : role
+        els.status.innerHTML = `${abbrAddr(addr)} | <span class=\"role-green\">${roleToDisplay}</span>`
+        els.status.style.cssText = "background:#d4edda;color:#155724"
+      } else {
+        els.status.textContent = "Logged Out"
+        els.status.style.cssText = "background:#e3f2fd;color:#0d47a1"
+      }
+    }
+
+    // ✅ Superadmins addresses
+    const SUPERADMINS_ADDRESSES = [
+      "0xE5639DfE345F8ab845bEBE63a1C7322F9c6fF5c7"
+    ]
+
+    // ✅ Governance rules
+    const GOVERNANCE_RULES = [
+      {
+        if: { role: "guest" },
+        offsetTimestamp: 5000,
+        then: { assignRole: "user" },
+      },
+      // {
+      //   if: { role: "user" },
+      //   offsetTimestamp: 5000,
+      //   then: { assignRole: "guest" },
+      // }
+    ]
+
+    const init = async () => {
+      els.init.disabled = true
+      try {
+        db = await gdb("governance-interactive-test-db10", {
+          rtc: true,
+          sm: {
+            superAdmins: SUPERADMINS_ADDRESSES,
+            governanceRules: GOVERNANCE_RULES
+          }
+        })
+
+        await db.sm.setSecurityStateChangeCallback((state) => {
+          const isActive = !!state?.isActive
+          els.logout.disabled = !isActive
+          // Keep deleteDb enabled after init, regardless of session state
+          els.guest.disabled = isActive
+          els.login.disabled = isActive
+          setStatus()
+
+          if (isActive && state.activeAddress) {
+            setStatus(state.activeAddress, 'guest')
+          } else {
+            setStatus()
+          }
+        })
+
+        els.guest.disabled = els.login.disabled = false
+        // Enable delete database button after successful initialization
+        els.deleteDb.disabled = false
+        log("✅ System initialized with governance rules")
+        // React to SM security state to toggle logout and show status promptly
+
+      } catch (e) {
+        log(`❌ Init failed: ${e.message}`)
+        els.init.disabled = false
+      }
+    }
+
+    const newGuest = async () => {
+      log("Generating new guest identity...")
+      if (db.sm.isSecurityActive()) await logout()
+      try {
+        const id = await db.sm.startNewUserRegistration()
+        els.mnemonic.value = id.mnemonic
+        log(`✅ Guest created: ${id.address}`)
+      } catch (e) {
+        log(`❌ Failed to generate guest: ${e.message}`)
+      }
+    }
+
+    let address = null;
+
+    const login = async () => {
+      const phrase = els.mnemonic.value.trim(); if (!mnemonic) return alert("Textarea is empty.");
+      if (!phrase) return alert("No mnemonic provided")
+      log("Attempting login...")
+      try {
+        if (db.sm.isSecurityActive()) await logout()
+        const id = await db.sm.loginOrRecoverUserWithMnemonic(phrase)
+        if (!id) throw new Error("Invalid mnemonic")
+        log(`✅ Logged in: ${id.address}`)
+        address = id.address;
+
+        // Subscribe to user data changes
+        // unsubscribeUser?.(); // Unsubscribe previous if any
+        unsubscribeUser = db.map({ query: { id: `user:${id.address}` } }, ({ value }) => {
+          if (value) {
+            setStatus(id.address, value.role);
+          }
+        });
+      } catch (e) {
+        log(`❌ Login failed: ${e.message}`)
+      }
+    }
+
+    const logout = async () => {
+      // unsubscribeUser?.(); unsubscribeUser = null;
+
+      await db.sm.clearSecurity()
+      setStatus()
+      // Ensure logout button is disabled after session clears
+      els.logout.disabled = true
+      els.deleteDb.disabled = true
+      // Re-enable identity/login buttons after logout (fallback if callback hasn't fired yet)
+      els.guest.disabled = false
+      els.login.disabled = false
+      log("Logged out")
+    }
+
+    const deleteDatabase = async () => {
+      try {
+        log("🗑️ Deleting database...")
+        
+        // Clear all data using GenosDB's clear method
+        await db.clear()
+        
+        log("✅ Database cleared successfully")
+        
+        // Reset UI state
+        setStatus()
+        els.logout.disabled = true
+        els.deleteDb.disabled = true
+        els.guest.disabled = false
+        els.login.disabled = false
+        els.mnemonic.value = ""
+        
+        // Clear cache
+        cache.clear()
+        
+        // Reset database reference
+        db = null
+      } catch (e) {
+        log(`❌ Error during database deletion: ${e.message}`)
+      }
+    }
+
+    els.init.onclick = init
+    els.guest.onclick = newGuest
+    els.login.onclick = login
+    els.logout.onclick = logout
+    els.deleteDb.onclick = deleteDatabase
+  </script>
+</body>
+
+</html>
