@@ -256,9 +256,9 @@
         <strong>$or + $and (roles OR) AND country</strong>
         <small>role is Developer OR role is Designer, AND country is USA.</small>
       </li>
-      <li class="query-item" data-query='{"prompt": "Find employees whose role is Developer or Designer"}'>
-        <strong>In-list with OR-like phrasing</strong>
-        <small>role is Developer or Designer (interpreta $in).</small>
+      <li class="query-item" data-query='{"prompt": "Find employees whose role in Developer, Designer"}'>
+        <strong>In-list: role in Developer, Designer</strong>
+        <small>role in Developer, Designer (usa $in).</small>
       </li>
       <li class="query-item" data-query='{"prompt": "Find employees whose name starts with B order asc by name limit 10"}'>
         <strong>Starts with + order asc + limit</strong>
@@ -276,9 +276,9 @@
         <strong>Not equals</strong>
         <small>country is not USA.</small>
       </li>
-      <li class="query-item" data-query='{"prompt": "Find a Company, then a descendant of type Employee with email exists"}'>
-        <strong>Exists</strong>
-        <small>Company → Employee with email exists.</small>
+      <li class="query-item" data-query='{"prompt": "Find a Company, then a descendant of type Employee with level Senior"}'>
+        <strong>Equality in $edge: level Senior</strong>
+        <small>Company → Employee with level Senior.</small>
       </li>
       <li class="query-item" data-query='{"prompt": "Finds only Employees"}'>
         <strong>Finds only Employees</strong>
