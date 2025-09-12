@@ -87,11 +87,23 @@
       gap: 10px;
       align-items: center;
     }
+
+    .hint {
+      margin: 8px 0 10px;
+      font-size: 12px;
+      color: #333;
+      background: #fff6d8;
+      border: 1px solid #f1dfaa;
+      padding: 10px 12px;
+      border-radius: 8px;
+  width: 100%;
+    }
   </style>
 </head>
 
 <body>
   <h2>To-Do List (Audit Module)</h2>
+  <div class="hint">Type spam (repeated or rapid messages) and insults to test the audit module.</div>
   <input type="text" id="taskInput" placeholder="New task">
   <ul id="taskList"></ul>
   <script type="module">
@@ -101,7 +113,7 @@
     const currentNodeIds = new Set();
 
     // Inicialización con top-level await (sin initDB)
-    let db = await gdb('todoList', { rtc: true, audit: true });
+    let db = await gdb('todoList-audit', { rtc: true, audit: true });
 
     const { unsubscribe } = await db.map(({ id, value, action }) => {
       if (action === "initial" || action === "added") handleAddTask(id, value);
