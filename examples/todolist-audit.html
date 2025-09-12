@@ -4,26 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GenosDB To-Do List (AI Audit Module)</title>
+  <title>GenosDB To-Do List (Audit Module)</title>
   <style>
-    .blink {
-      animation: blink-bg 0.4s linear 1 !important;
-    }
-
-    @keyframes blink-bg {
-      0% {
-        background: #e0ffff;
-      }
-
-      50% {
-        background: #f4f7fc;
-      }
-
-      100% {
-        background: #e0ffff;
-      }
-    }
-
     body {
       font-family: Arial, sans-serif;
       max-width: 400px;
@@ -109,36 +91,23 @@
 </head>
 
 <body>
-  <h2>To-Do List (AI Audit Module)</h2>
-  <textarea id="promptInput" placeholder="Audit prompt"
-    style="margin-bottom:8px;width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:16px;resize:vertical;min-height:48px;max-height:160px;"></textarea>
+  <h2>To-Do List (Audit Module)</h2>
   <input type="text" id="taskInput" placeholder="New task">
   <ul id="taskList"></ul>
   <script type="module">
     import { gdb } from "../dist/index.js";
 
-    let db;
-    let unsubscribe;
+
     const currentNodeIds = new Set();
-    let currentPrompt = "Flag offensive/prohibited content and consecutive entries with timestamps <150ms apart..";
-    document.getElementById('promptInput').value = currentPrompt;
 
-    // Initialize DB
-    async function initDB(prompt) {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+    // Inicialización con top-level await (sin initDB)
+    let db = await gdb('todoList', { rtc: true, audit: true });
 
-      db = await gdb('todoList', { rtc: true, audit: true });
-
-      const { unsubscribe: newUnsubscribe } = await db.map(({ id, value, action }) => {
-        if (action === "initial" || action === "added") handleAddTask(id, value);
-        if (action === "updated") handleUpdateTask(id, value);
-        if (action === "removed") handleDeleteTask(id);
-      });
-
-      unsubscribe = newUnsubscribe;
-    }
+    const { unsubscribe } = await db.map(({ id, value, action }) => {
+      if (action === "initial" || action === "added") handleAddTask(id, value);
+      if (action === "updated") handleUpdateTask(id, value);
+      if (action === "removed") handleDeleteTask(id);
+    });
 
     // Create DOM elements for each task
     function createTaskElements(li, id, { text, completed }) {
@@ -285,23 +254,6 @@
     document.getElementById('taskInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') addTask();
     });
-
-    const promptBox = document.getElementById('promptInput');
-    promptBox.addEventListener('keydown', async (e) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
-        e.preventDefault();
-        const newPrompt = promptBox.value.trim();
-        if (newPrompt && newPrompt !== currentPrompt) {
-          currentPrompt = newPrompt;
-          await initDB(currentPrompt);
-
-          promptBox.classList.add('blink');
-          setTimeout(() => promptBox.classList.remove('blink'), 800);
-        }
-      }
-    });
-
-    await initDB(currentPrompt);
   </script>
 </body>
 
