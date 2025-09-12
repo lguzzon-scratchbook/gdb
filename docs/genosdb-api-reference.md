@@ -41,7 +41,8 @@ Creates and configures a database connection.
       - `relayUrls` `{string[]}` – Custom list of secure WebSocket relay URLs (for Nostr), now passed inside the `rtc` object.
       - `turnConfig` `{Array<Object>}` – Configuration for TURN servers, now passed inside the `rtc` object.
     - `sm` `{boolean | Object}` – If `true`, loads the Security Manager module with default settings. Can also be an object with specific configuration parameters for the module.
-    - `ai` `{boolean}` – If `true`, loads the AIQuery module.
+    - `ai` `{boolean}` – If `true`, loads the AI module.
+    - `nlq` `{boolean}` – If `true`, loads the Natural Language for Queries module.
     - `rx` `{boolean}` – If `true`, loads the Radix Index module.
     - `ii` `{boolean}` – If `true`, loads the Inverted Index module.
     - `geo` `{boolean}` – If `true`, loads the Geo module.
@@ -556,7 +557,7 @@ Aquí tienes un párrafo que destila la esencia de tu prompt en un consejo conci
 
 To get the most out of GenosDB, we recommend adopting a modern and efficient coding style. Prioritize ES2020+ features like `async/await`, destructuring, and optional chaining (`?.`) to write code that is both **compact and highly readable**.
 
-Emphasize immutability and favor high-performance patterns, such as using array methods (`.map`, `.filter`) over traditional loops. This approach not only improves the maintainability and reliability of your code but also guides AI-powered development tools to generate the most optimized and robust solutions for your application.
+Emphasize immutability and favor high-performance patterns, such as using array methods (`.map`, `.filter`) over traditional loops. This approach not only improves the maintainability and reliability.
 
 ---
 
