@@ -46,6 +46,7 @@ Creates and configures a database connection.
     - `rx` `{boolean}` – If `true`, loads the Radix Index module.
     - `ii` `{boolean}` – If `true`, loads the Inverted Index module.
     - `geo` `{boolean}` – If `true`, loads the Geo module.
+    - `audit` `{boolean}` – If `true`, loads the Audit module.
     - `password` `{string}` – Optional encryption key.
     - `saveDelay` `{number}` _(optional)_ – The debounce delay in milliseconds for saving the graph to persistent storage. Higher values reduce disk I/O under heavy write loads but increase the risk of data loss if the browser crashes. Defaults to `200`.
     - `oplogSize` `{number}` _(optional)_ – The maximum number of recent operations to keep in the operation log for delta-based P2P synchronization. Larger values allow peers to sync efficiently after longer disconnections but consume more memory. Defaults to `20`.
