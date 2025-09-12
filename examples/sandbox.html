@@ -219,21 +219,73 @@
         <strong>$regex: Name contains "an"</strong>
         <small>Finds names containing the substring "an".</small>
       </li>
-      <h3>Search using (IA Prompt)</h3>
+      <h3>Search using (NL Query Prompt)</h3>
       <li class="query-item"
         data-query='{"prompt": "Finds a Company, then finds a Developer descendant, then finds that Developers descendant named Bob."}'>
-        <strong>Find by Hierarchy (IA Prompt)</strong>
+        <strong>Find by Hierarchy</strong>
         <small>Finds a Company, then finds a Developer descendant, then finds that Developer's descendant named
           "Bob".</small>
       </li>
+      <li class="query-item" data-query='{"prompt": "Finds a Company, then finds descendant named Bob"}'>
+        <strong>Company → descendant named Bob</strong>
+        <small>Company → descendant named "Bob" (sin especificar type/role).</small>
+      </li>
       <li class="query-item" data-query='{"prompt": "Finds only Companies"}'>
-        <strong>Finds only Companies (IA Prompt)</strong>
+        <strong>Finds only Companies</strong>
         <small>Finds all Companies.</small>
       </li>
       <li class="query-item" data-query='{"prompt": "finds descendant Developers"}'>
-        <strong>finds descendant Developers (IA Prompt)</strong>
+        <strong>finds descendant Developers</strong>
         <small>finds descendant Developers.</small>
       </li>
+      <li class="query-item" data-query='{"prompt": "Get posts order desc by id limit 3"}'>
+        <strong>Get posts order desc by id limit 3</strong>
+        <small>Get posts order desc by id limit 3</small>
+      </li>
+
+      <!-- Added NLQ prompts to showcase $edge, $and/$or, order/limit, starts with, between, exists -->
+      <li class="query-item" data-query='{"prompt": "Find a Company, then a descendant of type Employee with role Developer, then a descendant named Bob limit 5 order desc by id"}'>
+        <strong>Nested $edge with type + role + name</strong>
+        <small>Company → Employee(role=Developer) → descendant named Bob, ordered desc by id, limit 5.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find a Company, then a descendant named Bob"}'>
+        <strong>$edge with unnamed type</strong>
+        <small>Company → descendant named Bob (sin especificar type/role).</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose role is Developer or role is Designer and country is USA"}'>
+        <strong>$or + $and (roles OR) AND country</strong>
+        <small>role is Developer OR role is Designer, AND country is USA.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose role is Developer or Designer"}'>
+        <strong>In-list with OR-like phrasing</strong>
+        <small>role is Developer or Designer (interpreta $in).</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose name starts with B order asc by name limit 10"}'>
+        <strong>Starts with + order asc + limit</strong>
+        <small>name starts with B, order asc by name, limit 10.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose age between 30 and 40 order asc by age limit 5"}'>
+        <strong>Between age 30–40 + sort/limit</strong>
+        <small>age between 30 and 40, order asc by age, limit 5.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find a Company, then a descendant of type Employee whose tags includes JavaScript"}'>
+        <strong>$edge + includes</strong>
+        <small>Company → Employee with tags includes JavaScript.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose country is not USA"}'>
+        <strong>Not equals</strong>
+        <small>country is not USA.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find a Company, then a descendant of type Employee with email exists"}'>
+        <strong>Exists</strong>
+        <small>Company → Employee with email exists.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Finds only Employees"}'>
+        <strong>Finds only Employees</strong>
+        <small>Find all Employees.</small>
+      </li>
+
+      
     </ul>
   </div>
 
