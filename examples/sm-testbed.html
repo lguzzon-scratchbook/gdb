@@ -419,7 +419,7 @@
 
       // Update status display
       statusRbacActive.textContent = securityState.isActive;
-      statusActiveAddress.textContent = securityState.activeAddress || 'N/A';
+      statusActiveAddress.textContent = securityState.abbrAddr || 'N/A';
       statusWebAuthnProtected.textContent = securityState.isWebAuthnProtected;
       statusVolatileIdentity.textContent = securityState.hasVolatileIdentity;
       statusWebAuthnRegistered.textContent = securityState.hasWebAuthnHardwareRegistration;
@@ -517,7 +517,6 @@
       logToUI(`Initializing GDB '${dbName}'...`);
 
       try {
-        // REFACTORED: Correct, single initialization call
         db = await gdb(dbName, {
           rtc: true,
           sm: {
@@ -555,6 +554,7 @@
         handleSecurityStateChange({
           isActive: false,
           activeAddress: null,
+          abbrAddr: null,
           isWebAuthnProtected: false,
           hasVolatileIdentity: false,
           hasWebAuthnHardwareRegistration: false
