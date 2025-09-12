@@ -54,10 +54,9 @@ GenosDB’s architecture is modular and optimized for browser environments, inte
 +-------------------+       +-------------------+       +-------------------+
           |
           v
-+-------------------+
-|    Audit Module   |
-| AI-Based Analysis |
-+-------------------+
++---------------------------+
+|    Audit Module  Analysis |
++---------------------------+
 ```
 
 ## 3. Query Capabilities
@@ -126,7 +125,7 @@ GenosDB’s extensibility is driven by its modular design, allowing developers t
 -   **Radix Indexer**: Enabled with `rx: true`. Uses a Radix Tree for efficient prefix-based indexing and enhances queries with `$startsWith`.
 -   **Inverted Index**: Enabled with `ii: true`. Supports full-text search.
 -   **Geo Module**: Enabled with `geo: true`. Adds geospatial indexing and queries.
--   **AI Audit Module**: Enabled with `audit: true`. Analyzes oplog data for problematic content using an external AI API.
+-   **Audit Module**: Enabled with `audit: true`. Analyzes oplog data for problematic content.
 
 **Example (Enabling Modules)**:
 ```javascript
