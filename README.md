@@ -199,6 +199,9 @@ We value community contributions and discussions! Here's how you can get involve
 - **Ask questions or share ideas**: Join our [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions).
 - **Real-time chat**: For quick conversations, join us on [Gitter](https://app.gitter.im/#/room/#GDB:gitter.im).
 
+See the discussion on Product Hunt:
+
+<a href="https://www.producthunt.com/products/genosdb?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-genosdb" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1015741&theme=light&t=1757737737388" alt="GenosDB - GenosDB&#0032;&#0040;GDB&#0041;&#0032;–&#0032;Distributed&#0032;P2P&#0032;Graph&#0032;Database | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
 Feel free to ask questions, share ideas, or just say hello! 👋
 
