@@ -280,6 +280,42 @@
         <strong>Equality in $edge: level Senior</strong>
         <small>Company → Employee with level Senior.</small>
       </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose name ends with son order asc by name limit 5"}'>
+        <strong>Ends with + sort/limit</strong>
+        <small>name ends with "son", order asc by name, limit 5.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose name like \"J%\""}'>
+        <strong>Like operator</strong>
+        <small>name like "J%".</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Full text search \"Developer\""}'>
+        <strong>Text search</strong>
+        <small>Full text search "Developer".</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Full text search \"developer\""}'>
+        <strong>Text search (case-insensitive)</strong>
+        <small>Full text search "developer" (case-insensitive).</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Full text search \"JavaScript\""}'>
+        <strong>Text search (tags)</strong>
+        <small>Matches tags via $in when applicable.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Full text search JavaScript"}'>
+        <strong>Text search (unquoted single word)</strong>
+        <small>Same behavior as quoted when single-word term.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Find employees whose hireDate between 2020-01-01 and 2020-12-31 order asc by hireDate limit 5"}'>
+        <strong>Between dates + sort/limit</strong>
+        <small>hireDate between 2020-01-01 and 2020-12-31, order asc by hireDate, limit 5.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Get employees order asc by name limit 2"}'>
+        <strong>List: first 2 employees by name</strong>
+        <small>order asc by name, limit 2.</small>
+      </li>
+      <li class="query-item" data-query='{"prompt": "Get employees order desc by name limit 5"}'>
+        <strong>List: last 5 employees by name</strong>
+        <small>order desc by name, limit 5.</small>
+      </li>
       <li class="query-item" data-query='{"prompt": "Finds only Employees"}'>
         <strong>Finds only Employees</strong>
         <small>Find all Employees.</small>
@@ -305,7 +341,7 @@
     import { gdb } from "../dist/index.js";
 
     // Initialize GenosDB with AI module enabled
-    const db = await gdb('ultimate-sandbox-db-v3', { rtc: false, nlq: true });
+    const db = await gdb('nl-sandbox-db', { rtc: false, nlq: true });
     const sm = db.sm; // Security manager (sm)
 
     // Check if DB is empty and seed if needed
@@ -348,6 +384,11 @@
       const emp11Id = await db.put({ type: 'Employee', name: 'Leo', role: 'Developer', level: 'Lead', age: 36, country: 'USA', isActive: true, hireDate: '2018-10-10T00:00:00Z', tags: ['JavaScript', 'Architecture'] });
       const emp12Id = await db.put({ type: 'Employee', name: 'Mona', role: 'HR', level: 'Manager', age: 42, country: 'Canada', isActive: true, hireDate: '2017-12-01T00:00:00Z', tags: ['Recruiting', 'People Ops'], email: 'mona@example.com' });
 
+      // Extra employees to enrich NLQ examples (do not alter existing ones)
+      const emp13Id = await db.put({ type: 'Employee', name: 'Jackson', role: 'Developer', level: 'Mid', age: 29, country: 'USA', isActive: true, hireDate: '2022-07-15T00:00:00Z', tags: ['JavaScript', 'Node.js'] });
+      const emp14Id = await db.put({ type: 'Employee', name: 'Emerson', role: 'QA Engineer', level: 'Senior', age: 37, country: 'Canada', isActive: true, hireDate: '2019-04-21T00:00:00Z', tags: ['Testing', 'Automation'] });
+      const emp15Id = await db.put({ type: 'Employee', name: 'Allison', role: 'Designer', level: 'Mid', age: 30, country: 'USA', isActive: true, hireDate: '2020-09-09T00:00:00Z', tags: ['Figma', 'UX'] });
+
       // Link employees to companies
       await db.link(company1Id, emp1Id);
       await db.link(company1Id, emp2Id);
@@ -356,6 +397,11 @@
       await db.link(company2Id, emp5Id);
       await db.link(company1Id, emp7Id);
       await db.link(emp1Id, emp2Id);
+
+      // Link extra employees
+      await db.link(company1Id, emp13Id);
+      await db.link(company2Id, emp14Id);
+      await db.link(company1Id, emp15Id);
 
       statusBar.textContent = 'Data seeded successfully.';
       console.log('Sample data seeded.');
