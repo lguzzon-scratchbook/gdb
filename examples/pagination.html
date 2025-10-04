@@ -1,49 +1,49 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog Grid con Paginación Mixta y Persistencia</title>
+    <title>Blog Grid with Mixed Pagination and Persistence</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
             background: #004a9a;
-            /* Fondo azul del primer ejemplo */
+            /* Blue background from the first example */
             color: white;
         }
 
         .container {
             max-width: 1200px;
-            /* Más ancho para el grid */
+            /* Wider for the grid */
             margin: 20px auto;
             padding: 20px;
             padding-bottom: 100px;
         }
 
-        /* Estilos para el Grid de Posts */
+        /* Styles for the Posts Grid */
         #posts-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            /* Grid responsivo */
+            /* Responsive grid */
             gap: 20px;
         }
 
         .post {
             background: #FF9800;
-            /* Naranja del primer ejemplo */
+            /* Orange from the first example */
             border-radius: 8px;
             cursor: pointer;
             transition: transform 0.2s ease;
             overflow: hidden;
-            /* Para que la imagen no se salga */
+            /* So the image doesn't overflow */
             position: relative;
-            /* Para el título superpuesto */
+            /* For the overlay title */
             color: white;
             aspect-ratio: 1 / 1;
-            /* Para hacerlos cuadrados, o ajusta según necesites */
+            /* To make them square, or adjust as needed */
         }
 
         .post:hover {
@@ -54,7 +54,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            /* Cubre el espacio sin deformar */
+            /* Cover the space without distortion */
             display: block;
         }
 
@@ -73,7 +73,7 @@
             text-overflow: ellipsis;
         }
 
-        /* --- Fin estilos Grid --- */
+        /* --- End Grid styles --- */
 
         .pagination-bar {
             position: fixed;
@@ -81,7 +81,7 @@
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 74, 154, 0.9);
-            /* Azul más oscuro para la barra */
+            /* Darker blue for the bar */
             backdrop-filter: blur(5px);
             padding: 10px 20px;
             border-radius: 20px;
@@ -95,7 +95,7 @@
         .pagination-button,
         .pagination-number {
             background: #FF9800;
-            /* Naranja para botones */
+            /* Orange for buttons */
             color: white;
             border: none;
             padding: 10px 15px;
@@ -107,7 +107,7 @@
         .pagination-button:hover,
         .pagination-number:hover:not(.active) {
             background: #e68900;
-            /* Naranja más oscuro */
+            /* Darker orange */
         }
 
         .pagination-button:disabled {
@@ -123,7 +123,7 @@
 
         .pagination-number.active {
             background: #002b5c;
-            /* Azul muy oscuro para activo */
+            /* Very dark blue for active */
             color: white;
         }
 
@@ -147,7 +147,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
-            /* Más oscuro */
+            /* Darker */
             display: none;
             justify-content: center;
             align-items: center;
@@ -157,7 +157,7 @@
         .modal-content {
             background: white;
             color: #333;
-            /* Texto oscuro en modal */
+            /* Dark text in modal */
             padding: 20px;
             border-radius: 10px;
             max-width: 600px;
@@ -186,20 +186,20 @@
         }
 
         .modal-content .post-image {
-            /* Imagen dentro del modal */
+            /* Image inside the modal */
             width: 100%;
             height: auto;
-            /* Altura automática */
+            /* Automatic height */
             max-height: 400px;
-            /* Límite de altura */
+            /* Height limit */
             object-fit: contain;
-            /* Para verla completa */
+            /* To view it fully */
             border-radius: 8px;
             margin-bottom: 15px;
         }
 
         .modal-content .post-tags {
-            /* Tags en modal */
+            /* Tags in modal */
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
@@ -246,22 +246,22 @@
     <div class="container">
         <div id="posts-container"></div>
     </div>
-    <div class="loading-indicator" id="loading">Cargando...</div>
-    <button class="api-loader" id="load-api-posts">Cargar Posts de API</button>
+    <div class="loading-indicator" id="loading">Loading...</div>
+    <button class="api-loader" id="load-api-posts">Load API Posts</button>
 
     <div class="pagination-bar" id="pagination-bar">
-        <button class="pagination-button" id="first-page" title="Primera página">«</button>
-        <button class="pagination-button" id="prev-page" title="Página anterior">‹</button>
+        <button class="pagination-button" id="first-page" title="First page">«</button>
+        <button class="pagination-button" id="prev-page" title="Previous page">‹</button>
         <div id="page-numbers" class="pagination-group"></div>
-        <button class="pagination-button" id="next-page" title="Página siguiente">›</button>
-        <button class="pagination-button" id="last-page" title="Última página">»</button>
+        <button class="pagination-button" id="next-page" title="Next page">›</button>
+        <button class="pagination-button" id="last-page" title="Last page">»</button>
     </div>
 
     <div class="modal" id="post-modal">
         <div class="modal-content">
             <button class="modal-close" id="modal-close">X</button>
             <h2 id="modal-title"></h2>
-            <img id="modal-image" class="post-image" alt="Imagen del Post">
+            <img id="modal-image" class="post-image" alt="Post Image">
             <p id="modal-description"></p>
             <div id="modal-tags" class="post-tags"></div>
         </div>
@@ -318,7 +318,7 @@
             try {
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
             } catch (e) {
-                console.warn("Error guardando estado en localStorage:", e);
+                console.warn("Error saving state to localStorage:", e);
             }
         }
 
@@ -333,7 +333,7 @@
                     return state.scrollTop;
                 }
             } catch (e) {
-                console.warn("Error cargando estado desde localStorage:", e);
+                console.warn("Error loading state from localStorage:", e);
                 localStorage.removeItem(LOCAL_STORAGE_KEY);
             }
             return 0;
@@ -354,7 +354,7 @@
                 if (!cursor) {
                     console.warn(`No cursor for page ${pageToLoad - 1}. Cannot load page ${pageToLoad}.`);
                     if (!append && currentPage > 1 && Object.keys(pageLastPostCursors).length === 0) {
-                        console.log("Restauración fallida de cursores, recargando desde página 1");
+                        console.log("Failed to restore cursors; reloading from page 1");
                         currentPage = 1;
                     } else {
                         isLoading = false;
@@ -409,7 +409,7 @@
                 savePaginationState();
 
             } catch (error) {
-                console.error("Error cargando posts:", error);
+                console.error("Error loading posts:", error);
                 lastBatchResultCount = 0;
                 if (append) noMorePostsToLoadForScroll = true;
             } finally {
@@ -430,13 +430,13 @@
 
             const img = document.createElement("img");
             img.src = value.image || `https://picsum.photos/seed/${id}/300/300`;
-            img.alt = value.title || 'Imagen del post';
+            img.alt = value.title || 'Post image';
             img.className = "post-image";
             img.onerror = () => { img.src = `https://picsum.photos/seed/${Date.now()}/300/300`; };
 
             const titleOverlay = document.createElement("div");
             titleOverlay.className = "post-title-overlay";
-            titleOverlay.textContent = value.title || 'Sin título';
+            titleOverlay.textContent = value.title || 'Untitled';
 
             element.appendChild(img);
             element.appendChild(titleOverlay);
@@ -506,7 +506,7 @@
                 if (maxKnownPage === 1 || pageLastPostCursors[maxKnownPage - 1] || lastBatchResultCount < POSTS_PER_PAGE) {
                     loadPosts({ pageToLoad: maxKnownPage, append: false });
                 } else {
-                    console.warn("No se puede saltar a la última página directamente, falta cursor intermedio o la página no está confirmada como la última. Cargando progresivamente...");
+                    console.warn("Cannot jump to the last page directly; missing intermediate cursor or the page is not confirmed as the last. Loading progressively...");
                     if (maxKnownPage > 1 && pageLastPostCursors[maxKnownPage - 2]) {
                         loadPosts({ pageToLoad: maxKnownPage - 1, append: false });
                     } else {
@@ -518,10 +518,10 @@
 
         // --- Modal ---
         function showPostModal(postValue) {
-            elements.modalTitle.textContent = postValue.title || 'Sin título';
+            elements.modalTitle.textContent = postValue.title || 'Untitled';
             elements.modalImage.src = postValue.image || `https://picsum.photos/seed/${postValue.id || Date.now()}/600/400`;
-            elements.modalImage.alt = postValue.title || 'Imagen del post';
-            elements.modalDescription.textContent = postValue.description || 'Sin descripción.';
+            elements.modalImage.alt = postValue.title || 'Post image';
+            elements.modalDescription.textContent = postValue.description || 'No description.';
 
             let tagsToDisplay = ['general'];
             if (postValue.tags && Array.isArray(postValue.tags) && postValue.tags.length > 0) {
@@ -551,7 +551,7 @@
         // --- API Data Loading (Example) ---
         async function loadNewPostsFromApi() {
             elements.loadApiButton.disabled = true;
-            elements.loadApiButton.textContent = 'Cargando desde API...';
+            elements.loadApiButton.textContent = 'Loading from API...';
 
             // <<< MODIFIED: Updated API endpoint
             const apiUrl = 'https://dummyjson.com/posts?limit=500'; // Fetching more posts
@@ -573,7 +573,7 @@
                     throw new Error("Invalid API response structure: 'posts' is not an array.");
                 }
 
-                console.log("Base de datos limpiada antes de la carga de API.");
+                console.log("Database cleared before API load.");
 
                 const newDbPosts = apiPosts.map((post, index) => ({
                     title: post.title,
@@ -586,7 +586,7 @@
                 for (const post of newDbPosts) {
                     await db.put(post);
                 }
-                console.log(`${newDbPosts.length} posts guardados desde la API.`);
+                console.log(`${newDbPosts.length} posts saved from the API.`);
                 localStorage.removeItem(LOCAL_STORAGE_KEY);
 
                 currentPage = 1;
@@ -600,15 +600,15 @@
                 await loadPosts({ pageToLoad: 1, append: false });
 
             } catch (error) {
-                console.error('Error cargando posts desde API:', error);
+                console.error('Error loading posts from API:', error);
                 if (error.message.includes("Failed to fetch")) {
-                    alert('Error al cargar datos de la API: Falló la conexión (Failed to fetch). Verifique su conexión a internet, firewall, o extensiones del navegador. Consulte la consola para más detalles.');
+                    alert('Error loading API data: Connection failed (Failed to fetch). Check your internet connection, firewall, or browser extensions. See the console for more details.');
                 } else {
-                    alert('Error al cargar datos de la API. Verifique la consola para más detalles.');
+                    alert('Error loading API data. Check the console for more details.');
                 }
             } finally {
                 elements.loadApiButton.disabled = false;
-                elements.loadApiButton.textContent = 'Cargar Posts de API';
+                elements.loadApiButton.textContent = 'Load API Posts';
             }
         }
         elements.loadApiButton.addEventListener("click", loadNewPostsFromApi);
@@ -628,7 +628,7 @@
             const restoredScrollTop = loadPaginationState();
 
             if (currentPage > 1 && Object.keys(pageLastPostCursors).length === 0) {
-                console.log("Estado de cursores inconsistente, reiniciando a página 1.");
+                console.log("Inconsistent cursor state; resetting to page 1.");
                 currentPage = 1;
                 maxKnownPage = 1;
             }
@@ -637,7 +637,7 @@
             if (currentPage > 1 && pageLastPostCursors[currentPage - 1]) {
                 initialPageToLoad = currentPage;
             } else if (currentPage > 1) {
-                console.log(`No se puede restaurar la página ${currentPage} directamente, falta cursor. Cargando página 1.`);
+                console.log(`Cannot restore page ${currentPage} directly; missing cursor. Loading page 1.`);
                 currentPage = 1;
             }
 
