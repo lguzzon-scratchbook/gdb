@@ -1,6 +1,6 @@
 {
   "name": "genosdb",
-  "version": "0.11.5",
+  "version": "0.11.6",
   "description": "GenosDB (GDB): distributed graph database in real-time, peer-to-peer, scalable storage - efficient querying of complex relationships.",
   "main": "dist/index.js",
   "type": "module",
@@ -49,12 +49,12 @@
   },
   "devDependencies": {
     "@vitest/ui": "3.2.4",
-    "eslint": "9.35.0",
+    "eslint": "9.37.0",
     "eslint-config-standard": "17.1.0",
     "eslint-plugin-import": "2.32.0",
-    "eslint-plugin-n": "17.21.3",
+    "eslint-plugin-n": "17.23.1",
     "eslint-plugin-promise": "7.2.1",
-    "jsdom": "26.1.0",
+    "jsdom": "27.0.0",
     "vitest": "3.2.4"
   }
 }
