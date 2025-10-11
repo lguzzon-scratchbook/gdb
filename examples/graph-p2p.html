@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Simulación D3 P2PGraph (RT)</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f0f0f0; }
+    .graph-container { width: 400px; height: 400px; margin: 20px; background: #009dff; border-radius: 8px; overflow: hidden; }
+    svg { width: 100%; height: 100%; }
+    line { stroke: rgba(255,255,255,0.7); stroke-width: 1px; }
+    circle { stroke: #000; stroke-width: 1.5px; }
+    text { font-size: 10px; fill: #000; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="graph-container" id="graph"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script type="module">
+    /**
+     * Real-time peers graph using GenosDB (GenosRTC) + D3.
+     * - One local node ('me') and one link per connected peer.
+     * - Updates on 'peer:join' / 'peer:leave' events.
+     * Compact ES2020+ style per your rules.
+     */
+
+    // 1) Load GenosDB with RTC enabled (room = db.room)
+    import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js";
+    const db = await gdb("p2pgraph-demo", { rtc: true }); // room id = db name
+
+    // 2) D3 setup
+    const size = 400, rMe = 10, rPeer = 6;
+    const svg = d3.select('#graph').append('svg').attr('viewBox', `0 0 ${size} ${size}`);
+    const linkG = svg.append('g'), nodeG = svg.append('g'), labelG = svg.append('g');
+
+    // 3) In-memory state (Maps for O(1) upserts)
+    const nodes = new Map([['me', { id: 'me', me: true }]]);
+    const links = new Map(); // key: `me->peerId`
+
+    // 4) D3 force simulation
+    const sim = d3.forceSimulation([...nodes.values()])
+      .force('link', d3.forceLink([...links.values()]).id(d => d.id).distance(80).strength(0.2))
+      .force('charge', d3.forceManyBody().strength(-200))
+      .force('center', d3.forceCenter(size/2, size/2))
+      .force('collide', d3.forceCollide().radius(20))
+      .on('tick', () => {
+        linkSel
+          .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+        nodeSel
+          .attr('cx', d => d.x).attr('cy', d => d.y);
+        labelSel
+          .attr('x', d => d.x).attr('y', d => d.y + 14);
+      });
+
+    // 5) Selections (initialized empty, joined in render())
+    let linkSel = linkG.selectAll('line'), nodeSel = nodeG.selectAll('circle'), labelSel = labelG.selectAll('text');
+
+    // 6) Helpers
+    const keyLink = pid => `me->${pid}`;
+    const short = id => id === 'me' ? 'You' : (id?.slice(0,6) ?? 'peer');
+
+    const upsertPeer = peerId => {
+      if (!nodes.has(peerId)) nodes.set(peerId, { id: peerId });
+      links.set(keyLink(peerId), { source: 'me', target: peerId });
+      render(true);
+    };
+
+    const removePeer = peerId => {
+      nodes.delete(peerId); links.delete(keyLink(peerId));
+      render(true);
+    };
+
+    const drag = d3.drag()
+      .on('start', (ev, d) => { if (!ev.active) sim.alpha(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+      .on('end',  (_, d) => { d.fx = null; d.fy = null; });
+
+    const render = (kick=false) => {
+      const N = [...nodes.values()], L = [...links.values()];
+      linkSel = linkG.selectAll('line').data(L, d => `${d.source.id ?? d.source}-${d.target.id ?? d.target}`);
+      linkSel.exit().remove();
+      linkSel = linkSel.enter().append('line').merge(linkSel);
+
+      nodeSel = nodeG.selectAll('circle').data(N, d => d.id);
+      nodeSel.exit().remove();
+      nodeSel = nodeSel.enter().append('circle')
+        .attr('r', d => d.me ? rMe : rPeer)
+        .attr('fill', d => d.me ? '#111' : '#fff')
+        .call(drag)
+        .merge(nodeSel);
+
+      labelSel = labelG.selectAll('text').data(N, d => d.id);
+      labelSel.exit().remove();
+      labelSel = labelSel.enter().append('text')
+        .attr('dy', 4).attr('text-anchor', 'middle')
+        .text(d => short(d.id))
+        .merge(labelSel).text(d => short(d.id));
+
+      // Rebind sim data efficiently
+      sim.nodes(N);
+      sim.force('link').links(L);
+      if (kick) sim.alpha(0.7).restart();
+    };
+
+    // 7) Seed with current peers
+    [...(db.room.getPeers?.().keys?.() ?? [])].forEach(upsertPeer);
+
+    // 8) Real-time: when peers join/leave
+    db.room.on?.('peer:join', id => upsertPeer(id));
+    db.room.on?.('peer:leave', id => removePeer(id));
+
+    // 9) First paint
+    render(true);
+
+    // 10) Cleanup (optional)
+    addEventListener('beforeunload', () => db.room?.leave?.());
+  </script>
+</body>
+</html>
