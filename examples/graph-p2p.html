@@ -26,7 +26,9 @@
      */
 
     // 1) Load GenosDB with RTC enabled (room = db.room)
-    import { gdb } from "https://cdn.jsdelivr.net/npm/genosdb@latest/dist/index.min.js";
+
+    import { gdb } from "../dist/index.js"
+    
     const db = await gdb("p2pgraph-demo", { rtc: true }); // room id = db name
 
     // 2) D3 setup
