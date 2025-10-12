@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.8] - 2025-10-12
+
+### Improved
+- **High-Performance OPFS Worker:** The persistence layer has been re-architected for maximum performance. It now uses **Transferable Objects** when communicating with the main thread, virtually eliminating data-copying overhead. This results in significantly faster load times for large databases and prevents UI blocking.
+- **Intelligent Lock Management:** The OPFS worker now employs a more sophisticated locking strategy. It correctly identifies that asynchronous reads are safe to perform in parallel without a lock, while strictly enforcing locks for all writes and synchronous reads. This enhances concurrency and read performance, especially when an application is open in multiple tabs.
+
+### Fixed
+- **Cross-Tab Data Integrity:** Fixed a critical race condition where simultaneous writes from different browser tabs could lead to data corruption in OPFS. The new worker now uses the **Web Locks API** to ensure all write operations to a given file are serialized, guaranteeing data consistency across all sessions.
+
+### Changed
+- **Internal Worker Refactor:** The underlying code for the OPFS/IndexedDB worker has been completely rewritten to be more robust, maintainable, and readable, incorporating modern JavaScript features and best practices.
+
 ## [0.11.0] - 2025-09-11
 ### Added
 - Security: container signing for `deltaSync` and `fullStateSync` when SM is active; verification on reception if signatures are present. Backward compatible with unsigned containers.
