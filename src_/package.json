@@ -1,0 +1,115 @@
+{
+  "name": "genosdb-development",
+  "version": "0.11.9-dev",
+  "description": "GenosDB (GDB): distributed graph database in real-time, peer-to-peer, scalable storage - Development Source Code",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs"
+    },
+    "./gdb": "./gdb.js",
+    "./genosrtc": "./genosrtc.js",
+    "./sm": "./security-manager.js",
+    "./radix-index": "./radix-index.js",
+    "./geo-index": "./geo-index.js",
+    "./nlq": "./nlq-module.js",
+    "./audit": "./audit-module.js",
+    "./acls": "./acl-module.js",
+    "./gov": "./gov-module.js",
+    "./ii": "./ii-module.js",
+    "./ai": "./ai-module.js",
+    "./multirtc": "./multirtc.js",
+    "./inverted-index": "./inverted-index.js"
+  },
+  "scripts": {
+    "build": "bun run build.js",
+    "build:production": "bun run build.js --production",
+    "dev": "bun run --watch src/index.js",
+    "test": "vitest run --pool=threads --maxWorkers=1 --reporter=verbose --reporter=html --outputFile=tests/html/test-results.html",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix",
+    "format": "prettier --write src/**/*.js",
+    "bundle": "bun build src/index.js --target browser --minify --sourcemap --outfile dist/index.bundle.js",
+    "bundle:modules": "bun build src/*.js --target browser --outdir dist --minify --sourcemap",
+    "bundle:esbuild": "esbuild src/index.js --bundle --format=esm --minify --sourcemap --outfile=dist/index.esm.js",
+    "clean": "rm -rf dist/",
+    "prepublishOnly": "bun run clean && bun run build:production"
+  },
+  "files": [
+    "dist/*",
+    "src/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/estebanrfp/gdb.git"
+  },
+  "keywords": [
+    "GenosDB",
+    "gdb",
+    "graph",
+    "database",
+    "real-time",
+    "p2p",
+    "distributed",
+    "decentralized",
+    "rbac",
+    "webauthn",
+    "webrtc",
+    "nostr"
+  ],
+  "author": {
+    "name": "Esteban Fuster Pozzi",
+    "email": "estebanrfp@gmail.com",
+    "url": "https://github.com/estebanrfp"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/estebanrfp/gdb/issues"
+  },
+  "homepage": "https://github.com/estebanrfp/gdb#readme",
+  "engines": {
+    "node": "23.x",
+    "npm": "11.x",
+    "bun": "1.x"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^3.1.2",
+    "ethers": "^6.15.0",
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "@vitest/ui": "^3.2.4",
+    "eslint": "^9.37.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-n": "^17.23.1",
+    "eslint-plugin-promise": "^7.2.1",
+    "jsdom": "^27.0.0",
+    "vitest": "^3.2.4",
+    "prettier": "^3.0.0",
+    "esbuild": "^0.19.0",
+    "rollup": "^4.0.0",
+    "terser": "^5.20.0"
+  },
+  "peerDependencies": {
+    "crypto": "*",
+    "stream": "*",
+    "util": "*",
+    "url": "*"
+  },
+  "browserslist": [
+    "last 2 chrome version",
+    "last 2 firefox version",
+    "last 2 safari version",
+    "last 1 edge version"
+  ],
+  "volta": {
+    "node": "23.x",
+    "bun": "1.x"
+  }
+}

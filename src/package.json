@@ -1,0 +1,33 @@
+{
+  "name": "genosdb-src",
+  "version": "0.11.9",
+  "description": "GenosDB (GDB) - Source code reverse-engineered from dist",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./gdb": "./gdb.js",
+    "./genosrtc": "./genosrtc.js",
+    "./sm": "./security-manager.js",
+    "./radix-index": "./radix-index.js",
+    "./geo-index": "./geo-index.js",
+    "./nlq": "./nlq-module.js",
+    "./audit": "./audit-module.js",
+    "./acls": "./acl-module.js",
+    "./gov": "./gov-module.js",
+    "./ii": "./ii-module.js",
+    "./ai": "./ai-module.js",
+    "./multirtc": "./multirtc.js",
+    "./inverted-index": "./inverted-index.js"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^3.1.2",
+    "ethers": "^6.15.0",
+    "pako": "^2.1.0"
+  },
+  "engines": {
+    "node": "23.x",
+    "npm": "11.x"
+  }
+}
