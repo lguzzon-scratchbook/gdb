@@ -33,6 +33,8 @@
   },
   "json": {
     "formatter": {
+      "expand": "always",
+      "indentWidth": 2,
       "trailingCommas": "none"
     }
   },
@@ -42,7 +44,7 @@
       "recommended": true
     }
   },
-  "root": false,
+  "root": true,
   "vcs": {
     "clientKind": "git",
     "enabled": true,
