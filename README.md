@@ -7,9 +7,8 @@ A lightweight, decentralized graph database designed for modern web applications
 ---
 
 [![NPM Version](https://img.shields.io/npm/v/genosdb.svg?style=for-the-badge)](https://www.npmjs.org/package/genosdb)
-[![License](https://img.shields.io/badge/License-Proprietary-blue.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
-
-
+[![License-SourceCode-Proprietary](https://img.shields.io/badge/Source%20Code-Proprietary-blue.svg?style=for-the-badge)](...)
+[![Bundle Free](https://img.shields.io/badge/Bundle-Free%20for%20personal%20%26%20commercial%20use-brightgreen.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb)
 ![Downloads on NPM](https://img.shields.io/npm/dw/genosdb)
 [![](https://data.jsdelivr.com/v1/package/npm/genosdb/badge)](https://www.jsdelivr.com/package/npm/genosdb)
 [![Tests](https://github.com/estebanrfp/gdb/actions/workflows/test.yml/badge.svg)](https://estebanrfp.github.io/gdb/tests/html/test-results.html)
@@ -24,6 +23,15 @@ A lightweight, decentralized graph database designed for modern web applications
 <!-- ### Nostr.band Followers
 
 ![Nostr.band Followers](https://img.shields.io/nostr-band/followers/npub18c556t7n8xa3df2q82rwxejfglw5przds7sqvefylzjh8tjne28qld0we7) -->
+
+## Table of Contents
+- [Main Features](#main-features)
+- [Project Status](#project-status)
+- [Installation](#installation)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+- [Business Inquiries Collaboration](#🤝-business-inquiries--collaboration)
 
 
 ## Main Features
