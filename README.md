@@ -32,7 +32,7 @@ A lightweight, decentralized graph database designed for modern web applications
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [License](#license)
-- [Business Inquiries Collaboration](#🤝-business-inquiries--collaboration)
+- [Business Inquiries Collaboration](#business-inquiries--collaboration)
 
 
 ## Main Features
@@ -243,7 +243,7 @@ This repository provides minified builds of GenosDB (GDB), a decentralized P2P g
 
 ---
 
-## 🤝 Business Inquiries & Collaboration
+## Business Inquiries & Collaboration
 
 GenosDB is an independently developed project with a long-term vision to power the next generation of secure, decentralized, and real-time applications.
 
