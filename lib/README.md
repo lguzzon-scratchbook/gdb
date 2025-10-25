@@ -1,7 +1,7 @@
 # ⚠️ Source Code Not Included
 
 This folder does **not** contain the original source code.  
-Only **minified** files are included in the `dist/` directory as part of the distribution process.
+Only **production build files**  are included in the `dist/` directory as part of the distribution process.
 
 ---
 
@@ -19,7 +19,7 @@ Only **minified** files are included in the `dist/` directory as part of the dis
    This package is intended for direct use in production environments.  
    Only the final build output is published, which is a common practice for libraries distributed via npm.
 
-   > Example: many modern libraries publish only minified bundles in their final output.
+   > Example: many modern libraries publish only minified bundles in their final production build output.
 
 4. **Full Compatibility with Modern Tooling**  
    The public API is fully documented and available through TypeScript definition files (`.d.ts`).  
