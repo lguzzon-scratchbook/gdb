@@ -9,7 +9,7 @@ A lightweight, decentralized graph database designed for modern web applications
 [![NPM Version](https://img.shields.io/npm/v/genosdb.svg?style=for-the-badge)](https://www.npmjs.org/package/genosdb)
 [![License-SourceCode-Proprietary](https://img.shields.io/badge/Source%20Code-Proprietary-blue.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/LICENSE)
 
-[![Production Build](https://img.shields.io/badge/Production%20Build-Free%20for%20personal%20%26%20commercial%20use-brightgreen.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb)
+[![Production Build](https://img.shields.io/badge/Production%20Build-Free%20for%20personal%20%26%20commercial%20use-brightgreen.svg?style=for-the-badge)](https://github.com/estebanrfp/gdb/blob/main/docs/index.md)
 
 ![Downloads on NPM](https://img.shields.io/npm/dw/genosdb)
 [![](https://data.jsdelivr.com/v1/package/npm/genosdb/badge)](https://www.jsdelivr.com/package/npm/genosdb)
