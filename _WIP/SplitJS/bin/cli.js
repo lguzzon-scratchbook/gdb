@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import FunctionExtractor from '../src/extractor.js'
 import FileWriter from '../src/fileWriter.js'
+import Logger from '../src/logger.js'
 
 function printHelp() {
   console.log(`
@@ -16,6 +17,7 @@ Options:
   --output, -o <dir>      Output directory (default: extracted)
   --lazy                   Generate lazy-loading orchestrator
   --no-validate            Skip validation checks
+  --verbose, -V            Show all internal steps during execution
   --help, -h               Show this help message
   --version, -v            Show version
 
@@ -23,6 +25,7 @@ Examples:
   splitjs myfile.js
   splitjs myfile.js --output ./modules
   splitjs myfile.js --output ./modules --lazy
+  splitjs myfile.js --verbose
   `)
 }
 
@@ -56,6 +59,7 @@ async function main() {
   let outputDir = 'extracted'
   let includeLazyLoad = false
   let validate = true
+  let verbose = false
 
   for (let i = 1; i < args.length; i++) {
     if (args[i] === '--output' || args[i] === '-o') {
@@ -66,18 +70,26 @@ async function main() {
       includeLazyLoad = true
     } else if (args[i] === '--no-validate') {
       validate = false
+    } else if (args[i] === '--verbose' || args[i] === '-V') {
+      verbose = true
     }
   }
+
+  const logger = new Logger(verbose)
 
   try {
     console.log(`\n📦 Extracting functions from: ${inputFile}`)
 
+    logger.section('Reading Source File')
     const sourceCode = fs.readFileSync(inputFile, 'utf-8')
+    logger.step(`Read ${sourceCode.length} characters from file`)
+    logger.endSection()
 
     const extractor = new FunctionExtractor({
       outputDir,
       includeLazyLoad,
-      validate
+      validate,
+      logger
     })
 
     const result = extractor.extract(sourceCode)
@@ -111,11 +123,12 @@ async function main() {
       }
     }
 
+    logger.section('Writing Output Files')
     const fileWriter = new FileWriter(outputDir)
     fileWriter.ensureOutputDir()
+    logger.step('Output directory created/verified')
 
-    console.log('\n📝 Writing output files...')
-
+    logger.startStep('Writing function modules')
     const modules = Array.from(extractor.moduleGenerator.modules.values())
     for (const mod of modules) {
       const modulesDir = path.join(outputDir, 'modules')
@@ -123,16 +136,27 @@ async function main() {
         fs.mkdirSync(modulesDir, { recursive: true })
       }
       fs.writeFileSync(path.join(modulesDir, mod.filename), mod.code, 'utf-8')
+      logger.debug(`Wrote ${mod.filename} (${mod.code.length} bytes)`)
     }
+    logger.endStep(`Wrote ${modules.length} module files`)
 
     if (result.orchestrator) {
+      logger.startStep('Writing orchestrator')
       fileWriter.writeOrchestrator(result.orchestrator.code, 'index.js')
+      logger.endStep('Wrote index.js')
     }
 
+    logger.startStep('Writing metadata files')
     fileWriter.writeManifest(result.manifest)
+    logger.debug('Wrote manifest.json')
     fileWriter.writeDependencyGraph(result.dependencies)
+    logger.debug('Wrote dependencies.json')
     fileWriter.writeExtractionReport(result)
+    logger.debug('Wrote report.json')
     fileWriter.writePackageJson(outputDir)
+    logger.debug('Wrote package.json')
+    logger.endStep('All metadata files written')
+    logger.endSection()
 
     console.log(`\n📁 Output directory: ${path.resolve(outputDir)}`)
     console.log('   ├── modules/           (extracted function modules)')
