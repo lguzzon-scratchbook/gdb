@@ -4,7 +4,7 @@
 
 export class LLMAnalyzer {
   constructor(config = {}) {
-    this.model = config.model || 'z-ai/glm-4.6:exacto'
+    this.model = config.model || 'openai/gpt-4o-mini'
     this.confidenceThreshold = config.confidenceThreshold || 0.7
     this.maxBatchSize = config.maxBatchSize || 10
     this.timeout = config.timeout || 30000 * 10
