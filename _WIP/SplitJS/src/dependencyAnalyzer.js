@@ -4,7 +4,7 @@ export class DependencyAnalyzer {
     this.j = astParser.j
   }
 
-  analyzeFunctionDependencies(functionNode, functionName) {
+  analyzeFunctionDependencies(functionNode, functionName, globalVars) {
     const dependencies = {
       external: new Set(),
       internal: new Set(),
@@ -30,7 +30,6 @@ export class DependencyAnalyzer {
         return
       }
 
-      const globalVars = this.astParser.findGlobalVariables()
       if (globalVars.has(name)) {
         dependencies.internal.add(name)
         return
@@ -46,7 +45,6 @@ export class DependencyAnalyzer {
       if (callee.type === 'Identifier') {
         const name = callee.name
         if (!this._isBuiltinGlobal(name) && !scope.parameters.has(name)) {
-          const globalVars = this.astParser.findGlobalVariables()
           if (globalVars.has(name)) {
             dependencies.internal.add(name)
           } else if (!this._isLocalVariable(name, path)) {
@@ -69,9 +67,10 @@ export class DependencyAnalyzer {
   resolveDependencyGraph(functions) {
     const graph = new Map()
     const allFunctionNames = new Set(functions.map((f) => f.name))
+    const globalVars = this.astParser.findGlobalVariables()
 
     for (const func of functions) {
-      const deps = this.analyzeFunctionDependencies(func.node, func.name)
+      const deps = this.analyzeFunctionDependencies(func.node, func.name, globalVars)
       const resolved = {
         internal: deps.dependencies.internal.filter((d) =>
           allFunctionNames.has(d)
