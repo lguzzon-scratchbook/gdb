@@ -213,6 +213,8 @@ See the discussion on Product Hunt:
 
 <a href="https://www.producthunt.com/products/genosdb?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-genosdb" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1015741&theme=light&t=1757737737388" alt="GenosDB - GenosDB&#0032;&#0040;GDB&#0041;&#0032;–&#0032;Distributed&#0032;P2P&#0032;Graph&#0032;Database | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
+<a href="https://www.proofstories.io/directory/products/genosdb/" target="_blank" rel="noopener" style="height: 60px;"><img src="https://www.proofstories.io/directory/badges/l/genosdb.svg" alt="GenosDB badge" style="height: 60px;" /></a>
+
 Feel free to ask questions, share ideas, or just say hello! 👋
 
 For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md).
