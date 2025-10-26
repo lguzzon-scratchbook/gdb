@@ -1,0 +1,26 @@
+{
+  "name": "splitjs",
+  "version": "0.1.0",
+  "description": "Advanced JavaScript Function Extractor and Module Splitter powered by Bun.js",
+  "type": "module",
+  "bin": {
+    "splitjs": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "bun run bin/cli.js",
+    "test": "bun test tests/**/*.test.js",
+    "lint": "bunx @biomejs/biome check --write .",
+    "compile": "bun build --outdir dist src/index.js",
+    "dev": "bun --watch bin/cli.js"
+  },
+  "dependencies": {
+    "jscodeshift": "^0.15.1",
+    "recast": "^0.23.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.3"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

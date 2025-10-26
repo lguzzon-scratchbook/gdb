@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.bun/
+*.log
+.DS_Store
+temp/
+output/
+extracted/
+.vscode/
+.env.local
