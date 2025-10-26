@@ -43,6 +43,7 @@ export class Refactor {
     // Initialize logger
     this.logger = getLogger(this.config.logging)
     this.logger.info('refactor_init', { config: this.config })
+    process.exit(1)
 
     // Initialize VCS manager
     this.vcs = new VCSManager(this.config.vcs)
@@ -318,7 +319,9 @@ async function main() {
   const options = parseCLIArgs(args)
 
   try {
-    const refactor = new Refactor(options.config)
+    console.log("Options:", options)
+    process.exit(1)
+    const refactor = new Refactor(options)
 
     // Setup VCS if enabled
     if (options.sessionName) {

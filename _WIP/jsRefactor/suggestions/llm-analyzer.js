@@ -7,7 +7,7 @@ export class LLMAnalyzer {
     this.model = config.model || 'z-ai/glm-4.6:exacto'
     this.confidenceThreshold = config.confidenceThreshold || 0.7
     this.maxBatchSize = config.maxBatchSize || 10
-    this.timeout = config.timeout || 30000
+    this.timeout = config.timeout || 30000 * 10
     this.apiKey = config.apiKey || process.env.OPENROUTER_API_KEY
     this.baseURL = config.baseURL || 'https://openrouter.ai/api/v1'
 
@@ -73,14 +73,14 @@ export class LLMAnalyzer {
 
 ## Code Knowledge Graph Context:
 ${JSON.stringify(
-  {
-    totalNodes: ckg.getNodeCount(),
-    totalEdges: ckg.getEdgeCount(),
-    fileCount: ckg.getFileCount()
-  },
-  null,
-  2
-)}
+      {
+        totalNodes: ckg.getNodeCount(),
+        totalEdges: ckg.getEdgeCount(),
+        fileCount: ckg.getFileCount()
+      },
+      null,
+      2
+    )}
 
 ## Nodes to Analyze:
 ${JSON.stringify(nodeContexts, null, 2)}
@@ -178,6 +178,7 @@ SUGGESTIONS:`
    * @returns {Promise<string>} LLM response
    */
   async _makeLLMRequest(prompt) {
+    console.log(`_makeLLMRequest prompt:[ ${prompt} ]`)
     const requestBody = {
       model: this.model,
       messages: [
@@ -186,7 +187,7 @@ SUGGESTIONS:`
           content: prompt
         }
       ],
-      temperature: 0.3,
+      temperature: 0.01,
       max_tokens: 4000
     }
 
@@ -211,7 +212,7 @@ SUGGESTIONS:`
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       throw new Error('Invalid response format from LLM API')
     }
-
+    console.log(`_makeLLMRequest return:[ ${data.choices[0].message.content} ]`)
     return data.choices[0].message.content
   }
 
@@ -470,27 +471,27 @@ ${JSON.stringify(suggestion, null, 2)}
 
 ## Node Context:
 ${JSON.stringify(
-  {
-    id: node.id,
-    name: node.name,
-    type: node.type,
-    file: node.file,
-    loc: node.loc
-  },
-  null,
-  2
-)}
+      {
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        file: node.file,
+        loc: node.loc
+      },
+      null,
+      2
+    )}
 
 ## CKG Context:
 ${JSON.stringify(
-  {
-    totalNodes: ckg.getNodeCount(),
-    totalEdges: ckg.getEdgeCount(),
-    fileCount: ckg.getFileCount()
-  },
-  null,
-  2
-)}
+      {
+        totalNodes: ckg.getNodeCount(),
+        totalEdges: ckg.getEdgeCount(),
+        fileCount: ckg.getFileCount()
+      },
+      null,
+      2
+    )}
 
 ## Instructions:
 1. Validate if the suggested name follows JavaScript conventions

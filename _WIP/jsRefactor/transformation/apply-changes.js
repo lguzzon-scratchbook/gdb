@@ -36,8 +36,11 @@ export class ChangeApplier {
       backups: new Map()
     }
 
+    // Filter out any suggestions that target protected keywords
+    const filteredSuggestions = this._filterProtectedSuggestions(suggestions)
+
     // Group suggestions by file
-    const suggestionsByFile = this._groupSuggestionsByFile(suggestions)
+    const suggestionsByFile = this._groupSuggestionsByFile(filteredSuggestions)
 
     // Process each file
     for (const [filePath, fileSuggestions] of suggestionsByFile) {
@@ -206,6 +209,54 @@ export class ChangeApplier {
 
     const currentName = suggestion.currentName
     const suggestedName = suggestion.suggestedName
+
+    // Additional safety check: never replace export keywords
+    const protectedKeywords = [
+      'export',
+      'import',
+      'default',
+      'from',
+      'as',
+      'const',
+      'let',
+      'var',
+      'function',
+      'class',
+      'extends',
+      'return',
+      'break',
+      'continue',
+      'throw',
+      'try',
+      'catch',
+      'finally',
+      'if',
+      'else',
+      'for',
+      'while',
+      'do',
+      'switch',
+      'case',
+      'new',
+      'this',
+      'super',
+      'typeof',
+      'instanceof',
+      'in',
+      'of',
+      'void',
+      'delete'
+    ]
+
+    if (protectedKeywords.includes(currentName.toLowerCase())) {
+      throw new Error(`Refusing to replace protected keyword '${currentName}'`)
+    }
+
+    if (protectedKeywords.includes(suggestedName.toLowerCase())) {
+      throw new Error(
+        `Refusing to replace with protected keyword '${suggestedName}'`
+      )
+    }
 
     // Replace all occurrences of the current name
     // This is a simplified approach - jscodeshift would handle scope properly
@@ -399,6 +450,103 @@ export class ChangeApplier {
       console.error(`Failed to restore from backup: ${error.message}`)
       return false
     }
+  }
+
+  /**
+   * Filter out suggestions that target protected keywords
+   * @param {Array<Object>} suggestions - Array of suggestions
+   * @returns {Array<Object>} Filtered suggestions
+   */
+  _filterProtectedSuggestions(suggestions) {
+    // List of protected JavaScript keywords that should never be renamed
+    const protectedKeywords = [
+      'export',
+      'import',
+      'default',
+      'from',
+      'as',
+      'const',
+      'let',
+      'var',
+      'function',
+      'class',
+      'extends',
+      'implements',
+      'interface',
+      'type',
+      'enum',
+      'namespace',
+      'module',
+      'declare',
+      'abstract',
+      'readonly',
+      'static',
+      'public',
+      'private',
+      'protected',
+      'async',
+      'await',
+      'yield',
+      'return',
+      'break',
+      'continue',
+      'throw',
+      'try',
+      'catch',
+      'finally',
+      'if',
+      'else',
+      'for',
+      'while',
+      'do',
+      'switch',
+      'case',
+      'new',
+      'this',
+      'super',
+      'typeof',
+      'instanceof',
+      'in',
+      'of',
+      'void',
+      'delete'
+    ]
+
+    return suggestions.filter((suggestion) => {
+      // Filter out suggestions that target protected keywords
+      if (protectedKeywords.includes(suggestion.currentName.toLowerCase())) {
+        console.warn(
+          `Blocked application of suggestion targeting protected keyword '${suggestion.currentName}'`
+        )
+        return false
+      }
+
+      // Filter out suggestions that suggest renaming to protected keywords
+      if (protectedKeywords.includes(suggestion.suggestedName.toLowerCase())) {
+        console.warn(
+          `Blocked application of suggestion suggesting rename to protected keyword '${suggestion.suggestedName}'`
+        )
+        return false
+      }
+
+      // Filter out suggestions targeting export-related nodes
+      if (suggestion.nodeId?.includes('export:')) {
+        console.warn(
+          `Blocked application of suggestion targeting export node '${suggestion.nodeId}'`
+        )
+        return false
+      }
+
+      // Filter out suggestions with export type
+      if (suggestion.type === 'export') {
+        console.warn(
+          `Blocked application of suggestion with export type for node '${suggestion.nodeId}'`
+        )
+        return false
+      }
+
+      return true
+    })
   }
 
   /**

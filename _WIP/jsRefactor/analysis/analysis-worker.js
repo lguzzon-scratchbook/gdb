@@ -276,14 +276,9 @@ function extractNodeFromStatement(statement, filepath) {
       }
 
     case 'ExportNamedDeclaration':
-      return {
-        id: `export:${filepath}`,
-        type: 'export',
-        name: 'export',
-        file: filepath,
-        loc: statement.loc,
-        specifiers: statement.specifiers || []
-      }
+      // Skip creating nodes for export keywords to protect them from refactoring
+      // We still track the export statement but don't make the 'export' keyword itself renameable
+      return null
 
     default:
       return null

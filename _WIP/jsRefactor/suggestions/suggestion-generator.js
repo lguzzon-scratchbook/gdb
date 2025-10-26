@@ -59,7 +59,11 @@ export class SuggestionGenerator {
       (suggestion) => suggestion.confidence >= this.confidenceThreshold
     )
 
-    return filteredSuggestions
+    // Phase 5: Filter out protected keywords (export, import, etc.)
+    const protectedSuggestions =
+      this._filterProtectedKeywords(filteredSuggestions)
+
+    return protectedSuggestions
   }
 
   /**
@@ -316,6 +320,103 @@ export class SuggestionGenerator {
    */
   clearCache() {
     this.suggestionCache.clear()
+  }
+
+  /**
+   * Filter out suggestions that target protected keywords
+   * @param {Array<Object>} suggestions - Array of suggestions
+   * @returns {Array<Object>} Filtered suggestions
+   */
+  _filterProtectedKeywords(suggestions) {
+    // List of protected JavaScript keywords that should never be renamed
+    const protectedKeywords = [
+      'export',
+      'import',
+      'default',
+      'from',
+      'as',
+      'const',
+      'let',
+      'var',
+      'function',
+      'class',
+      'extends',
+      'implements',
+      'interface',
+      'type',
+      'enum',
+      'namespace',
+      'module',
+      'declare',
+      'abstract',
+      'readonly',
+      'static',
+      'public',
+      'private',
+      'protected',
+      'async',
+      'await',
+      'yield',
+      'return',
+      'break',
+      'continue',
+      'throw',
+      'try',
+      'catch',
+      'finally',
+      'if',
+      'else',
+      'for',
+      'while',
+      'do',
+      'switch',
+      'case',
+      'new',
+      'this',
+      'super',
+      'typeof',
+      'instanceof',
+      'in',
+      'of',
+      'void',
+      'delete'
+    ]
+
+    return suggestions.filter((suggestion) => {
+      // Filter out suggestions that target protected keywords
+      if (protectedKeywords.includes(suggestion.currentName.toLowerCase())) {
+        console.warn(
+          `Filtered out suggestion targeting protected keyword '${suggestion.currentName}'`
+        )
+        return false
+      }
+
+      // Filter out suggestions that suggest renaming to protected keywords
+      if (protectedKeywords.includes(suggestion.suggestedName.toLowerCase())) {
+        console.warn(
+          `Filtered out suggestion suggesting rename to protected keyword '${suggestion.suggestedName}'`
+        )
+        return false
+      }
+
+      // Filter out suggestions targeting export-related nodes
+      if (suggestion.nodeId?.includes('export:')) {
+        console.warn(
+          `Filtered out suggestion targeting export node '${suggestion.nodeId}'`
+        )
+        return false
+      }
+
+      // Filter out suggestions with export type
+      if (suggestion.type === 'export') {
+        console.warn(
+          `Filtered out suggestion with export type for node '${suggestion.nodeId}'`
+        )
+        return false
+      }
+
+      return true
+    })
   }
 
   /**
