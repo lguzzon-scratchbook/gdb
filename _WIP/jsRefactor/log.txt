@@ -1,0 +1,65 @@
+{
+  "timestamp": "2025-10-26T09:29:46.380Z",
+  "level": "info",
+  "event": "refactor_init",
+  "data": {
+    "config": {
+      "discovery": {
+        "targetPath": ".",
+        "includePatterns": [
+          "**/*.js",
+          "**/*.jsx",
+          "**/*.mjs",
+          "**/*.cjs"
+        ],
+        "excludePatterns": [
+          "node_modules",
+          "dist",
+          ".git",
+          "coverage",
+          "build"
+        ],
+        "useGitignore": true
+      },
+      "analysis": {
+        "maxWorkers": 4,
+        "workerTimeout": 30000,
+        "enableCKG": true,
+        "extractNodes": true,
+        "extractEdges": true
+      },
+      "suggestions": {
+        "enableHeuristics": true,
+        "enableLLM": true,
+        "llmModel": "z-ai/glm-4.6:exacto",
+        "confidenceThreshold": 0.7,
+        "maxBatchSize": 10,
+        "enableCache": true
+      },
+      "transformation": {
+        "enableCrossModule": true,
+        "enableConflictResolution": true,
+        "backupFiles": true,
+        "validateRenames": true
+      },
+      "vcs": {
+        "enabled": true,
+        "autoBranch": true,
+        "branchPrefix": "refactor/",
+        "requireClean": true
+      },
+      "logging": {
+        "level": "info",
+        "enableFileLogging": true,
+        "logFile": "refactor.log",
+        "enableConsole": true,
+        "structured": true
+      },
+      "performance": {
+        "enableMetrics": true,
+        "enableProfiling": false,
+        "memoryLimit": "1GB"
+      }
+    }
+  }
+}
