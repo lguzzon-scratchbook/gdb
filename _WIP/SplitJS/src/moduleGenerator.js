@@ -1,4 +1,4 @@
-import path from 'path'
+import path from 'node:path'
 
 export class ModuleGenerator {
   constructor(astParser, dependencyAnalyzer, scopeAnalyzer) {
@@ -43,10 +43,10 @@ export class ModuleGenerator {
   generateAllModules(functions, dependencyGraph, originalImports) {
     const generated = []
 
-    functions.forEach((func) => {
+    for (const func of functions) {
       const module = this.generateModule(func, dependencyGraph, originalImports)
       generated.push(module)
-    })
+    }
 
     return generated
   }
@@ -55,30 +55,30 @@ export class ModuleGenerator {
     let imports = ''
 
     const originalImportMap = new Map()
-    originalImports.forEach((imp) => {
-      imp.specifiers.forEach((spec) => {
+    for (const imp of originalImports) {
+      for (const spec of imp.specifiers) {
         originalImportMap.set(spec.local, {
           source: imp.source,
           imported: spec.imported
         })
-      })
-    })
+      }
+    }
 
     const neededExternals = new Set([
       ...deps.external,
       ...closures.capturedVars
     ])
 
-    neededExternals.forEach((extDep) => {
+    for (const extDep of neededExternals) {
       if (originalImportMap.has(extDep)) {
         const impInfo = originalImportMap.get(extDep)
         imports += `import { ${impInfo.imported} } from '${impInfo.source}'\n`
       }
-    })
+    }
 
-    deps.internal.forEach((intDep) => {
+    for (const intDep of deps.internal) {
       imports += `import { ${intDep} } from './${this._generateFilename(intDep)}'\n`
-    })
+    }
 
     if (imports) imports += '\n'
     return imports
@@ -116,9 +116,9 @@ export class ModuleGenerator {
 
   _generateFilename(func) {
     if (typeof func === 'string') {
-      return this._sanitizeName(func) + '.js'
+      return `${this._sanitizeName(func)}.js`
     }
-    return this._sanitizeName(func.name) + '.js'
+    return `${this._sanitizeName(func.name)}.js`
   }
 
   _sanitizeName(name) {

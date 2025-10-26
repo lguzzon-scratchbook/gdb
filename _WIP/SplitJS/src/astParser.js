@@ -101,7 +101,7 @@ export class ASTParser {
       .find(this.j.VariableDeclaration)
       .filter((path) => path.parent.value.type === 'Program')
       .forEach((path) => {
-        path.value.declarations.forEach((decl) => {
+        for (const decl of path.value.declarations) {
           if (decl.id.type === 'Identifier') {
             variables.set(decl.id.name, {
               name: decl.id.name,
@@ -110,7 +110,7 @@ export class ASTParser {
               node: decl
             })
           }
-        })
+        }
       })
 
     return variables

@@ -66,7 +66,7 @@ function transform(data, formatter) {
 
 const utils = {
   validate: validateInput,
-  log: logMessage,
+  log: logMessage
 }
 
 const addFunc = (a, b) => a + b
@@ -80,5 +80,5 @@ export {
   getCachedData,
   setCachedData,
   transform,
-  utils,
+  utils
 }

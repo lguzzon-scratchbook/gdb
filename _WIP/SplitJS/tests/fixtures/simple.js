@@ -23,7 +23,7 @@ export function* generatorFunction() {
   yield 3
 }
 
-const PI = 3.14159
+const PI = Math.PI
 
 export function circleArea(radius) {
   return PI * radius * radius

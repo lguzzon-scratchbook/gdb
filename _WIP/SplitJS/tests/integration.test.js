@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import FunctionExtractor from '../src/extractor.js'
 import FileWriter from '../src/fileWriter.js'
 
@@ -30,13 +30,13 @@ describe('Integration Tests', () => {
     const fileWriter = new FileWriter(testOutputDir)
     const modules = Array.from(extractor.moduleGenerator.modules.values())
 
-    modules.forEach((mod) => {
+    for (const mod of modules) {
       const modulesDir = path.join(testOutputDir, 'modules')
       if (!fs.existsSync(modulesDir)) {
         fs.mkdirSync(modulesDir, { recursive: true })
       }
       fs.writeFileSync(path.join(modulesDir, mod.filename), mod.code, 'utf-8')
-    })
+    }
 
     expect(fs.existsSync(testOutputDir)).toBe(true)
   })

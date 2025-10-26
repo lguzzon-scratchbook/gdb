@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import fs from 'fs'
+import fs from 'node:fs'
 import FunctionExtractor from '../src/extractor.js'
 
 describe('FunctionExtractor', () => {

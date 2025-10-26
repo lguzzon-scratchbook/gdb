@@ -11,34 +11,34 @@ export class Orchestrator {
 
     const imports = new Map()
 
-    modules.forEach((mod) => {
+    for (const mod of modules) {
       const moduleName = this._extractModuleName(mod.filename)
       const key = `${moduleName}:${mod.filename.replace(/\.js$/, '')}`
       if (!imports.has(key)) {
         imports.set(key, moduleName)
       }
-    })
+    }
 
-    imports.forEach((moduleName, _) => {
+    for (const [, moduleName] of imports) {
       const modPath = Array.from(modules).find(
         (m) => this._extractModuleName(m.filename) === moduleName
       )
       if (modPath) {
         code += `import ${moduleName} from './${modPath.filename.replace(/\.js$/, '')}'\n`
       }
-    })
+    }
 
     code += '\n'
     code += '// Re-export all modules\n'
 
     const uniqueModules = new Set()
-    modules.forEach((mod) => {
+    for (const mod of modules) {
       const moduleName = this._extractModuleName(mod.filename)
       if (!uniqueModules.has(moduleName)) {
         code += `export { ${moduleName} }\n`
         uniqueModules.add(moduleName)
       }
-    })
+    }
 
     code += '\n'
     code += this._generateModuleManifest(modules)
@@ -49,12 +49,12 @@ export class Orchestrator {
   generateDependencyGraph() {
     const graph = {}
 
-    this.dependencyGraph.forEach((deps, funcName) => {
+    for (const [funcName, deps] of this.dependencyGraph) {
       graph[funcName] = {
         internal: deps.internal || [],
         external: deps.external || []
       }
-    })
+    }
 
     return graph
   }
@@ -110,13 +110,13 @@ export class Orchestrator {
 
     code += 'export const __loadModule = lazyLoad\n\n'
 
-    functions.forEach((func) => {
+    for (const func of functions) {
       const moduleName = this._extractModuleName(func.name.toLowerCase())
       code += `export async function ${func.name}(...args) {\n`
       code += `  const mod = await lazyLoad('${moduleName}')\n`
       code += `  return mod.${func.name}(...args)\n`
       code += '}\n\n'
-    })
+    }
 
     return code
   }

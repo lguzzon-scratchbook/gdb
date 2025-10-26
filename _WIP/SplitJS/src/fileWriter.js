@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 
 export class FileWriter {
   constructor(outputDir) {
@@ -20,10 +20,10 @@ export class FileWriter {
       fs.mkdirSync(modulesDir, { recursive: true })
     }
 
-    modules.forEach((mod) => {
+    for (const mod of modules) {
       const filePath = path.join(modulesDir, mod.filename)
       fs.writeFileSync(filePath, mod.code, 'utf-8')
-    })
+    }
 
     return modulesDir
   }
@@ -47,9 +47,9 @@ export class FileWriter {
     const filePath = path.join(this.outputDir, filename)
 
     const graphData = {}
-    graph.forEach((deps, funcName) => {
+    for (const [funcName, deps] of graph) {
       graphData[funcName] = deps
-    })
+    }
 
     fs.writeFileSync(filePath, JSON.stringify(graphData, null, 2), 'utf-8')
     return filePath
@@ -97,13 +97,13 @@ export class FileWriter {
     const modulesDir = path.join(this.outputDir, 'modules')
 
     if (fs.existsSync(modulesDir)) {
-      fs.readdirSync(modulesDir).forEach((file) => {
+      for (const file of fs.readdirSync(modulesDir)) {
         files.push({
           type: 'module',
           path: path.join(modulesDir, file),
           filename: file
         })
-      })
+      }
     }
 
     const indexPath = path.join(this.outputDir, 'index.js')

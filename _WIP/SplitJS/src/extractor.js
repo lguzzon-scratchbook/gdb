@@ -89,7 +89,7 @@ export class FunctionExtractor {
         })),
         modules: modules.map((m) => ({
           filename: m.filename,
-          preview: m.code.substring(0, 200) + '...'
+          preview: `${m.code.substring(0, 200)}...`
         })),
         orchestrator: {
           filename: 'index.js',

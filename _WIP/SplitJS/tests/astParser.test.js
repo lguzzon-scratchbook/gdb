@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import fs from 'fs'
+import fs from 'node:fs'
 import ASTParser from '../src/astParser.js'
 
 describe('ASTParser', () => {

@@ -1,6 +1,6 @@
-import { execSync } from 'child_process'
-import fs from 'fs'
-import path from 'path'
+import { execSync } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
 
 export class Validator {
   constructor() {
@@ -114,11 +114,11 @@ export class Validator {
     graph.forEach((deps, funcName) => {
       const missing = []
 
-      deps.internal?.forEach((dep) => {
+      for (const dep of deps.internal || []) {
         if (!graph.has(dep)) {
           missing.push(dep)
         }
-      })
+      }
 
       if (missing.length > 0) {
         issues.push({

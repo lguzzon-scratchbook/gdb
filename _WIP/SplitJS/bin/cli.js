@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import FunctionExtractor from '../src/extractor.js'
 import FileWriter from '../src/fileWriter.js'
 
@@ -82,44 +82,48 @@ async function main() {
 
     const result = extractor.extract(sourceCode)
 
-    console.log(`\n✅ Extraction completed successfully!`)
+    console.log('\n✅ Extraction completed successfully!')
     console.log(`   Functions found: ${result.functions.length}`)
     console.log(`   Modules generated: ${result.modules.length}`)
 
     if (result.warnings.length > 0) {
-      console.log(`\n⚠️  Warnings:`)
-      result.warnings.forEach((w) => console.log(`   - ${w}`))
+      console.log('\n⚠️  Warnings:')
+      for (const w of result.warnings) {
+        console.log(`   - ${w}`)
+      }
     }
 
     if (validate) {
-      console.log(`\n🔍 Validating generated modules...`)
+      console.log('\n🔍 Validating generated modules...')
       const validation = await extractor.validate()
       if (validation.isValid) {
-        console.log(`   ✅ All modules passed validation`)
+        console.log('   ✅ All modules passed validation')
       } else {
-        console.log(`   ⚠️  Some validation issues found:`)
-        validation.results.forEach((res) => {
+        console.log('   ⚠️  Some validation issues found:')
+        for (const res of validation.results) {
           if (res.errors.length > 0) {
             console.log(`   Module: ${res.module}`)
-            res.errors.forEach((e) => console.log(`     - ${e}`))
+            for (const e of res.errors) {
+              console.log(`     - ${e}`)
+            }
           }
-        })
+        }
       }
     }
 
     const fileWriter = new FileWriter(outputDir)
     fileWriter.ensureOutputDir()
 
-    console.log(`\n📝 Writing output files...`)
+    console.log('\n📝 Writing output files...')
 
     const modules = Array.from(extractor.moduleGenerator.modules.values())
-    modules.forEach((mod) => {
+    for (const mod of modules) {
       const modulesDir = path.join(outputDir, 'modules')
       if (!fs.existsSync(modulesDir)) {
         fs.mkdirSync(modulesDir, { recursive: true })
       }
       fs.writeFileSync(path.join(modulesDir, mod.filename), mod.code, 'utf-8')
-    })
+    }
 
     if (result.orchestrator) {
       fileWriter.writeOrchestrator(result.orchestrator.code, 'index.js')
@@ -131,16 +135,16 @@ async function main() {
     fileWriter.writePackageJson(outputDir)
 
     console.log(`\n📁 Output directory: ${path.resolve(outputDir)}`)
-    console.log(`   ├── modules/           (extracted function modules)`)
-    console.log(`   ├── index.js           (orchestrator/entry point)`)
-    console.log(`   ├── manifest.json      (module metadata)`)
-    console.log(`   ├── dependencies.json  (dependency graph)`)
-    console.log(`   ├── report.json        (extraction report)`)
-    console.log(`   └── package.json       (package metadata)`)
+    console.log('   ├── modules/           (extracted function modules)')
+    console.log('   ├── index.js           (orchestrator/entry point)')
+    console.log('   ├── manifest.json      (module metadata)')
+    console.log('   ├── dependencies.json  (dependency graph)')
+    console.log('   ├── report.json        (extraction report)')
+    console.log('   └── package.json       (package metadata)')
 
-    console.log(`\n🎉 All done! Your modules are ready to use.\n`)
+    console.log('\n🎉 All done! Your modules are ready to use.\n')
   } catch (error) {
-    console.error(`\n❌ Error during extraction:`)
+    console.error('\n❌ Error during extraction:')
     console.error(`   ${error.message}`)
     if (process.env.DEBUG) {
       console.error(error.stack)

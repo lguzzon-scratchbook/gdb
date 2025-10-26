@@ -70,7 +70,7 @@ export class DependencyAnalyzer {
     const graph = new Map()
     const allFunctionNames = new Set(functions.map((f) => f.name))
 
-    functions.forEach((func) => {
+    for (const func of functions) {
       const deps = this.analyzeFunctionDependencies(func.node, func.name)
       const resolved = {
         internal: deps.dependencies.internal.filter((d) =>
@@ -81,7 +81,7 @@ export class DependencyAnalyzer {
         )
       }
       graph.set(func.name, resolved)
-    })
+    }
 
     return graph
   }
@@ -110,11 +110,11 @@ export class DependencyAnalyzer {
       recursionStack.delete(node)
     }
 
-    dependencyGraph.forEach((_, node) => {
+    for (const [, node] of dependencyGraph) {
       if (!visited.has(node)) {
         dfs(node, [])
       }
-    })
+    }
 
     return cycles
   }
@@ -122,7 +122,7 @@ export class DependencyAnalyzer {
   _extractParameters(functionNode) {
     const params = new Set()
     if (functionNode.params) {
-      functionNode.params.forEach((param) => {
+      for (const param of functionNode.params) {
         if (param.type === 'Identifier') {
           params.add(param.name)
         } else if (
@@ -131,7 +131,7 @@ export class DependencyAnalyzer {
         ) {
           params.add(param.argument.name)
         }
-      })
+      }
     }
     return params
   }
