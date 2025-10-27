@@ -213,6 +213,7 @@ The enhanced analysis report includes:
 ### Variable Information
 
 For each variable:
+
 - **Declaration Type**: `var`, `let`, `const`, `function`, `class`
 - **Declaration Location**: Line number and code context
 - **Inferred Type**: Automatically detected from usage patterns
@@ -244,27 +245,32 @@ The module exports the following functions for programmatic use:
 ### Core Analysis Functions
 
 **`analyzeVariableReferences(sourceCode, filename, exportedNames?)`**
+
 - Analyzes JavaScript source code for variable declarations and references
 - Returns array of `VariableInfo` objects
 - Optionally filters by provided exported names
 
 **`extractDetailedExportInfo(sourceCode)`**
+
 - Extracts comprehensive export information including aliasing patterns
 - Returns `ExportInfo` object with export classification
 - Handles named exports, variable declarations, function/class exports
 
 **`extractExportedNames(sourceCode)`**
+
 - Legacy wrapper that extracts only the set of exported names
 - Returns `Set<string>` of exported variable/function names
 
 ### Report Generation
 
 **`generateMarkdownReport(variables, filename, exportInfo?)`**
+
 - Generates detailed Markdown analysis report
 - Includes export classification when `exportInfo` provided
 - Returns formatted Markdown string
 
 **`generateRenameReport(results, filename)`**
+
 - Generates Markdown report of rename operations
 - Separates successful and failed renames with reasoning
 - Returns formatted Markdown string
@@ -272,23 +278,27 @@ The module exports the following functions for programmatic use:
 ### Renaming Functions
 
 **`performIntelligentRename(sourceCode, variableInfo, config, exportInfo)`**
+
 - Performs complete rename workflow for a single variable
 - Calls LLM API, validates identifier, compares ASTs
 - Returns `RenameResult` object (Promise)
 
 **`processBatchRenames(sourceCode, variables, config, exportInfo)`**
+
 - Processes multiple variables with sequential renaming
 - Updates analysis after each successful rename
 - Includes rate limiting between API calls
 - Returns array of `RenameResult` objects (Promise)
 
 **`renameVariableInASTWithExportInfo(sourceCode, oldName, newName, exportInfo)`**
+
 - Low-level function to apply rename in AST
 - Respects export protection rules
 - Handles cyclic references in complex ASTs
 - Returns modified source code string
 
 **`renameVariableInAST(sourceCode, oldName, newName, exportedNames?)`**
+
 - Backward compatible wrapper for renaming
 - Converts exported names set to export info
 - Returns modified source code string
@@ -296,26 +306,31 @@ The module exports the following functions for programmatic use:
 ### Utility Functions
 
 **`getLLMNameSuggestion(variableInfo, config)`**
+
 - Calls Openrouter.ai API for name suggestions
 - Includes comprehensive variable context
 - Returns suggested name string (Promise)
 
 **`generateNamingPrompt(variableInfo, config)`**
+
 - Generates strategy-specific LLM prompt
 - Includes declaration context, usage patterns, behavioral analysis
 - Returns prompt string
 
 **`isValidIdentifier(name)`**
+
 - Validates JavaScript identifier syntax
 - Checks for reserved words
 - Returns boolean
 
 **`filterVariablesByLength(variables, renameAll?)`**
+
 - Filters variables by name length
 - Returns only variables with name < 4 chars unless `renameAll=true`
 - Returns filtered array
 
 **`isRenamableIdentifier(name, exportInfo)`**
+
 - Determines if identifier can be safely renamed
 - Respects public API boundaries
 - Returns boolean
@@ -323,26 +338,32 @@ The module exports the following functions for programmatic use:
 ### Internal Helper Functions
 
 **`extractContext(sourceLines, targetLine, contextSize?)`**
+
 - Extracts surrounding code context
 - Returns formatted code block with line numbers
 
 **`analyzeUsagePattern(path, node)`**
+
 - Analyzes AST path to determine usage pattern
 - Returns one of 15+ usage pattern strings
 
 **`inferVariableType(variableInfo)`**
+
 - Infers variable type from usage patterns
 - Returns type string
 
 **`analyzeBehavioralPatterns(variableInfo)`**
+
 - Analyzes variable behavioral patterns
 - Returns patterns object with boolean flags
 
 **`determineScopeLevel(declarationNode, sourceCode)`**
+
 - Determines variable scope level
 - Returns 'global' | 'function' | 'block'
 
 **`compareASTs(originalAST, modifiedAST)`**
+
 - Compares ASTs for semantic equivalence
 - Handles cyclic references properly
 - Returns comparison result object
@@ -473,16 +494,19 @@ console.log(sum);
 The analyzer identifies:
 
 **Direct Exports (Protected):**
+
 - `user`: Object, direct export, public API
 - `version`: String, direct export, public API
 - `processData`: Function, direct export, public API
 
 **Aliased Exports (Renamable):**
+
 - `N0` → `selfId` (internal identifier, safe for renaming)
 - `MJ` → `join` (internal identifier, safe for renaming)
 - `DJ` → `getRelaySockets` (internal identifier, safe for renaming)
 
 **Internal Variables (Renamable):**
+
 - `x`: Number, global, read-only, 1 reference
 - `y`: Number, global, read-only, 1 reference
 - `sum`: Number, computed, read-only, 1 reference
@@ -497,6 +521,7 @@ bun jsVariableAnalyzer.js input.js --rename --all --strategy=descriptive
 **Results:**
 
 ✅ Successful renames:
+
 - `N0` → `selfIdentifier` (aliased export, internal ID, safe to rename)
 - `MJ` → `sumTwoNumbers` (aliased export, internal ID, safe to rename)
 - `DJ` → `getRelayConfiguration` (aliased export, internal ID, safe to rename)
@@ -505,6 +530,7 @@ bun jsVariableAnalyzer.js input.js --rename --all --strategy=descriptive
 - `sum` → `totalSumOfXAndY` (non-exported, safe to rename)
 
 ❌ Failed renames (protected):
+
 - `user`: Part of public API - cannot rename
 - `version`: Part of public API - cannot rename
 - `processData`: Part of public API - cannot rename
@@ -514,6 +540,7 @@ bun jsVariableAnalyzer.js input.js --rename --all --strategy=descriptive
 **analysis.md** includes export classification showing public API vs internal details.
 
 **rename-report.md** shows:
+
 - 6 successful renames with LLM reasoning
 - 3 protected exports that cannot be renamed
 - Clear distinction between public and internal identifiers
@@ -527,7 +554,7 @@ bun jsVariableAnalyzer.js input.js --rename --all --strategy=descriptive
 ```javascript
 const llmConfig = {
   apiKey: process.env.OPENROUTER_API_KEY,
-  model: 'anthropic/claude-3-haiku',
+  model: 'openai/gpt-4o-mini',
   namingStrategy: 'descriptive',
   maxTokens: 1000,
   temperature: 0.3,
@@ -537,7 +564,8 @@ const llmConfig = {
 
 ### Supported Models
 
-- `anthropic/claude-3-haiku` (default)
+- `openai/gpt-4o-mini` (default)
+- `anthropic/claude-3-haiku`
 - `anthropic/claude-3-sonnet`
 - `anthropic/claude-3-opus`
 - Other Openrouter.ai compatible models
