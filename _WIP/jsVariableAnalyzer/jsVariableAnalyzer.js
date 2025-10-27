@@ -20,12 +20,15 @@ import fetch from "node-fetch";
  * @property {string} name - The variable name
  * @property {string} declarationType - Type of declaration (var, let, const, function, class)
  * @property {number} declarationLine - Line where variable is declared
+ * @property {number} declarationColumn - Column where variable is declared
  * @property {string} declarationContext - Code context around the declaration
  * @property {VariableReference[]} references - All references to this variable
  * @property {string} inferredType - Inferred type from usage patterns
  * @property {string} scope - Scope level (global, function, block)
  * @property {Object} behavioralPatterns - Analysis of how the variable is used
  * @property {boolean} isExported - Whether this variable is exported
+ * @property {string} uniqueId - Unique identifier combining name:line:column
+ * @property {Object} scopeRange - Scope boundaries {start: number, end: number}
  */
 
 /**
@@ -604,6 +607,99 @@ function compareASTs(originalAST, modifiedAST) {
 }
 
 /**
+ * Calculates the scope range for a variable declaration
+ * @param {Object} declarationNode - AST node of the declaration
+ * @param {Object} ast - Full AST or source code
+ * @param {number} totalLines - Total number of lines in source (optional)
+ * @returns {Object} Scope range {start: line, end: line}
+ */
+function calculateScopeRange(declarationNode, ast, totalLines = 99999) {
+  const startLine = getNodePosition(declarationNode).line;
+  let endLine = totalLines;
+
+  // Walk up the AST to find the containing scope
+  const j = typeof ast === 'string' ? jscodeshift(ast) : ast;
+  
+  // Try to find the end of the containing scope
+  // For function declarations, use the function's end
+  if (declarationNode.type === 'FunctionDeclaration' || 
+      declarationNode.type === 'ClassDeclaration') {
+    if (declarationNode.loc?.end?.line) {
+      endLine = declarationNode.loc.end.line;
+    }
+  }
+  
+  // For variable declarations, find the containing function/program
+  let scope = null;
+  j.find(jscodeshift.Program).forEach((path) => {
+    const walker = (node, parent) => {
+      // Check if declarationNode is a child of this node
+      if (node === declarationNode) {
+        scope = parent;
+      } else if (node.body) {
+        const nextParent = node;
+        if (Array.isArray(node.body)) {
+          node.body.forEach(child => walker(child, nextParent));
+        } else if (node.body && typeof node.body === 'object') {
+          walker(node.body, nextParent);
+        }
+      }
+    };
+    walker(path.node, null);
+  });
+
+  // If we found a containing scope, use its end line
+  if (scope && scope.loc?.end?.line) {
+    endLine = scope.loc.end.line;
+  } else if (scope === null && declarationNode.type !== 'FunctionDeclaration' && 
+             declarationNode.type !== 'ClassDeclaration') {
+    // Top-level declaration - spans to end of file
+    endLine = totalLines;
+  }
+
+  return { start: startLine, end: endLine };
+}
+
+/**
+ * Creates a unique identifier for a variable declaration
+ * @param {string} name - Variable name
+ * @param {number} line - Declaration line
+ * @param {number} column - Declaration column
+ * @returns {string} Unique identifier
+ */
+function createUniqueVariableId(name, line, column) {
+  return `${name}:${line}:${column}`;
+}
+
+/**
+ * Validates that new names don't create duplicates
+ * @param {Array} renameMappings - Array of {from: string, to: string} mappings
+ * @returns {Object} {isValid: boolean, duplicates: Set<string>, conflicts: Array}
+ */
+function validateRenameMapping(renameMappings) {
+  const seenNewNames = new Map();
+  const duplicates = new Set();
+  const conflicts = [];
+
+  for (const mapping of renameMappings) {
+    if (seenNewNames.has(mapping.to)) {
+      duplicates.add(mapping.to);
+      conflicts.push({
+        newName: mapping.to,
+        conflictingOriginals: [seenNewNames.get(mapping.to), mapping.from]
+      });
+    }
+    seenNewNames.set(mapping.to, mapping.from);
+  }
+
+  return {
+    isValid: duplicates.size === 0,
+    duplicates,
+    conflicts
+  };
+}
+
+/**
  * Determines if an identifier is renamable based on export patterns
  * @param {string} name - Identifier name to check
  * @param {ExportInfo} exportInfo - Export information with aliasing details
@@ -622,6 +718,91 @@ function isRenamableIdentifier(name, exportInfo) {
 
   // If it's not exported at all, it's renamable
   return true;
+}
+
+/**
+ * Renames a variable within its scope using a unique identifier
+ * @param {Object|string} ast - The AST or source code to modify
+ * @param {string} variableId - Unique identifier in format name:line:column
+ * @param {string} newName - New variable name
+ * @param {Object} variableInfo - Variable information with scope details and references
+ * @param {ExportInfo} exportInfo - Detailed export information with aliasing
+ * @returns {string} Modified source code
+ */
+function renameVariableByIdWithExportInfo(ast, variableId, newName, variableInfo, exportInfo) {
+  const j = jscodeshift(ast);
+
+  // Skip renaming if the variable is a direct export (public API contract)
+  if (!isRenamableIdentifier(variableInfo.name, exportInfo)) {
+    return typeof ast === 'string' ? ast : j.toSource();
+  }
+
+  // Build set of reference positions to rename
+  const referencePosToRename = new Set();
+  for (const ref of variableInfo.references) {
+    referencePosToRename.add(`${ref.line}:${ref.column}`);
+  }
+
+  // Also add the declaration position itself
+  const declPos = `${variableInfo.declarationLine}:${variableInfo.declarationColumn}`;
+  
+  let renamedCount = 0;
+
+  // Find all identifiers with the old name
+  j.find(jscodeshift.Identifier, { name: variableInfo.name }).forEach(path => {
+    const nodePosition = getNodePosition(path.node);
+    const posKey = `${nodePosition.line}:${nodePosition.column}`;
+
+    // Only rename if this identifier is in our references or is the declaration
+    if (!referencePosToRename.has(posKey) && posKey !== declPos) {
+      return;
+    }
+
+    // Skip property names and other contexts where renaming would be incorrect
+    const parent = path.parent;
+    if (parent) {
+      const parentNode = parent.node;
+
+      // Skip property names in object literals
+      if (parentNode.type === 'Property' && parentNode.key === path.node) {
+        return;
+      }
+
+      // Skip property access in non-computed member expressions
+      if (parentNode.type === 'MemberExpression' &&
+        parentNode.property === path.node &&
+        !parentNode.computed) {
+        return;
+      }
+
+      // Skip import specifiers
+      if (parentNode.type === 'ImportSpecifier' && parentNode.local === path.node) {
+        return;
+      }
+
+      // Skip export specifiers
+      if (parentNode.type === 'ExportSpecifier' && parentNode.local === path.node) {
+        return;
+      }
+
+      // Skip function parameter names in function declarations
+      if (parentNode.type === 'FunctionDeclaration' &&
+        parentNode.params.includes(path.node)) {
+        return;
+      }
+
+      // Skip class method parameters
+      if (parentNode.type === 'MethodDefinition' && parentNode.key === path.node) {
+        return;
+      }
+    }
+
+    // Rename the identifier
+    path.node.name = newName;
+    renamedCount++;
+  });
+
+  return j.toSource();
 }
 
 /**
@@ -661,6 +842,11 @@ function renameVariableInASTWithExportInfo(ast, oldName, newName, exportInfo) {
 
       // Skip import specifiers
       if (parentNode.type === 'ImportSpecifier' && parentNode.local === path.node) {
+        return
+      }
+
+      // Skip export specifiers
+      if (parentNode.type === 'ExportSpecifier' && parentNode.local === path.node) {
         return
       }
 
@@ -780,7 +966,7 @@ function isValidIdentifier(name) {
 }
 
 /**
- * Processes multiple variables for renaming with batch support
+ * Processes multiple variables for renaming with batch support and duplicate detection
  * @param {string} sourceCode - Original source code
  * @param {VariableInfo[]} variables - Variables to process
  * @param {LLMConfig} config - LLM configuration
@@ -790,16 +976,90 @@ function isValidIdentifier(name) {
 async function processBatchRenames(sourceCode, variables, config, exportInfo) {
   const results = []
   let currentSource = sourceCode
+  const usedNewNames = new Set()
 
+  // First pass: collect all suggested names and validate for duplicates
+  const suggestions = []
   for (const variableInfo of variables) {
+    try {
+      const suggestedName = await getLLMNameSuggestion(variableInfo, config)
+      suggestions.push({
+        variable: variableInfo,
+        suggestedName,
+        isValid: isValidIdentifier(suggestedName) && suggestedName !== variableInfo.name
+      })
+    } catch (error) {
+      results.push({
+        success: false,
+        originalName: variableInfo.name,
+        newName: '',
+        reason: `Failed to get name suggestion: ${error.message}`,
+        warnings: [`Error during LLM request: ${error.message}`],
+        astComparison: null
+      })
+    }
+  }
+
+  // Validate rename mappings for duplicates
+  const renameMappings = suggestions
+    .filter(s => s.isValid)
+    .map(s => ({ from: s.variable.name, to: s.suggestedName }));
+
+  const validation = validateRenameMapping(renameMappings);
+  
+  if (!validation.isValid) {
+    // Add warnings for duplicate names
+    for (const conflict of validation.conflicts) {
+      results.push({
+        success: false,
+        originalName: conflict.conflictingOriginals[0],
+        newName: conflict.newName,
+        reason: `Duplicate new name "${conflict.newName}" conflicts with rename of "${conflict.conflictingOriginals[1]}"`,
+        warnings: [`Cannot use "${conflict.newName}" - collision with another variable's new name`],
+        astComparison: null
+      })
+    }
+  }
+
+  // Second pass: apply valid renames that don't create collisions
+  for (const suggestion of suggestions) {
+    if (!suggestion.isValid) {
+      results.push({
+        success: false,
+        originalName: suggestion.variable.name,
+        newName: suggestion.suggestedName,
+        reason: suggestion.suggestedName === suggestion.variable.name 
+          ? 'LLM suggested the same name'
+          : `Suggested name "${suggestion.suggestedName}" is not a valid JavaScript identifier`,
+        warnings: [suggestion.suggestedName === suggestion.variable.name 
+          ? 'LLM suggestion identical to original'
+          : `Invalid identifier: ${suggestion.suggestedName}`],
+        astComparison: null
+      })
+      continue
+    }
+
+    // Check if this new name conflicts with another suggestion
+    if (validation.duplicates.has(suggestion.suggestedName)) {
+      results.push({
+        success: false,
+        originalName: suggestion.variable.name,
+        newName: suggestion.suggestedName,
+        reason: `Cannot use "${suggestion.suggestedName}" - would create collision with another rename`,
+        warnings: [`Duplicate name collision: "${suggestion.suggestedName}"`],
+        astComparison: null
+      })
+      continue
+    }
+
     // Re-analyze the variable in the current source to get updated references
     const updatedVariables = analyzeVariableReferences(currentSource, 'current', exportInfo.exportedNames)
-    const currentVariable = updatedVariables.find(v => v.name === variableInfo.name)
+    const currentVariable = updatedVariables.find(v => v.name === suggestion.variable.name && v.uniqueId === suggestion.variable.uniqueId)
 
     if (!currentVariable) {
       results.push({
         success: false,
-        originalName: variableInfo.name,
+        originalName: suggestion.variable.name,
         newName: '',
         reason: 'Variable no longer exists in current source',
         warnings: ['Variable not found during batch processing'],
@@ -808,19 +1068,29 @@ async function processBatchRenames(sourceCode, variables, config, exportInfo) {
       continue
     }
 
-    const result = await performIntelligentRename(currentSource, currentVariable, config, exportInfo)
+    // Apply the rename using scope-aware function
+    const modifiedSource = renameVariableByIdWithExportInfo(
+      currentSource,
+      currentVariable.uniqueId,
+      suggestion.suggestedName,
+      currentVariable,
+      exportInfo
+    )
 
-    if (result.success) {
-      // Apply the rename to the current source
-      const ast = jscodeshift(currentSource)
-      renameVariableInASTWithExportInfo(ast, result.originalName, result.newName, exportInfo)
-      currentSource = ast.toSource()
-    }
-
-    results.push(result)
+    currentSource = modifiedSource
+    usedNewNames.add(suggestion.suggestedName)
+    
+    results.push({
+      success: true,
+      originalName: suggestion.variable.name,
+      newName: suggestion.suggestedName,
+      reason: `Successfully renamed "${suggestion.variable.name}" to "${suggestion.suggestedName}" based on ${config.namingStrategy} strategy`,
+      warnings: [],
+      astComparison: null
+    })
 
     // Add delay between API calls to avoid rate limiting
-    if (config.enableBatchProcessing && variables.indexOf(variableInfo) < variables.length - 1) {
+    if (config.enableBatchProcessing && suggestions.indexOf(suggestion) < suggestions.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
@@ -849,7 +1119,8 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
     const ast = jscodeshift(sourceCode);
 
     // Find all variable declarations
-    const declarations = new Map();
+    // Use an array to handle multiple variables with the same name (shadowing)
+    const declarationsList = [];
 
     // Handle var, let, const declarations
     ast.find(jscodeshift.VariableDeclarator).forEach((path) => {
@@ -859,13 +1130,19 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
         const position = getNodePosition(node)
         const parentType = path.parent.value.kind // var, let, const
 
-        declarations.set(varName, {
+        // Create unique ID for this declaration
+        const uniqueId = createUniqueVariableId(varName, position.line, position.column);
+
+        declarationsList.push({
           name: varName,
           declarationType: parentType,
           declarationLine: position.line,
+          declarationColumn: position.column,
           declarationContext: extractContext(sourceLines, position.line),
           declarationNode: node,
           references: [],
+          uniqueId,
+          scopeRange: { start: position.line, end: sourceLines.length }
         })
       }
     });
@@ -877,13 +1154,19 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
         const funcName = node.id.name
         const position = getNodePosition(node);
 
-        declarations.set(funcName, {
+        const uniqueId = createUniqueVariableId(funcName, position.line, position.column);
+        const scopeRange = calculateScopeRange(node, ast, sourceLines.length);
+
+        declarationsList.push({
           name: funcName,
           declarationType: "function",
           declarationLine: position.line,
+          declarationColumn: position.column,
           declarationContext: extractContext(sourceLines, position.line),
           declarationNode: node,
           references: [],
+          uniqueId,
+          scopeRange
         })
       }
     });
@@ -895,13 +1178,19 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
         const className = node.id.name
         const position = getNodePosition(node);
 
-        declarations.set(className, {
+        const uniqueId = createUniqueVariableId(className, position.line, position.column);
+        const scopeRange = calculateScopeRange(node, ast, sourceLines.length);
+
+        declarationsList.push({
           name: className,
           declarationType: "class",
           declarationLine: position.line,
+          declarationColumn: position.column,
           declarationContext: extractContext(sourceLines, position.line),
           declarationNode: node,
           references: [],
+          uniqueId,
+          scopeRange
         })
       }
     });
@@ -913,13 +1202,13 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
       const { node } = path
       const varName = node.name;
 
-      if (!declarations.has(varName)) {
-        return
+      // Find all declarations with this name
+      const matchingDeclarations = declarationsList.filter(d => d.name === varName);
+      if (matchingDeclarations.length === 0) {
+        return;
       }
 
-      const varInfo = declarations.get(varName)
       const position = getNodePosition(node);
-
       const referenceKey = `${varName}:${position.line}:${position.column}`;
 
       if (processedReferences.has(referenceKey)) {
@@ -928,48 +1217,66 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
 
       processedReferences.add(referenceKey);
 
-      if (
-        (position.line === varInfo.declarationLine &&
-          node === varInfo.declarationNode.id) ||
-        (path.parent && path.parent.node.type === "Property" && path.parent.node.key === node) ||
-        (path.parent && path.parent.node.type === "MemberExpression" && path.parent.node.property === node && !path.parent.node.computed) ||
-        (path.parent && path.parent.node.type === "FunctionDeclaration" && path.parent.node.params.includes(node)) ||
-        (path.parent && path.parent.node.type === "FunctionExpression" && path.parent.node.params.includes(node)) ||
-        (path.parent && path.parent.node.type === "ArrowFunctionExpression" && path.parent.node.params.includes(node)) ||
-        (path.parent && path.parent.node.type === "MethodDefinition" && path.parent.node.key === node) ||
-        (path.parent && path.parent.node.type === "ImportSpecifier" && path.parent.node.local === node) ||
-        (path.parent && path.parent.node.type === "ImportDefaultSpecifier" && path.parent.node.local === node) ||
-        (path.parent && path.parent.node.type === "VariableDeclarator" && path.parent.node.id === node)
-      ) {
-        return
-      }
+      // Find the correct declaration for this reference
+      // Choose the one that is in scope and closest to the reference (most recent declaration)
+      // Filter to declarations that are declared before the reference
+      const validDeclarations = matchingDeclarations.filter(d => d.declarationLine < position.line);
+      
+      if (validDeclarations.length > 0) {
+        // Pick the most recent (closest) declaration
+        const varInfo = validDeclarations.reduce((closest, current) => {
+          return current.declarationLine > closest.declarationLine ? current : closest;
+        });
+        
+        // Skip if this is the declaration itself
+        if (position.line === varInfo.declarationLine && node === varInfo.declarationNode.id) {
+          return;
+        }
+        
+        // Skip property names and other contexts where renaming would be incorrect
+        if (path.parent) {
+          const parentNode = path.parent.node;
+          if ((parentNode.type === 'Property' && parentNode.key === node) ||
+              (parentNode.type === 'MemberExpression' && parentNode.property === node && !parentNode.computed) ||
+              (parentNode.type === 'FunctionDeclaration' && parentNode.params.includes(node)) ||
+              (parentNode.type === 'FunctionExpression' && parentNode.params.includes(node)) ||
+              (parentNode.type === 'ArrowFunctionExpression' && parentNode.params.includes(node)) ||
+              (parentNode.type === 'MethodDefinition' && parentNode.key === node) ||
+              (parentNode.type === 'ImportSpecifier' && parentNode.local === node) ||
+              (parentNode.type === 'ImportDefaultSpecifier' && parentNode.local === node) ||
+              (parentNode.type === 'VariableDeclarator' && parentNode.id === node)) {
+            return;
+          }
+        }
+        
+        // Add reference to this specific declaration
+        if (isWithinScope(varInfo.declarationNode, node)) {
+          const context = extractContext(sourceLines, position.line);
+          const usagePattern = analyzeUsagePattern(path, node);
 
-      if (isWithinScope(varInfo.declarationNode, node)) {
-        const context = extractContext(sourceLines, position.line);
-        const usagePattern = analyzeUsagePattern(path, node);
-
-        varInfo.references.push({
-          name: varName,
-          line: position.line,
-          column: position.column,
-          context: context,
-          type: "usage",
-          usagePattern: usagePattern,
-        })
+          varInfo.references.push({
+            name: varName,
+            line: position.line,
+            column: position.column,
+            context: context,
+            type: "usage",
+            usagePattern: usagePattern,
+          })
+        }
       }
+      
+      return;
     });
 
     // Enhance variable information with additional analysis
-    for (const [name, varInfo] of declarations) {
+    for (const varInfo of declarationsList) {
       varInfo.inferredType = inferVariableType(varInfo)
       varInfo.scope = determineScopeLevel(varInfo.declarationNode, sourceCode)
       varInfo.behavioralPatterns = analyzeBehavioralPatterns(varInfo)
-      varInfo.isExported = names.has(name)
+      varInfo.isExported = names.has(varInfo.name)
     }
-
-    const allDeclarations = Array.from(declarations.values())
     
-    return allDeclarations.sort(
+    return declarationsList.sort(
       (a, b) => a.declarationLine - b.declarationLine,
     )
   } catch (error) {
@@ -1279,5 +1586,9 @@ export {
   extractExportedNames,
   isRenamableIdentifier,
   renameVariableInAST,
-  renameVariableInASTWithExportInfo
+  renameVariableInASTWithExportInfo,
+  renameVariableByIdWithExportInfo,
+  calculateScopeRange,
+  createUniqueVariableId,
+  validateRenameMapping
 }
