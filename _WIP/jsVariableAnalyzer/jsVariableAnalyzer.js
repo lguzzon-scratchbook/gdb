@@ -25,6 +25,7 @@ import fetch from "node-fetch";
  * @property {string} inferredType - Inferred type from usage patterns
  * @property {string} scope - Scope level (global, function, block)
  * @property {Object} behavioralPatterns - Analysis of how the variable is used
+ * @property {boolean} isExported - Whether this variable is exported
  */
 
 /**
@@ -58,6 +59,61 @@ const DEFAULT_LLM_CONFIG = {
   temperature: 0.1,
   enableBatchProcessing: false
 };
+
+/**
+ * Extracts exported names from JavaScript source code
+ * @param {string} sourceCode - The JavaScript source code to analyze
+ * @returns {Set<string>} Set of exported variable/function names
+ */
+function extractExportedNames(sourceCode) {
+  const exportedNames = new Set();
+  try {
+    const ast = jscodeshift(sourceCode);
+
+    // Find all named exports (export { name1, name2, ... })
+    ast.find(jscodeshift.ExportNamedDeclaration).forEach((path) => {
+      const { node } = path;
+
+      // Handle export { name1, name2 }
+      if (node.specifiers) {
+        node.specifiers.forEach((spec) => {
+          if (spec.type === 'ExportSpecifier' && spec.local) {
+            exportedNames.add(spec.local.name);
+          }
+        });
+      }
+
+      // Handle export const/let/var name = ...
+      if (node.declaration) {
+        const decl = node.declaration;
+        if (decl.type === 'VariableDeclaration' && decl.declarations) {
+          decl.declarations.forEach((declarator) => {
+            if (declarator.id && declarator.id.name) {
+              exportedNames.add(declarator.id.name);
+            }
+          });
+        }
+        // Handle export function name()
+        if ((decl.type === 'FunctionDeclaration' || decl.type === 'ClassDeclaration') && decl.id) {
+          exportedNames.add(decl.id.name);
+        }
+      }
+    });
+
+    // Find default exports (function/class declarations are named)
+    ast.find(jscodeshift.ExportDefaultDeclaration).forEach((path) => {
+      const { node } = path;
+      if (node.declaration && (node.declaration.type === 'FunctionDeclaration' || node.declaration.type === 'ClassDeclaration')) {
+        if (node.declaration.id) {
+          exportedNames.add(node.declaration.id.name);
+        }
+      }
+    });
+  } catch (error) {
+    console.warn('Could not extract exported names:', error.message);
+  }
+  return exportedNames;
+}
 
 /**
  * Extracts context lines around a specific line number
@@ -463,10 +519,16 @@ function compareASTs(originalAST, modifiedAST) {
  * @param {Object} ast - The AST to modify
  * @param {string} oldName - Current variable name
  * @param {string} newName - New variable name
+ * @param {Set<string>} exportedNames - Set of exported names to exclude from renaming
  * @returns {Object} Modified AST
  */
-function renameVariableInAST(ast, oldName, newName) {
+function renameVariableInAST(ast, oldName, newName, exportedNames = new Set()) {
   const j = jscodeshift(ast)
+
+  // Skip renaming if the variable is an exported name
+  if (exportedNames.has(oldName)) {
+    return ast
+  }
 
   // Find all identifiers with the old name
   j.find(jscodeshift.Identifier, { name: oldName }).forEach(path => {
@@ -511,9 +573,10 @@ function renameVariableInAST(ast, oldName, newName) {
  * @param {string} sourceCode - Original source code
  * @param {VariableInfo} variableInfo - Variable to rename
  * @param {LLMConfig} config - LLM configuration
+ * @param {Set<string>} exportedNames - Set of exported names to exclude from renaming
  * @returns {Promise<RenameResult>} Rename result
  */
-async function performIntelligentRename(sourceCode, variableInfo, config) {
+async function performIntelligentRename(sourceCode, variableInfo, config, exportedNames = new Set()) {
   const result = {
     success: false,
     originalName: variableInfo.name,
@@ -546,7 +609,8 @@ async function performIntelligentRename(sourceCode, variableInfo, config) {
     const modifiedAST = renameVariableInAST(
       JSON.parse(JSON.stringify(originalAST)),
       variableInfo.name,
-      suggestedName
+      suggestedName,
+      exportedNames
     )
 
     // Compare ASTs for semantic equivalence
@@ -603,15 +667,16 @@ function isValidIdentifier(name) {
  * @param {string} sourceCode - Original source code
  * @param {VariableInfo[]} variables - Variables to process
  * @param {LLMConfig} config - LLM configuration
+ * @param {Set<string>} exportedNames - Set of exported names to exclude from renaming
  * @returns {Promise<RenameResult[]>} Array of rename results
  */
-async function processBatchRenames(sourceCode, variables, config) {
+async function processBatchRenames(sourceCode, variables, config, exportedNames = new Set()) {
   const results = []
   let currentSource = sourceCode
 
   for (const variableInfo of variables) {
     // Re-analyze the variable in the current source to get updated references
-    const updatedVariables = analyzeVariableReferences(currentSource, 'current')
+    const updatedVariables = analyzeVariableReferences(currentSource, 'current', exportedNames)
     const currentVariable = updatedVariables.find(v => v.name === variableInfo.name)
 
     if (!currentVariable) {
@@ -626,12 +691,12 @@ async function processBatchRenames(sourceCode, variables, config) {
       continue
     }
 
-    const result = await performIntelligentRename(currentSource, currentVariable, config)
+    const result = await performIntelligentRename(currentSource, currentVariable, config, exportedNames)
 
     if (result.success) {
       // Apply the rename to the current source
       const ast = jscodeshift(currentSource)
-      renameVariableInAST(ast, result.originalName, result.newName)
+      renameVariableInAST(ast, result.originalName, result.newName, exportedNames)
       currentSource = ast.toSource()
     }
 
@@ -650,11 +715,17 @@ async function processBatchRenames(sourceCode, variables, config) {
  * Analyzes a JavaScript source file for variable declarations and references
  * @param {string} sourceCode - The JavaScript source code to analyze
  * @param {string} filename - Name of the file being analyzed
+ * @param {Set<string>} exportedNames - Set of exported names to exclude from analysis
  * @returns {VariableInfo[]} Array of variable information objects
  */
-function analyzeVariableReferences(sourceCode, filename) {
+function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
   const sourceLines = sourceCode.split("\n")
   const variableMap = new Map();
+
+  // Extract exported names if not provided
+  if (!exportedNames) {
+    exportedNames = extractExportedNames(sourceCode);
+  }
 
   try {
     const ast = jscodeshift(sourceCode);
@@ -775,9 +846,12 @@ function analyzeVariableReferences(sourceCode, filename) {
       varInfo.inferredType = inferVariableType(varInfo)
       varInfo.scope = determineScopeLevel(varInfo.declarationNode, sourceCode)
       varInfo.behavioralPatterns = analyzeBehavioralPatterns(varInfo)
+      varInfo.isExported = exportedNames.has(name)
     }
 
-    return Array.from(declarations.values()).sort(
+    const allDeclarations = Array.from(declarations.values())
+    
+    return allDeclarations.sort(
       (a, b) => a.declarationLine - b.declarationLine,
     )
   } catch (error) {
@@ -801,11 +875,13 @@ function generateMarkdownReport(variables, filename) {
   }
 
   for (const variable of variables) {
-    report += `## Variable: \`${variable.name}\`\n\n`
+    const exportedLabel = variable.isExported ? ' [EXPORTED - Protected from renaming]' : ''
+    report += `## Variable: \`${variable.name}\`${exportedLabel}\n\n`
     report += `**Declaration Type:** \`${variable.declarationType}\`  \n`
     report += `**Declared on line:** ${variable.declarationLine}  \n`
     report += `**Inferred Type:** \`${variable.inferredType}\`  \n`
     report += `**Scope:** \`${variable.scope}\`  \n`
+    report += `**Exported:** ${variable.isExported ? 'Yes' : 'No'}  \n`
     report += `**Usage Frequency:** ${variable.behavioralPatterns.usageFrequency}\n\n`
 
     report += `### Declaration Context: \`${variable.name}\`\n\n`
@@ -896,19 +972,37 @@ function generateRenameReport(results, filename) {
 }
 
 /**
+ * Filters variables based on name length
+ * @param {VariableInfo[]} variables - Array of variables to filter
+ * @param {boolean} renameAll - If true, include all variables; if false, only include variables with name < 4 chars
+ * @returns {VariableInfo[]} Filtered array of variables
+ */
+function filterVariablesByLength(variables, renameAll = false) {
+  if (renameAll) {
+    return variables
+  }
+  return variables.filter(v => v.name.length < 4)
+}
+
+/**
  * Main function to analyze JavaScript files and optionally perform intelligent renaming
  * @param {string[]} filePaths - Array of file paths to analyze
  * @param {Object} options - Options for processing
  */
 async function main(filePaths, options = {}) {
   if (!filePaths || filePaths.length === 0) {
-    console.error("Usage: bun variable-analyzer.js <file1.js> [file2.js] ... [--rename] [--strategy=descriptive|concise|domain-specific]")
+    console.error("Usage: bun jsVariableAnalyzer.js <file1.js> [file2.js] ... [--rename] [--all] [--strategy=descriptive|concise|domain-specific] [--batch]")
+    console.error("  --rename    Enable intelligent variable renaming")
+    console.error("  --all       Rename all variables (default: only variables with name length < 4 chars)")
+    console.error("  --strategy  Naming strategy: descriptive, concise, or domain-specific (default: descriptive)")
+    console.error("  --batch     Process multiple variables in batch mode")
     process.exit(1)
   }
 
   const enableRename = options.rename || false
   const namingStrategy = options.strategy || 'descriptive'
   const enableBatch = options.batch || false
+  const renameAll = options.all || false
 
   // Configure LLM
   const llmConfig = {
@@ -924,7 +1018,10 @@ async function main(filePaths, options = {}) {
       const sourceCode = readFileSync(filePath, "utf-8")
       const filename = basename(filePath);
 
-      const variables = analyzeVariableReferences(sourceCode, filename)
+      // Extract exported names to protect them from renaming
+      const exportedNames = extractExportedNames(sourceCode)
+
+      const variables = analyzeVariableReferences(sourceCode, filename, exportedNames)
       const analysisReport = generateMarkdownReport(variables, filename);
 
       const analysisOutputPath = `${filePath}-analysis.md`
@@ -937,14 +1034,34 @@ async function main(filePaths, options = {}) {
 
       if (enableRename) {
         console.log(`Performing intelligent renaming with strategy: ${namingStrategy}`)
+        if (!renameAll) {
+          console.log(`Filtering: Only renaming variables with name length < 4 characters`)
+        }
 
-        let renameResults
+        const exportedVariables = variables.filter(v => v.isExported)
+        const nonExportedVariables = variables.filter(v => !v.isExported)
+        const renamableVariables = filterVariablesByLength(nonExportedVariables, renameAll)
+
+        let renameResults = []
+
+        // Skip renaming for exported variables and document them
+        for (const expVar of exportedVariables) {
+          renameResults.push({
+            success: false,
+            originalName: expVar.name,
+            newName: '',
+            reason: 'Variable is exported and protected from renaming',
+            warnings: ['This variable is part of the public API and cannot be renamed'],
+            astComparison: null
+          })
+        }
+
         if (enableBatch) {
-          renameResults = await processBatchRenames(sourceCode, variables, llmConfig)
+          const batchResults = await processBatchRenames(sourceCode, renamableVariables, llmConfig, exportedNames)
+          renameResults = renameResults.concat(batchResults)
         } else {
-          renameResults = []
-          for (const variable of variables) {
-            const result = await performIntelligentRename(sourceCode, variable, llmConfig)
+          for (const variable of renamableVariables) {
+            const result = await performIntelligentRename(sourceCode, variable, llmConfig, exportedNames)
             renameResults.push(result)
 
             if (!enableBatch) {
@@ -968,7 +1085,7 @@ async function main(filePaths, options = {}) {
 
           // Apply all successful renames
           for (const rename of successfulRenames) {
-            renameVariableInAST(ast, rename.originalName, rename.newName)
+            renameVariableInAST(ast, rename.originalName, rename.newName, exportedNames)
           }
 
           modifiedSource = ast.toSource()
@@ -991,6 +1108,7 @@ const filePaths = args.filter(arg => !arg.startsWith('--'))
 const options = {
   rename: args.includes('--rename'),
   batch: args.includes('--batch'),
+  all: args.includes('--all'),
   strategy: args.find(arg => arg.startsWith('--strategy='))?.split('=')[1] || 'descriptive'
 };
 
@@ -1005,5 +1123,6 @@ export {
   extractContext,
   performIntelligentRename,
   processBatchRenames,
-  getLLMNameSuggestion
+  getLLMNameSuggestion,
+  filterVariablesByLength
 }
