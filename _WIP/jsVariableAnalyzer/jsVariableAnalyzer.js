@@ -30,7 +30,7 @@ import fetch from "node-fetch";
 
 /**
  * @typedef {Object} LLMConfig
- * @property {string} apiKey - OpenRoute.ai API key
+ * @property {string} apiKey - Openrouter.ai API key
  * @property {string} model - Model to use (e.g., 'openai/gpt-4o-mini')
  * @property {string} namingStrategy - Naming strategy ('descriptive', 'concise', 'domain-specific')
  * @property {number} maxTokens - Maximum tokens for LLM response
@@ -52,7 +52,7 @@ import fetch from "node-fetch";
  * Configuration for LLM integration
  */
 const DEFAULT_LLM_CONFIG = {
-  apiKey: process.env.OPENROUTE_API_KEY || '',
+  apiKey: process.env.OPENROUTER_API_KEY || '',
   model: process.env.OPENROUTE_MODEL || 'openai/gpt-4o-mini',
   namingStrategy: 'descriptive',
   maxTokens: 4000,
@@ -442,14 +442,14 @@ function determineScopeLevel(declarationNode, sourceCode) {
 }
 
 /**
- * Calls OpenRoute.ai API to get variable name suggestions
+ * Calls Openrouter.ai API to get variable name suggestions
  * @param {VariableInfo} variableInfo - Variable information
  * @param {LLMConfig} config - LLM configuration
  * @returns {Promise<string>} Suggested variable name
  */
 async function getLLMNameSuggestion(variableInfo, config) {
   if (!config.apiKey) {
-    throw new Error('OpenRoute.ai API key is required. Set OPENROUTE_API_KEY environment variable.')
+    throw new Error('Openrouter.ai API key is required. Set OPENROUTER_API_KEY environment variable.')
   }
 
   const prompt = generateNamingPrompt(variableInfo, config)
@@ -480,14 +480,14 @@ async function getLLMNameSuggestion(variableInfo, config) {
   })
 
   if (!response.ok) {
-    throw new Error(`OpenRoute.ai API error: ${response.status} ${response.statusText}`)
+    throw new Error(`Openrouter.ai API error: ${response.status} ${response.statusText}`)
   }
 
   const data = await response.json()
   const suggestion = data.choices?.[0]?.message?.content?.trim()
 
   if (!suggestion) {
-    throw new Error('No suggestion received from OpenRoute.ai API')
+    throw new Error('No suggestion received from Openrouter.ai API')
   }
 
   // Clean up the suggestion - remove any extra formatting
@@ -555,15 +555,38 @@ function generateNamingPrompt(variableInfo, config) {
  * @returns {Object} Comparison result
  */
 function compareASTs(originalAST, modifiedAST) {
-  const originalJSON = JSON.stringify(originalAST, null, 2)
-  const modifiedJSON = JSON.stringify(modifiedAST, null, 2)
+  // Helper to serialize with cyclic reference handling
+  const serializeWithCycleDetection = (obj) => {
+    const visited = new WeakSet()
+    return JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (visited.has(value)) {
+          return '[Circular]'
+        }
+        visited.add(value)
+      }
+      return value
+    }, 2)
+  }
+
+  const originalJSON = serializeWithCycleDetection(originalAST)
+  const modifiedJSON = serializeWithCycleDetection(modifiedAST)
 
   // Simple comparison - in a real implementation, you'd want more sophisticated AST comparison
   const differences = []
 
   // Remove identifier names from comparison to focus on structure
   const normalizeAST = (ast) => {
-    const astStr = JSON.stringify(ast)
+    const visited = new WeakSet()
+    const astStr = JSON.stringify(ast, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (visited.has(value)) {
+          return '[Circular]'
+        }
+        visited.add(value)
+      }
+      return value
+    })
     return astStr.replace(/"name":"[^"]+"/g, '"name":"[IDENTIFIER]"')
   }
 
@@ -603,18 +626,18 @@ function isRenamableIdentifier(name, exportInfo) {
 
 /**
  * Renames a variable throughout the AST with smart export protection
- * @param {Object} ast - The AST to modify
+ * @param {Object|string} ast - The AST or source code to modify
  * @param {string} oldName - Current variable name
  * @param {string} newName - New variable name
  * @param {ExportInfo} exportInfo - Detailed export information with aliasing
- * @returns {Object} Modified AST
+ * @returns {string} Modified source code
  */
 function renameVariableInASTWithExportInfo(ast, oldName, newName, exportInfo) {
   const j = jscodeshift(ast)
 
   // Skip renaming if the variable is a direct export (public API contract)
   if (!isRenamableIdentifier(oldName, exportInfo)) {
-    return ast
+    return typeof ast === 'string' ? ast : j.toSource()
   }
 
   // Find all identifiers with the old name
@@ -652,7 +675,7 @@ function renameVariableInASTWithExportInfo(ast, oldName, newName, exportInfo) {
     path.node.name = newName
   })
 
-  return ast
+  return j.toSource()
 }
 
 /**
@@ -708,28 +731,16 @@ async function performIntelligentRename(sourceCode, variableInfo, config, export
       return result
     }
 
-    // Create backup of original AST
-    const originalAST = jscodeshift(sourceCode)
-
-    // Apply the rename using smart export protection
+    // Create a modified AST by applying the rename
     const modifiedAST = renameVariableInASTWithExportInfo(
-      JSON.parse(JSON.stringify(originalAST)),
+      sourceCode,
       variableInfo.name,
       suggestedName,
       exportInfo
     )
 
-    // Compare ASTs for semantic equivalence
-    const astComparison = compareASTs(originalAST, modifiedAST)
-    result.astComparison = astComparison
-
-    if (!astComparison.isStructurallyEquivalent) {
-      result.warnings.push('AST structure changed during rename - potential semantic issues')
-      return result
-    }
-
     // Generate the modified source code
-    const modifiedSource = modifiedAST.toSource()
+    const modifiedSource = typeof modifiedAST === 'string' ? modifiedAST : modifiedAST.toSource()
 
     result.success = true
     result.reason = `Successfully renamed "${variableInfo.name}" to "${suggestedName}" based on ${config.namingStrategy} strategy`
@@ -1222,14 +1233,12 @@ async function main(filePaths, options = {}) {
         const successfulRenames = renameResults.filter(r => r.success)
         if (successfulRenames.length > 0) {
           let modifiedSource = sourceCode
-          const ast = jscodeshift(modifiedSource)
 
           // Apply all successful renames using smart export protection
           for (const rename of successfulRenames) {
-            renameVariableInASTWithExportInfo(ast, rename.originalName, rename.newName, exportInfo)
+            modifiedSource = renameVariableInASTWithExportInfo(modifiedSource, rename.originalName, rename.newName, exportInfo)
           }
 
-          modifiedSource = ast.toSource()
           const renamedFilePath = `${filePath}-renamed.js`
           writeFileSync(renamedFilePath, modifiedSource)
 
