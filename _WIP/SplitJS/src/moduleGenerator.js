@@ -1,4 +1,5 @@
 import path from 'node:path'
+import HashUtil from './hashUtil.js'
 
 export class ModuleGenerator {
   constructor(astParser, dependencyAnalyzer, scopeAnalyzer) {
@@ -7,6 +8,7 @@ export class ModuleGenerator {
     this.scopeAnalyzer = scopeAnalyzer
     this.j = astParser.j
     this.modules = new Map()
+    this.nameMapping = new Map()
   }
 
   generateModule(func, dependencyGraph, originalImports) {
@@ -27,15 +29,18 @@ export class ModuleGenerator {
     moduleCode += this._generateFunctionCode(func)
     moduleCode += this._generateExports(func.name)
 
+    const functionCode = this.astParser.getSourceForNode(func.node)
+    const filename = this._generateFilename(func, functionCode)
+
     this.modules.set(func.name, {
-      filename: this._generateFilename(func),
+      filename,
       code: moduleCode,
       dependencies: deps,
       closures: Array.from(closures.capturedVars)
     })
 
     return {
-      filename: this._generateFilename(func),
+      filename,
       code: moduleCode
     }
   }
@@ -77,7 +82,11 @@ export class ModuleGenerator {
     }
 
     for (const intDep of deps.internal) {
-      imports += `import { ${intDep} } from './${this._generateFilename(intDep)}'\n`
+      const moduleInfo = this.modules.get(intDep)
+      const filename = moduleInfo
+        ? moduleInfo.filename
+        : this._generateFilename(intDep, '')
+      imports += `import { ${intDep} } from './${filename}'\n`
     }
 
     if (imports) imports += '\n'
@@ -86,14 +95,15 @@ export class ModuleGenerator {
 
   _generateFunctionCode(func) {
     const functionCode = this.astParser.getSourceForNode(func.node)
+    const exportName = func.name
     let code = ''
 
     if (func.node.type === 'ClassMethod' || func.node.type === 'ObjectMethod') {
-      code = `export function ${func.name}(${this._extractParamString(func)}) ${functionCode.slice(functionCode.indexOf('{'))}\n`
+      code = `export function ${exportName}(${this._extractParamString(func)}) ${functionCode.slice(functionCode.indexOf('{'))}\n`
     } else if (func.node.type === 'FunctionExpression') {
-      code = `export function ${func.name}${functionCode.slice(8)}\n`
+      code = `export function ${exportName}${functionCode.slice(8)}\n`
     } else if (func.node.type === 'ArrowFunctionExpression') {
-      code = `export const ${func.name} = ${functionCode}\n`
+      code = `export const ${exportName} = ${functionCode}\n`
     } else {
       code = `export ${functionCode}\n`
     }
@@ -114,18 +124,31 @@ export class ModuleGenerator {
     return `\nexport default ${funcName}\n`
   }
 
-  _generateFilename(func) {
-    if (typeof func === 'string') {
-      return `${this._sanitizeName(func)}.js`
+  _generateFilename(func, functionCode = '') {
+    const originalName = typeof func === 'string' ? func : func.name
+    const sanitizedName = this._sanitizeName(originalName)
+    this.nameMapping.set(sanitizedName, originalName)
+
+    if (!functionCode) {
+      return `${sanitizedName}_0000000000000.js`
     }
-    return `${this._sanitizeName(func.name)}.js`
+
+    const contentHash = HashUtil.generateContentHash(functionCode)
+    return HashUtil.buildFilenameWithHash(sanitizedName, contentHash)
   }
 
   _sanitizeName(name) {
-    return name
+    if (!name) return 'anonymous'
+    const sanitized = name
+      .replace(/\$/g, 'dollar')
       .replace(/[^a-zA-Z0-9_]/g, '_')
       .replace(/^_+|_+$/g, '')
       .toLowerCase()
+    return sanitized || 'anonymous'
+  }
+
+  getNameMapping() {
+    return Object.fromEntries(this.nameMapping)
   }
 
   getGeneratedModules() {

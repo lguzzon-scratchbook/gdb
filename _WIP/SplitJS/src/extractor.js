@@ -116,7 +116,8 @@ export class FunctionExtractor {
       this.logger.endSection()
 
       this.logger.section('Creating Orchestrator')
-      this.orchestrator = new Orchestrator(dependencyGraph)
+      const nameMapping = this.moduleGenerator.getNameMapping()
+      this.orchestrator = new Orchestrator(dependencyGraph, nameMapping)
 
       const orchestratorCode = this.options.includeLazyLoad
         ? this.orchestrator.generateLazyLoadOrchestrator(modules, functions)
@@ -150,6 +151,7 @@ export class FunctionExtractor {
         },
         dependencies: this.dependencyAnalyzer.resolveDependencyGraph(functions),
         manifest,
+        nameMapping,
         errors: this.extractionResult.errors,
         warnings: [
           ...this.extractionResult.warnings,

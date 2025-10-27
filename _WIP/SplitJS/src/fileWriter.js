@@ -69,10 +69,18 @@ export class FileWriter {
         size: m.code ? m.code.length : 0
       })),
       errors: result.errors,
-      warnings: result.warnings
+      warnings: result.warnings,
+      nameMapping: result.nameMapping || {}
     }
 
     fs.writeFileSync(filePath, JSON.stringify(report, null, 2), 'utf-8')
+    return filePath
+  }
+
+  writeNameMapping(nameMapping, filename = 'nameMapping.json') {
+    this.ensureOutputDir()
+    const filePath = path.join(this.outputDir, filename)
+    fs.writeFileSync(filePath, JSON.stringify(nameMapping, null, 2), 'utf-8')
     return filePath
   }
 

@@ -153,6 +153,10 @@ async function main() {
     logger.debug('Wrote dependencies.json')
     fileWriter.writeExtractionReport(result)
     logger.debug('Wrote report.json')
+    if (result.nameMapping) {
+      fileWriter.writeNameMapping(result.nameMapping)
+      logger.debug('Wrote nameMapping.json')
+    }
     fileWriter.writePackageJson(outputDir)
     logger.debug('Wrote package.json')
     logger.endStep('All metadata files written')
@@ -163,6 +167,7 @@ async function main() {
     console.log('   ├── index.js           (orchestrator/entry point)')
     console.log('   ├── manifest.json      (module metadata)')
     console.log('   ├── dependencies.json  (dependency graph)')
+    console.log('   ├── nameMapping.json   (original name mapping)')
     console.log('   ├── report.json        (extraction report)')
     console.log('   └── package.json       (package metadata)')
 

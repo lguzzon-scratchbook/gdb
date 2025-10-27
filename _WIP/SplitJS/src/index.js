@@ -18,3 +18,4 @@ export {
   default as FunctionExtractorDefault
 } from './extractor.js'
 export { FileWriter, default as FileWriterDefault } from './fileWriter.js'
+export { HashUtil, default as HashUtilDefault } from './hashUtil.js'

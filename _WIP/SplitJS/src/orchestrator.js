@@ -1,6 +1,9 @@
+import HashUtil from './hashUtil.js'
+
 export class Orchestrator {
-  constructor(dependencyGraph) {
+  constructor(dependencyGraph, nameMapping = {}) {
     this.dependencyGraph = dependencyGraph
+    this.nameMapping = nameMapping
   }
 
   generateOrchestratorFile(modules, functions) {
@@ -9,35 +12,30 @@ export class Orchestrator {
     code += '// Auto-generated orchestrator file\n'
     code += '// This file coordinates all extracted modules\n\n'
 
-    const imports = new Map()
+    const importedNames = new Set()
+    const validImports = []
 
     for (const mod of modules) {
-      const moduleName = this._extractModuleName(mod.filename)
-      const key = `${moduleName}:${mod.filename.replace(/\.js$/, '')}`
-      if (!imports.has(key)) {
-        imports.set(key, moduleName)
+      const sanitizedName = this._extractModuleName(mod.filename)
+      const originalName = this.nameMapping[sanitizedName] || sanitizedName
+      const filename = mod.filename.replace(/\.js$/, '')
+
+      // Validate that both the identifier and original name are valid
+      if (this._isValidIdentifier(sanitizedName) && this._isValidIdentifier(originalName) && !importedNames.has(sanitizedName)) {
+        importedNames.add(sanitizedName)
+        validImports.push({ sanitized: sanitizedName, original: originalName, filename })
       }
     }
 
-    for (const [, moduleName] of imports) {
-      const modPath = Array.from(modules).find(
-        (m) => this._extractModuleName(m.filename) === moduleName
-      )
-      if (modPath) {
-        code += `import ${moduleName} from './${modPath.filename.replace(/\.js$/, '')}'\n`
-      }
+    for (const imp of validImports) {
+      code += `import { ${imp.original} } from './${imp.filename}'\n`
     }
 
     code += '\n'
     code += '// Re-export all modules\n'
 
-    const uniqueModules = new Set()
-    for (const mod of modules) {
-      const moduleName = this._extractModuleName(mod.filename)
-      if (!uniqueModules.has(moduleName)) {
-        code += `export { ${moduleName} }\n`
-        uniqueModules.add(moduleName)
-      }
+    for (const imp of validImports) {
+      code += `export { ${imp.original} }\n`
     }
 
     code += '\n'
@@ -80,8 +78,8 @@ export class Orchestrator {
   }
 
   _extractModuleName(filename) {
-    return filename
-      .replace(/\.js$/, '')
+    const baseName = HashUtil.extractNameFromFilename(filename)
+    return baseName
       .split('-')
       .map((part, index) => {
         if (index === 0) return part
@@ -111,14 +109,31 @@ export class Orchestrator {
     code += 'export const __loadModule = lazyLoad\n\n'
 
     for (const func of functions) {
-      const moduleName = this._extractModuleName(func.name.toLowerCase())
-      code += `export async function ${func.name}(...args) {\n`
-      code += `  const mod = await lazyLoad('${moduleName}')\n`
-      code += `  return mod.${func.name}(...args)\n`
+      const originalName = func.name
+      const sanitizedName = this._sanitizeForFilename(originalName)
+      code += `export async function ${originalName}(...args) {\n`
+      code += `  const mod = await lazyLoad('${sanitizedName}')\n`
+      code += `  return mod.${originalName}(...args)\n`
       code += '}\n\n'
     }
 
     return code
+  }
+
+  _sanitizeForFilename(name) {
+    if (!name) return 'anonymous'
+    const sanitized = name
+      .replace(/\$/g, 'dollar')
+      .replace(/[^a-zA-Z0-9_]/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toLowerCase()
+    return sanitized || 'anonymous'
+  }
+
+  _isValidIdentifier(name) {
+    if (!name || typeof name !== 'string') return false
+    // JavaScript identifier rules: must start with letter, $, or _; can contain letters, digits, $, or _
+    return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)
   }
 }
 
