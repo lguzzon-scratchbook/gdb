@@ -61,12 +61,24 @@ const DEFAULT_LLM_CONFIG = {
 };
 
 /**
- * Extracts exported names from JavaScript source code
- * @param {string} sourceCode - The JavaScript source code to analyze
- * @returns {Set<string>} Set of exported variable/function names
+ * @typedef {Object} ExportInfo
+ * @property {Set<string>} exportedNames - All exported names (public API)
+ * @property {Map<string, string>} aliasedExports - Maps local name -> export name (internal identifiers)
+ * @property {Set<string>} directExports - Direct exports matching local names (public API)
+ * @property {Map<string, Object>} exportPatterns - Detailed export pattern information
  */
-function extractExportedNames(sourceCode) {
+
+/**
+ * Extracts detailed export information including aliasing patterns
+ * @param {string} sourceCode - The JavaScript source code to analyze
+ * @returns {ExportInfo} Detailed export information with aliasing details
+ */
+function extractDetailedExportInfo(sourceCode) {
   const exportedNames = new Set();
+  const aliasedExports = new Map();
+  const directExports = new Set();
+  const exportPatterns = new Map();
+
   try {
     const ast = jscodeshift(sourceCode);
 
@@ -78,7 +90,24 @@ function extractExportedNames(sourceCode) {
       if (node.specifiers) {
         node.specifiers.forEach((spec) => {
           if (spec.type === 'ExportSpecifier' && spec.local) {
-            exportedNames.add(spec.local.name);
+            const localName = spec.local.name;
+            const exportedName = spec.exported ? spec.exported.name : localName;
+            
+            exportedNames.add(exportedName);
+            exportPatterns.set(exportedName, {
+              type: 'named_export',
+              localName,
+              exportedName,
+              isAliased: localName !== exportedName
+            });
+
+            if (localName !== exportedName) {
+              // Aliased export: local name is an internal implementation detail
+              aliasedExports.set(localName, exportedName);
+            } else {
+              // Direct export: local name matches export name
+              directExports.add(localName);
+            }
           }
         });
       }
@@ -89,13 +118,27 @@ function extractExportedNames(sourceCode) {
         if (decl.type === 'VariableDeclaration' && decl.declarations) {
           decl.declarations.forEach((declarator) => {
             if (declarator.id?.name) {
-              exportedNames.add(declarator.id.name);
+              const name = declarator.id.name;
+              exportedNames.add(name);
+              directExports.add(name);
+              exportPatterns.set(name, {
+                type: 'variable_declaration',
+                name,
+                isAliased: false
+              });
             }
           });
         }
         // Handle export function name()
         if ((decl.type === 'FunctionDeclaration' || decl.type === 'ClassDeclaration') && decl.id) {
-          exportedNames.add(decl.id.name);
+          const name = decl.id.name;
+          exportedNames.add(name);
+          directExports.add(name);
+          exportPatterns.set(name, {
+            type: decl.type === 'FunctionDeclaration' ? 'function_declaration' : 'class_declaration',
+            name,
+            isAliased: false
+          });
         }
       }
     });
@@ -105,14 +148,37 @@ function extractExportedNames(sourceCode) {
       const { node } = path;
       if (node.declaration && (node.declaration.type === 'FunctionDeclaration' || node.declaration.type === 'ClassDeclaration')) {
         if (node.declaration.id) {
-          exportedNames.add(node.declaration.id.name);
+          const name = node.declaration.id.name;
+          exportedNames.add(name);
+          directExports.add(name);
+          exportPatterns.set(name, {
+            type: 'default_export',
+            name,
+            isAliased: false
+          });
         }
       }
     });
   } catch (error) {
-    console.warn('Could not extract exported names:', error.message);
+    console.warn('Could not extract export information:', error.message);
   }
-  return exportedNames;
+
+  return {
+    exportedNames,
+    aliasedExports,
+    directExports,
+    exportPatterns
+  };
+}
+
+/**
+ * Extracts exported names from JavaScript source code (legacy wrapper)
+ * @param {string} sourceCode - The JavaScript source code to analyze
+ * @returns {Set<string>} Set of exported variable/function names
+ */
+function extractExportedNames(sourceCode) {
+  const exportInfo = extractDetailedExportInfo(sourceCode);
+  return exportInfo.exportedNames;
 }
 
 /**
@@ -515,18 +581,39 @@ function compareASTs(originalAST, modifiedAST) {
 }
 
 /**
- * Renames a variable throughout the AST
+ * Determines if an identifier is renamable based on export patterns
+ * @param {string} name - Identifier name to check
+ * @param {ExportInfo} exportInfo - Export information with aliasing details
+ * @returns {boolean} True if identifier can be safely renamed
+ */
+function isRenamableIdentifier(name, exportInfo) {
+  // If it's a direct export (public API), it's protected from renaming
+  if (exportInfo.directExports.has(name)) {
+    return false;
+  }
+
+  // If it's an internal identifier exported via alias, it's safely renamable
+  if (exportInfo.aliasedExports.has(name)) {
+    return true;
+  }
+
+  // If it's not exported at all, it's renamable
+  return true;
+}
+
+/**
+ * Renames a variable throughout the AST with smart export protection
  * @param {Object} ast - The AST to modify
  * @param {string} oldName - Current variable name
  * @param {string} newName - New variable name
- * @param {Set<string>} exportedNames - Set of exported names to exclude from renaming
+ * @param {ExportInfo} exportInfo - Detailed export information with aliasing
  * @returns {Object} Modified AST
  */
-function renameVariableInAST(ast, oldName, newName, exportedNames = new Set()) {
+function renameVariableInASTWithExportInfo(ast, oldName, newName, exportInfo) {
   const j = jscodeshift(ast)
 
-  // Skip renaming if the variable is an exported name
-  if (exportedNames.has(oldName)) {
+  // Skip renaming if the variable is a direct export (public API contract)
+  if (!isRenamableIdentifier(oldName, exportInfo)) {
     return ast
   }
 
@@ -569,14 +656,33 @@ function renameVariableInAST(ast, oldName, newName, exportedNames = new Set()) {
 }
 
 /**
+ * Renames a variable throughout the AST (backward compatible wrapper)
+ * @param {Object} ast - The AST to modify
+ * @param {string} oldName - Current variable name
+ * @param {string} newName - New variable name
+ * @param {Set<string>} exportedNames - Set of exported names to exclude from renaming
+ * @returns {Object} Modified AST
+ */
+function renameVariableInAST(ast, oldName, newName, exportedNames = new Set()) {
+  // Create export info from the exported names set for backward compatibility
+  const exportInfo = {
+    exportedNames,
+    aliasedExports: new Map(),
+    directExports: exportedNames,
+    exportPatterns: new Map()
+  };
+  return renameVariableInASTWithExportInfo(ast, oldName, newName, exportInfo);
+}
+
+/**
  * Performs an intelligent variable rename with validation
  * @param {string} sourceCode - Original source code
  * @param {VariableInfo} variableInfo - Variable to rename
  * @param {LLMConfig} config - LLM configuration
- * @param {Set<string>} exportedNames - Set of exported names to exclude from renaming
+ * @param {ExportInfo} exportInfo - Export information with aliasing details
  * @returns {Promise<RenameResult>} Rename result
  */
-async function performIntelligentRename(sourceCode, variableInfo, config, exportedNames = new Set()) {
+async function performIntelligentRename(sourceCode, variableInfo, config, exportInfo) {
   const result = {
     success: false,
     originalName: variableInfo.name,
@@ -605,12 +711,12 @@ async function performIntelligentRename(sourceCode, variableInfo, config, export
     // Create backup of original AST
     const originalAST = jscodeshift(sourceCode)
 
-    // Apply the rename
-    const modifiedAST = renameVariableInAST(
+    // Apply the rename using smart export protection
+    const modifiedAST = renameVariableInASTWithExportInfo(
       JSON.parse(JSON.stringify(originalAST)),
       variableInfo.name,
       suggestedName,
-      exportedNames
+      exportInfo
     )
 
     // Compare ASTs for semantic equivalence
@@ -667,16 +773,16 @@ function isValidIdentifier(name) {
  * @param {string} sourceCode - Original source code
  * @param {VariableInfo[]} variables - Variables to process
  * @param {LLMConfig} config - LLM configuration
- * @param {Set<string>} exportedNames - Set of exported names to exclude from renaming
+ * @param {ExportInfo} exportInfo - Export information with aliasing details
  * @returns {Promise<RenameResult[]>} Array of rename results
  */
-async function processBatchRenames(sourceCode, variables, config, exportedNames = new Set()) {
+async function processBatchRenames(sourceCode, variables, config, exportInfo) {
   const results = []
   let currentSource = sourceCode
 
   for (const variableInfo of variables) {
     // Re-analyze the variable in the current source to get updated references
-    const updatedVariables = analyzeVariableReferences(currentSource, 'current', exportedNames)
+    const updatedVariables = analyzeVariableReferences(currentSource, 'current', exportInfo.exportedNames)
     const currentVariable = updatedVariables.find(v => v.name === variableInfo.name)
 
     if (!currentVariable) {
@@ -691,12 +797,12 @@ async function processBatchRenames(sourceCode, variables, config, exportedNames 
       continue
     }
 
-    const result = await performIntelligentRename(currentSource, currentVariable, config, exportedNames)
+    const result = await performIntelligentRename(currentSource, currentVariable, config, exportInfo)
 
     if (result.success) {
       // Apply the rename to the current source
       const ast = jscodeshift(currentSource)
-      renameVariableInAST(ast, result.originalName, result.newName, exportedNames)
+      renameVariableInASTWithExportInfo(ast, result.originalName, result.newName, exportInfo)
       currentSource = ast.toSource()
     }
 
@@ -865,9 +971,10 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
  * Generates a Markdown report from variable analysis results
  * @param {VariableInfo[]} variables - Array of variable information
  * @param {string} filename - Name of the analyzed file
+ * @param {ExportInfo} exportInfo - Export information with aliasing details (optional)
  * @returns {string} Formatted Markdown report
  */
-function generateMarkdownReport(variables, filename) {
+function generateMarkdownReport(variables, filename, exportInfo = null) {
   let report = `# Variable Reference Analysis: ${filename}\n\n`;
 
   if (variables.length === 0) {
@@ -875,8 +982,33 @@ function generateMarkdownReport(variables, filename) {
     return report
   }
 
+  // Generate export classification summary if exportInfo is provided
+  if (exportInfo) {
+    report += `## Export Classification Summary\n\n`
+    report += `**Direct Exports (Public API - Protected from renaming):** ${exportInfo.directExports.size}\n`
+    report += `**Aliased Exports (Internal identifiers - Eligible for renaming):** ${exportInfo.aliasedExports.size}\n\n`
+    
+    if (exportInfo.aliasedExports.size > 0) {
+      report += `### Aliased Export Details\n\n`
+      for (const [localName, exportedName] of exportInfo.aliasedExports) {
+        report += `- \`${localName}\` → \`${exportedName}\` (internal implementation detail, safe for minification)\n`
+      }
+      report += '\n'
+    }
+  }
+
   for (const variable of variables) {
-    const exportedLabel = variable.isExported ? ' [EXPORTED - Protected from renaming]' : ''
+    let exportedLabel = ''
+    if (exportInfo) {
+      if (exportInfo.directExports.has(variable.name)) {
+        exportedLabel = ' [DIRECT EXPORT - Public API - Protected]'
+      } else if (exportInfo.aliasedExports.has(variable.name)) {
+        exportedLabel = ' [ALIASED EXPORT - Internal ID - Renamable]'
+      }
+    } else if (variable.isExported) {
+      exportedLabel = ' [EXPORTED - Protected from renaming]'
+    }
+    
     report += `## Variable: \`${variable.name}\`${exportedLabel}\n\n`
     report += `**Declaration Type:** \`${variable.declarationType}\`  \n`
     report += `**Declared on line:** ${variable.declarationLine}  \n`
@@ -1019,11 +1151,11 @@ async function main(filePaths, options = {}) {
       const sourceCode = readFileSync(filePath, "utf-8")
       const filename = basename(filePath);
 
-      // Extract exported names to protect them from renaming
-      const exportedNames = extractExportedNames(sourceCode)
+      // Extract detailed export information with aliasing analysis
+      const exportInfo = extractDetailedExportInfo(sourceCode)
 
-      const variables = analyzeVariableReferences(sourceCode, filename, exportedNames)
-      const analysisReport = generateMarkdownReport(variables, filename);
+      const variables = analyzeVariableReferences(sourceCode, filename, exportInfo.exportedNames)
+      const analysisReport = generateMarkdownReport(variables, filename, exportInfo);
 
       const analysisOutputPath = `${filePath}-analysis.md`
       writeFileSync(analysisOutputPath, analysisReport);
@@ -1039,30 +1171,38 @@ async function main(filePaths, options = {}) {
           console.log('Filtering: Only renaming variables with name length < 4 characters')
         }
 
-        const exportedVariables = variables.filter(v => v.isExported)
+        // Classify variables based on export patterns
+        const protectedExports = variables.filter(v => exportInfo.directExports.has(v.name))
+        const aliasedInternalIds = variables.filter(v => exportInfo.aliasedExports.has(v.name))
         const nonExportedVariables = variables.filter(v => !v.isExported)
-        const renamableVariables = filterVariablesByLength(nonExportedVariables, renameAll)
+        const renamableVariables = filterVariablesByLength(
+          [...aliasedInternalIds, ...nonExportedVariables],
+          renameAll
+        )
 
         let renameResults = []
 
-        // Skip renaming for exported variables and document them
-        for (const expVar of exportedVariables) {
+        // Document protected direct exports (public API contract)
+        for (const protectedVar of protectedExports) {
           renameResults.push({
             success: false,
-            originalName: expVar.name,
+            originalName: protectedVar.name,
             newName: '',
-            reason: 'Variable is exported and protected from renaming',
+            reason: 'Variable is a direct export representing the module public contract',
             warnings: ['This variable is part of the public API and cannot be renamed'],
             astComparison: null
           })
         }
 
+        // Document aliased exports as renamable internal identifiers
+        console.log(`Found ${aliasedInternalIds.length} internal identifiers exported via aliases - eligible for renaming`)
+
         if (enableBatch) {
-          const batchResults = await processBatchRenames(sourceCode, renamableVariables, llmConfig, exportedNames)
+          const batchResults = await processBatchRenames(sourceCode, renamableVariables, llmConfig, exportInfo)
           renameResults = renameResults.concat(batchResults)
         } else {
           for (const variable of renamableVariables) {
-            const result = await performIntelligentRename(sourceCode, variable, llmConfig, exportedNames)
+            const result = await performIntelligentRename(sourceCode, variable, llmConfig, exportInfo)
             renameResults.push(result)
 
             if (!enableBatch) {
@@ -1084,9 +1224,9 @@ async function main(filePaths, options = {}) {
           let modifiedSource = sourceCode
           const ast = jscodeshift(modifiedSource)
 
-          // Apply all successful renames
+          // Apply all successful renames using smart export protection
           for (const rename of successfulRenames) {
-            renameVariableInAST(ast, rename.originalName, rename.newName, exportedNames)
+            renameVariableInASTWithExportInfo(ast, rename.originalName, rename.newName, exportInfo)
           }
 
           modifiedSource = ast.toSource()
@@ -1125,5 +1265,10 @@ export {
   performIntelligentRename,
   processBatchRenames,
   getLLMNameSuggestion,
-  filterVariablesByLength
+  filterVariablesByLength,
+  extractDetailedExportInfo,
+  extractExportedNames,
+  isRenamableIdentifier,
+  renameVariableInAST,
+  renameVariableInASTWithExportInfo
 }
