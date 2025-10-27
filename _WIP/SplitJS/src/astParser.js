@@ -5,6 +5,8 @@ export class ASTParser {
     this.j = jscodeshift
     this.ast = null
     this.source = null
+    this.anonymousCounter = 0
+    this.namedFunctionCount = new Map()
   }
 
   parse(sourceCode) {
@@ -17,6 +19,15 @@ export class ASTParser {
     }
   }
 
+  _generateUniqueId(baseName) {
+    if (!this.namedFunctionCount.has(baseName)) {
+      this.namedFunctionCount.set(baseName, 0)
+    }
+    const count = this.namedFunctionCount.get(baseName)
+    this.namedFunctionCount.set(baseName, count + 1)
+    return count === 0 ? baseName : `${baseName}_${count}`
+  }
+
   findAllFunctions() {
     if (!this.ast) {
       throw new Error('Must parse source code first')
@@ -25,9 +36,10 @@ export class ASTParser {
     const functions = []
 
     this.ast.find(this.j.FunctionDeclaration).forEach((path) => {
+      const name = this._generateUniqueId(path.value.id.name)
       functions.push({
         type: 'FunctionDeclaration',
-        name: path.value.id.name,
+        name,
         path,
         node: path.value,
         params: path.value.params.map((p) => p.name || p.type),
@@ -37,8 +49,9 @@ export class ASTParser {
     })
 
     this.ast.find(this.j.FunctionExpression).forEach((path) => {
-      const name =
-        path.value.id?.name || this._extractNameFromContext(path) || 'anonymous'
+      const contextName = this._extractNameFromContext(path)
+      const baseName = path.value.id?.name || contextName || 'anonymous'
+      const name = this._generateUniqueId(baseName)
       functions.push({
         type: 'FunctionExpression',
         name,
@@ -51,7 +64,9 @@ export class ASTParser {
     })
 
     this.ast.find(this.j.ArrowFunctionExpression).forEach((path) => {
-      const name = this._extractNameFromContext(path) || 'anonymous'
+      const contextName = this._extractNameFromContext(path)
+      const baseName = contextName || 'anonymous'
+      const name = this._generateUniqueId(baseName)
       functions.push({
         type: 'ArrowFunctionExpression',
         name,
@@ -192,12 +207,6 @@ export class ASTParser {
     if (parent.value.type === 'AssignmentExpression') {
       if (parent.value.left.type === 'Identifier') {
         return parent.value.left.name
-      }
-    }
-
-    if (parent.value.type === 'CallExpression') {
-      if (parent.value.arguments.includes(path.value)) {
-        return `arg_${Math.random().toString(36).substr(2, 9)}`
       }
     }
 
