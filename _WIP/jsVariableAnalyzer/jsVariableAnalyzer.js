@@ -6,6 +6,50 @@ import jscodeshift from "jscodeshift";
 import fetch from "node-fetch";
 
 /**
+ * Progress tracker for monitoring execution steps
+ */
+class ProgressTracker {
+  constructor(totalSteps, enableProgress = true) {
+    this.totalSteps = totalSteps
+    this.currentStep = 0
+    this.enableProgress = enableProgress
+    this.startTime = Date.now()
+    this.stepDetails = []
+  }
+
+  nextStep(stepName, substepsTotal = 0) {
+    this.currentStep++
+    if (this.enableProgress) {
+      const percentage = Math.round((this.currentStep / this.totalSteps) * 100)
+      const elapsed = ((Date.now() - this.startTime) / 1000).toFixed(1)
+      console.log(`\n[PROGRESS ${percentage}%] Step ${this.currentStep}/${this.totalSteps}: ${stepName} (${elapsed}s elapsed)`)
+      if (substepsTotal > 0) {
+        console.log(`  ├─ Subtasks: 0/${substepsTotal}`)
+      }
+    }
+    this.stepDetails.push({ name: stepName, substepsTotal, substepsCurrent: 0 })
+  }
+
+  updateSubstep(stepIndex, substepName, current, total) {
+    if (this.enableProgress && stepIndex < this.stepDetails.length) {
+      const step = this.stepDetails[stepIndex]
+      step.substepsCurrent = current
+      const barLength = 20
+      const filled = Math.round((current / total) * barLength)
+      const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled)
+      console.log(`  ├─ [${bar}] ${current}/${total}: ${substepName}`)
+    }
+  }
+
+  complete() {
+    if (this.enableProgress) {
+      const totalTime = ((Date.now() - this.startTime) / 1000).toFixed(1)
+      console.log(`\n[✓ COMPLETE] All steps finished in ${totalTime}s\n`)
+    }
+  }
+}
+
+/**
  * @typedef {Object} VariableReference
  * @property {string} name - The variable name
  * @property {number} line - Line number (1-based)
@@ -40,6 +84,7 @@ import fetch from "node-fetch";
  * @property {number} temperature - Temperature for LLM creativity
  * @property {boolean} enableBatchProcessing - Whether to process multiple variables at once
  * @property {number|null} renameLimit - Maximum number of renames to perform (null for unlimited)
+ * @property {boolean} dryRun - If true, use mock LLM with random generated names instead of calling API
  */
 
 /**
@@ -62,7 +107,8 @@ const DEFAULT_LLM_CONFIG = {
   maxTokens: 4000,
   temperature: 0.1,
   enableBatchProcessing: false,
-  renameLimit: null
+  renameLimit: null,
+  dryRun: false
 };
 
 /**
@@ -447,12 +493,67 @@ function determineScopeLevel(declarationNode, sourceCode) {
 }
 
 /**
+ * Generates a random meaningful variable name based on variable analysis (mock LLM)
+ * @param {VariableInfo} variableInfo - Variable information
+ * @returns {string} Mock-generated variable name
+ */
+function generateMockLLMName(variableInfo) {
+  const adjectives = [
+    'current', 'active', 'total', 'final', 'primary', 'secondary', 'temporary',
+    'cached', 'pending', 'computed', 'derived', 'accumulated', 'initial', 'default',
+    'valid', 'optimized', 'filtered', 'sorted', 'mapped', 'parsed', 'formatted'
+  ]
+
+  const nouns = [
+    'value', 'result', 'data', 'state', 'config', 'context', 'handler', 'manager',
+    'service', 'provider', 'controller', 'wrapper', 'helper', 'instance', 'object',
+    'element', 'item', 'node', 'entry', 'record', 'index', 'key', 'map', 'set',
+    'list', 'array', 'collection', 'buffer', 'queue', 'stack', 'tree', 'graph'
+  ]
+
+  const suffixes = [
+    'Items', 'List', 'Collection', 'Set', 'Map', 'Dict', 'Cache', 'Store',
+    'Pool', 'Registry', 'Factory', 'Builder', 'Handler', 'Processor', 'Parser'
+  ]
+
+  // Pick random components based on variable characteristics
+  const patterns = variableInfo.behavioralPatterns
+  let name = ''
+
+  if (patterns.isConfiguration) {
+    name = adjectives[Math.floor(Math.random() * adjectives.length)] + 'Config'
+  } else if (patterns.isState) {
+    name = adjectives[Math.floor(Math.random() * adjectives.length)] + 'State'
+  } else if (patterns.isFunction) {
+    const verb = ['get', 'set', 'process', 'handle', 'compute', 'validate', 'format', 'parse'][Math.floor(Math.random() * 8)]
+    name = verb + nouns[Math.floor(Math.random() * nouns.length)]
+  } else if (patterns.isIterator) {
+    name = adjectives[Math.floor(Math.random() * adjectives.length)] + 'Iterator'
+  } else if (variableInfo.declarationType === 'const' || patterns.isReadOnly) {
+    const noun = nouns[Math.floor(Math.random() * nouns.length)]
+    name = adjectives[Math.floor(Math.random() * adjectives.length)] + noun.charAt(0).toUpperCase() + noun.slice(1)
+  } else {
+    // Regular variable - use adjective + noun
+    const noun = nouns[Math.floor(Math.random() * nouns.length)]
+    name = adjectives[Math.floor(Math.random() * adjectives.length)] + noun.charAt(0).toUpperCase() + noun.slice(1)
+  }
+
+  // Capitalize first letter and ensure camelCase
+  return name.charAt(0).toLowerCase() + name.slice(1)
+}
+
+/**
  * Calls Openrouter.ai API to get variable name suggestions
  * @param {VariableInfo} variableInfo - Variable information
  * @param {LLMConfig} config - LLM configuration
  * @returns {Promise<string>} Suggested variable name
  */
 async function getLLMNameSuggestion(variableInfo, config) {
+  // Use mock LLM if in dry run mode
+  if (config.dryRun) {
+    return generateMockLLMName(variableInfo)
+  }
+
   if (!config.apiKey) {
     throw new Error('Openrouter.ai API key is required. Set OPENROUTER_API_KEY environment variable.')
   }
@@ -985,8 +1086,9 @@ async function processBatchRenames(sourceCode, variables, config, exportInfo) {
   // First pass: collect all suggested names and validate for duplicates
   // Stop collecting if we've reached the rename limit
   const suggestions = []
+  let suggestionsCollected = 0
   for (const variableInfo of variables) {
-    if (renameLimit !== null && successfulRenameCount >= renameLimit) {
+    if (renameLimit !== null && suggestionsCollected >= renameLimit) {
       // Skip remaining variables if limit reached
       results.push({
         success: false,
@@ -1006,6 +1108,7 @@ async function processBatchRenames(sourceCode, variables, config, exportInfo) {
         suggestedName,
         isValid: isValidIdentifier(suggestedName) && suggestedName !== variableInfo.name
       })
+      suggestionsCollected++
     } catch (error) {
       results.push({
         success: false,
@@ -1481,12 +1584,13 @@ function filterVariablesByLength(variables, renameAll = false) {
  */
 async function main(filePaths, options = {}) {
   if (!filePaths || filePaths.length === 0) {
-    console.error("Usage: bun jsVariableAnalyzer.js <file1.js> [file2.js] ... [--rename] [--all] [--strategy=descriptive|concise|domain-specific] [--batch] [--limit=N]")
+    console.error("Usage: bun jsVariableAnalyzer.js <file1.js> [file2.js] ... [--rename] [--all] [--strategy=descriptive|concise|domain-specific] [--batch] [--limit=N] [--dry-run]")
     console.error("  --rename    Enable intelligent variable renaming")
     console.error("  --all       Rename all variables (default: only variables with name length < 4 chars)")
     console.error("  --strategy  Naming strategy: descriptive, concise, or domain-specific (default: descriptive)")
     console.error("  --batch     Process multiple variables in batch mode")
     console.error("  --limit     Maximum number of variables to rename in this session (default: unlimited)")
+    console.error("  --dry-run   Use mock LLM with randomly generated names (no API calls)")
     process.exit(1)
   }
 
@@ -1495,44 +1599,59 @@ async function main(filePaths, options = {}) {
   const enableBatch = options.batch || false
   const renameAll = options.all || false
   const renameLimit = options.limit !== undefined ? (options.limit === null ? null : parseInt(options.limit, 10)) : null
+  const dryRun = options.dryRun || false
 
   // Configure LLM
   const llmConfig = {
     ...DEFAULT_LLM_CONFIG,
     namingStrategy,
     enableBatchProcessing: enableBatch,
-    renameLimit
+    renameLimit,
+    dryRun
   };
 
-  for (const filePath of filePaths) {
-    try {
-      console.log(`Analyzing: ${filePath}`);
+  // Calculate total steps for progress tracking
+  // Analysis steps: 1) Read file, 2) Analyze variables, 3) Generate report
+  // Rename steps (if enabled): 4) Process renames, 5) Write rename report
+  const stepsPerFile = enableRename ? 5 : 3
+  const totalSteps = filePaths.length * stepsPerFile
+  const progress = new ProgressTracker(totalSteps, true)
 
+  for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
+    const filePath = filePaths[fileIndex]
+    try {
+      progress.nextStep(`Reading file: ${basename(filePath)}`)
       const sourceCode = readFileSync(filePath, "utf-8")
       const filename = basename(filePath);
 
+      progress.nextStep(`Analyzing variables in: ${filename}`)
       // Extract detailed export information with aliasing analysis
       const exportInfo = extractDetailedExportInfo(sourceCode)
-
       const variables = analyzeVariableReferences(sourceCode, filename, exportInfo.exportedNames)
-      const analysisReport = generateMarkdownReport(variables, filename, exportInfo);
+      console.log(`  └─ Found ${variables.length} variables with ${variables.reduce((sum, v) => sum + v.references.length, 0)} total references`)
 
+      progress.nextStep(`Generating analysis report for: ${filename}`)
+      const analysisReport = generateMarkdownReport(variables, filename, exportInfo);
       const analysisOutputPath = `${filePath}-analysis.md`
       writeFileSync(analysisOutputPath, analysisReport);
-
-      console.log(`Analysis report generated: ${analysisOutputPath}`)
-      console.log(
-        `Found ${variables.length} variables with ${variables.reduce((sum, v) => sum + v.references.length, 0)} total references\n`,
-      );
+      console.log(`  └─ Report saved: ${analysisOutputPath}`)
 
       if (enableRename) {
-        console.log(`Performing intelligent renaming with strategy: ${namingStrategy}`)
+        console.log(`\n  → Rename configuration:`)
+        console.log(`    • Strategy: ${namingStrategy}`)
         if (!renameAll) {
-          console.log('Filtering: Only renaming variables with name length < 4 characters')
+          console.log('    • Filter: Only variables with name length < 4 chars')
+        } else {
+          console.log('    • Filter: All variables')
         }
         if (renameLimit !== null) {
-          console.log(`Rename limit: Maximum ${renameLimit} variables will be renamed in this session`)
+          console.log(`    • Limit: Maximum ${renameLimit} renames per session`)
         }
+        if (dryRun) {
+          console.log(`    • Mode: DRY RUN (mock LLM with randomly generated names)`)
+        }
+
+        progress.nextStep(`Processing intelligent renames for: ${filename}`, variables.length)
 
         // Classify variables based on export patterns
         const protectedExports = variables.filter(v => exportInfo.directExports.has(v.name))
@@ -1542,6 +1661,10 @@ async function main(filePaths, options = {}) {
           [...aliasedInternalIds, ...nonExportedVariables],
           renameAll
         )
+
+        console.log(`  ├─ Protected exports (public API): ${protectedExports.length}`)
+        console.log(`  ├─ Aliased exports (internal IDs): ${aliasedInternalIds.length}`)
+        console.log(`  └─ Non-exported variables: ${nonExportedVariables.length}`)
 
         let renameResults = []
 
@@ -1557,16 +1680,17 @@ async function main(filePaths, options = {}) {
           })
         }
 
-        // Document aliased exports as renamable internal identifiers
-        console.log(`Found ${aliasedInternalIds.length} internal identifiers exported via aliases - eligible for renaming`)
-
+        const renameStepIndex = fileIndex * stepsPerFile + 3 // Step 4 for each file (0-indexed to 3 for step 4)
         if (enableBatch) {
           const batchResults = await processBatchRenames(sourceCode, renamableVariables, llmConfig, exportInfo)
           renameResults = renameResults.concat(batchResults)
+          progress.updateSubstep(renameStepIndex, `Batch processing ${renamableVariables.length} variables`, renamableVariables.length, renamableVariables.length)
         } else {
-          for (const variable of renamableVariables) {
+          for (let i = 0; i < renamableVariables.length; i++) {
+            const variable = renamableVariables[i]
             const result = await performIntelligentRename(sourceCode, variable, llmConfig, exportInfo)
             renameResults.push(result)
+            progress.updateSubstep(renameStepIndex, `${result.originalName} → ${result.newName || 'FAILED'}`, i + 1, renamableVariables.length)
 
             if (!enableBatch) {
               // Add delay between API calls
@@ -1575,11 +1699,11 @@ async function main(filePaths, options = {}) {
           }
         }
 
+        progress.nextStep(`Writing rename report for: ${filename}`)
         const renameReport = generateRenameReport(renameResults, filename, renameLimit)
         const renameOutputPath = `${filePath}-rename-report.md`
         writeFileSync(renameOutputPath, renameReport)
-
-        console.log(`Rename report generated: ${renameOutputPath}`)
+        console.log(`  ├─ Rename report saved: ${renameOutputPath}`)
 
         // Apply successful renames to create a new file
         const successfulRenames = renameResults.filter(r => r.success)
@@ -1593,15 +1717,16 @@ async function main(filePaths, options = {}) {
 
           const renamedFilePath = `${filePath}-renamed.js`
           writeFileSync(renamedFilePath, modifiedSource)
-
-          console.log(`Renamed file generated: ${renamedFilePath}`)
-          console.log(`Successfully renamed ${successfulRenames.length} variables`)
+          console.log(`  ├─ Renamed file saved: ${renamedFilePath}`)
+          console.log(`  └─ Successfully renamed ${successfulRenames.length} variables`)
         }
       }
     } catch (error) {
       console.error(`Error processing ${filePath}:`, error.message)
     }
   }
+
+  progress.complete()
 }
 
 // Parse command line arguments
@@ -1612,6 +1737,7 @@ const options = {
   rename: args.includes('--rename'),
   batch: args.includes('--batch'),
   all: args.includes('--all'),
+  dryRun: args.includes('--dry-run'),
   strategy: args.find(arg => arg.startsWith('--strategy='))?.split('=')[1] || 'descriptive',
   limit: limitArg ? parseInt(limitArg.split('=')[1], 10) : undefined
 };
@@ -1622,6 +1748,7 @@ if (import.meta.main) {
 }
 
 export {
+  ProgressTracker,
   analyzeVariableReferences,
   generateMarkdownReport,
   generateRenameReport,
@@ -1629,6 +1756,7 @@ export {
   performIntelligentRename,
   processBatchRenames,
   getLLMNameSuggestion,
+  generateMockLLMName,
   filterVariablesByLength,
   extractDetailedExportInfo,
   extractExportedNames,
