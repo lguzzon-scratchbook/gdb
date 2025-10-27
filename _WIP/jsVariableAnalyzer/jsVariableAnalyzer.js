@@ -39,6 +39,7 @@ import fetch from "node-fetch";
  * @property {number} maxTokens - Maximum tokens for LLM response
  * @property {number} temperature - Temperature for LLM creativity
  * @property {boolean} enableBatchProcessing - Whether to process multiple variables at once
+ * @property {number|null} renameLimit - Maximum number of renames to perform (null for unlimited)
  */
 
 /**
@@ -60,7 +61,8 @@ const DEFAULT_LLM_CONFIG = {
   namingStrategy: 'descriptive',
   maxTokens: 4000,
   temperature: 0.1,
-  enableBatchProcessing: false
+  enableBatchProcessing: false,
+  renameLimit: null
 };
 
 /**
@@ -977,10 +979,26 @@ async function processBatchRenames(sourceCode, variables, config, exportInfo) {
   const results = []
   let currentSource = sourceCode
   const usedNewNames = new Set()
+  let successfulRenameCount = 0
+  const renameLimit = config.renameLimit
 
   // First pass: collect all suggested names and validate for duplicates
+  // Stop collecting if we've reached the rename limit
   const suggestions = []
   for (const variableInfo of variables) {
+    if (renameLimit !== null && successfulRenameCount >= renameLimit) {
+      // Skip remaining variables if limit reached
+      results.push({
+        success: false,
+        originalName: variableInfo.name,
+        newName: '',
+        reason: `Rename limit (${renameLimit}) reached`,
+        warnings: ['Variable processing skipped due to rename limit'],
+        astComparison: null
+      })
+      continue
+    }
+
     try {
       const suggestedName = await getLLMNameSuggestion(variableInfo, config)
       suggestions.push({
@@ -1023,6 +1041,19 @@ async function processBatchRenames(sourceCode, variables, config, exportInfo) {
 
   // Second pass: apply valid renames that don't create collisions
   for (const suggestion of suggestions) {
+    // Check if we've reached the rename limit
+    if (renameLimit !== null && successfulRenameCount >= renameLimit) {
+      results.push({
+        success: false,
+        originalName: suggestion.variable.name,
+        newName: suggestion.suggestedName,
+        reason: `Rename limit (${renameLimit}) reached`,
+        warnings: ['Variable processing skipped due to rename limit'],
+        astComparison: null
+      })
+      continue
+    }
+
     if (!suggestion.isValid) {
       results.push({
         success: false,
@@ -1079,6 +1110,7 @@ async function processBatchRenames(sourceCode, variables, config, exportInfo) {
 
     currentSource = modifiedSource
     usedNewNames.add(suggestion.suggestedName)
+    successfulRenameCount++
     
     results.push({
       success: true,
@@ -1376,18 +1408,25 @@ function generateMarkdownReport(variables, filename, exportInfo = null) {
  * Generates a rename report from rename results
  * @param {RenameResult[]} results - Array of rename results
  * @param {string} filename - Name of the processed file
+ * @param {number|null} renameLimit - Rename limit applied (if any)
  * @returns {string} Formatted Markdown report
  */
-function generateRenameReport(results, filename) {
+function generateRenameReport(results, filename, renameLimit = null) {
   let report = `# Intelligent Variable Rename Report: ${filename}\n\n`
 
   const successful = results.filter(r => r.success)
   const failed = results.filter(r => !r.success)
+  const limitExceeded = failed.filter(r => r.reason.includes('Rename limit') && r.reason.includes('reached'))
 
   report += '## Summary\n\n'
   report += `- **Total processed:** ${results.length}\n`
   report += `- **Successfully renamed:** ${successful.length}\n`
-  report += `- **Failed:** ${failed.length}\n\n`
+  report += `- **Failed:** ${failed.length}\n`
+  if (renameLimit !== null) {
+    report += `- **Rename limit:** ${renameLimit}\n`
+    report += `- **Skipped due to limit:** ${limitExceeded.length}\n`
+  }
+  report += '\n'
 
   if (successful.length > 0) {
     report += '## Successful Renames\n\n'
@@ -1442,11 +1481,12 @@ function filterVariablesByLength(variables, renameAll = false) {
  */
 async function main(filePaths, options = {}) {
   if (!filePaths || filePaths.length === 0) {
-    console.error("Usage: bun jsVariableAnalyzer.js <file1.js> [file2.js] ... [--rename] [--all] [--strategy=descriptive|concise|domain-specific] [--batch]")
+    console.error("Usage: bun jsVariableAnalyzer.js <file1.js> [file2.js] ... [--rename] [--all] [--strategy=descriptive|concise|domain-specific] [--batch] [--limit=N]")
     console.error("  --rename    Enable intelligent variable renaming")
     console.error("  --all       Rename all variables (default: only variables with name length < 4 chars)")
     console.error("  --strategy  Naming strategy: descriptive, concise, or domain-specific (default: descriptive)")
     console.error("  --batch     Process multiple variables in batch mode")
+    console.error("  --limit     Maximum number of variables to rename in this session (default: unlimited)")
     process.exit(1)
   }
 
@@ -1454,12 +1494,14 @@ async function main(filePaths, options = {}) {
   const namingStrategy = options.strategy || 'descriptive'
   const enableBatch = options.batch || false
   const renameAll = options.all || false
+  const renameLimit = options.limit !== undefined ? (options.limit === null ? null : parseInt(options.limit, 10)) : null
 
   // Configure LLM
   const llmConfig = {
     ...DEFAULT_LLM_CONFIG,
     namingStrategy,
-    enableBatchProcessing: enableBatch
+    enableBatchProcessing: enableBatch,
+    renameLimit
   };
 
   for (const filePath of filePaths) {
@@ -1487,6 +1529,9 @@ async function main(filePaths, options = {}) {
         console.log(`Performing intelligent renaming with strategy: ${namingStrategy}`)
         if (!renameAll) {
           console.log('Filtering: Only renaming variables with name length < 4 characters')
+        }
+        if (renameLimit !== null) {
+          console.log(`Rename limit: Maximum ${renameLimit} variables will be renamed in this session`)
         }
 
         // Classify variables based on export patterns
@@ -1530,7 +1575,7 @@ async function main(filePaths, options = {}) {
           }
         }
 
-        const renameReport = generateRenameReport(renameResults, filename)
+        const renameReport = generateRenameReport(renameResults, filename, renameLimit)
         const renameOutputPath = `${filePath}-rename-report.md`
         writeFileSync(renameOutputPath, renameReport)
 
@@ -1562,11 +1607,13 @@ async function main(filePaths, options = {}) {
 // Parse command line arguments
 const args = process.argv.slice(2)
 const filePaths = args.filter(arg => !arg.startsWith('--'))
+const limitArg = args.find(arg => arg.startsWith('--limit='))
 const options = {
   rename: args.includes('--rename'),
   batch: args.includes('--batch'),
   all: args.includes('--all'),
-  strategy: args.find(arg => arg.startsWith('--strategy='))?.split('=')[1] || 'descriptive'
+  strategy: args.find(arg => arg.startsWith('--strategy='))?.split('=')[1] || 'descriptive',
+  limit: limitArg ? parseInt(limitArg.split('=')[1], 10) : undefined
 };
 
 // Run the script with command line arguments
@@ -1577,6 +1624,7 @@ if (import.meta.main) {
 export {
   analyzeVariableReferences,
   generateMarkdownReport,
+  generateRenameReport,
   extractContext,
   performIntelligentRename,
   processBatchRenames,
