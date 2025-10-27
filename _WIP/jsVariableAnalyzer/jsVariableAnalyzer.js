@@ -153,6 +153,8 @@ function analyzeVariableReferences(sourceCode, filename) {
     });
 
     // Find all identifier references
+    const processedReferences = new Set(); // Track processed references to avoid duplicates
+    
     ast.find(jscodeshift.Identifier).forEach((path) => {
       const { node } = path
       const varName = node.name;
@@ -164,11 +166,38 @@ function analyzeVariableReferences(sourceCode, filename) {
 
       const varInfo = declarations.get(varName)
       const position = getNodePosition(node);
+      
+      // Create a unique key for this reference to detect duplicates
+      const referenceKey = `${varName}:${position.line}:${position.column}`;
+      
+      // Skip if we've already processed this reference
+      if (processedReferences.has(referenceKey)) {
+        return;
+      }
+      
+      // Mark this reference as processed
+      processedReferences.add(referenceKey);
 
-      // Skip the declaration itself
+      // Skip the declaration itself and other identifier types that shouldn't count as references
       if (
-        position.line === varInfo.declarationLine &&
-        node === varInfo.declarationNode.id
+        // Skip the declaration identifier
+        (position.line === varInfo.declarationLine &&
+         node === varInfo.declarationNode.id) ||
+        // Skip property names (object properties)
+        (path.parent && path.parent.node.type === "Property" && path.parent.node.key === node) ||
+        // Skip object property access
+        (path.parent && path.parent.node.type === "MemberExpression" && path.parent.node.property === node && !path.parent.node.computed) ||
+        // Skip function parameters
+        (path.parent && path.parent.node.type === "FunctionDeclaration" && path.parent.node.params.includes(node)) ||
+        (path.parent && path.parent.node.type === "FunctionExpression" && path.parent.node.params.includes(node)) ||
+        (path.parent && path.parent.node.type === "ArrowFunctionExpression" && path.parent.node.params.includes(node)) ||
+        // Skip class method names
+        (path.parent && path.parent.node.type === "MethodDefinition" && path.parent.node.key === node) ||
+        // Skip import specifiers
+        (path.parent && path.parent.node.type === "ImportSpecifier" && path.parent.node.local === node) ||
+        (path.parent && path.parent.node.type === "ImportDefaultSpecifier" && path.parent.node.local === node) ||
+        // Skip variable declarators (the identifier being declared)
+        (path.parent && path.parent.node.type === "VariableDeclarator" && path.parent.node.id === node)
       ) {
         return
       }
@@ -217,7 +246,7 @@ function generateMarkdownReport(variables, filename) {
     report += `**Declared on line:** ${variable.declarationLine}\n\n`
 
     // Added declaration context section
-    report += "### Declaration Context\n\n"
+    report += `### Declaration Context: \`${variable.name}\`\n\n`
     report += "```javascript\n"
     report += variable.declarationContext
     report += "\n```\n\n"

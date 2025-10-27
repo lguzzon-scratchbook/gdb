@@ -1,11 +1,10 @@
 {
     "author": "Your Name <your.email@example.com>",
     "bin": {
-        "js-variable-analyzer": "./variable-analyzer.js",
-        "variable-analyzer": "./variable-analyzer.js"
+        "jsVariableAnalyzer": "./jsVariableAnalyzer.js"
     },
     "bugs": {
-        "url": "https://github.com/yourusername/js-variable-analyzer/issues"
+        "url": "https://github.com/yourusername/jsVariableAnalyzer/issues"
     },
     "dependencies": {
         "jscodeshift": "^0.15.2"
@@ -18,7 +17,7 @@
     "engines": {
         "bun": ">=1.0.0"
     },
-    "homepage": "https://github.com/yourusername/js-variable-analyzer#readme",
+    "homepage": "https://github.com/yourusername/jsVariableAnalyzer#readme",
     "keywords": [
         "javascript",
         "ast",
@@ -30,20 +29,20 @@
         "markdown-report"
     ],
     "license": "MIT",
-    "main": "variable-analyzer.js",
-    "name": "js-variable-analyzer",
+    "main": "jsVariableAnalyzer.js",
+    "name": "jsVariableAnalyzer",
     "repository": {
         "type": "git",
-        "url": "https://github.com/yourusername/js-variable-analyzer.git"
+        "url": "https://github.com/yourusername/jsVariableAnalyzer.git"
     },
     "scripts": {
-        "analyze": "bun variable-analyzer.js",
+        "analyze": "bun jsVariableAnalyzer.js",
         "check": "biome check .",
         "check:fix": "biome check --write .",
         "format": "biome format --write .",
         "format:check": "biome format .",
         "lint": "biome lint .",
-        "start": "bun variable-analyzer.js",
+        "start": "bun jsVariableAnalyzer.js",
         "test": "bun test"
     },
     "type": "module",
