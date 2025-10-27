@@ -7,7 +7,8 @@
         "url": "https://github.com/yourusername/jsVariableAnalyzer/issues"
     },
     "dependencies": {
-        "jscodeshift": "^0.15.2"
+        "jscodeshift": "^0.15.2",
+        "node-fetch": "^3.3.2"
     },
     "description": "A Bun.js script that analyzes JavaScript variable declarations and references using jscodeshift to generate detailed Markdown reports",
     "devDependencies": {
