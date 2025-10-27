@@ -88,7 +88,7 @@ function extractExportedNames(sourceCode) {
         const decl = node.declaration;
         if (decl.type === 'VariableDeclaration' && decl.declarations) {
           decl.declarations.forEach((declarator) => {
-            if (declarator.id && declarator.id.name) {
+            if (declarator.id?.name) {
               exportedNames.add(declarator.id.name);
             }
           });
@@ -723,8 +723,9 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
   const variableMap = new Map();
 
   // Extract exported names if not provided
-  if (!exportedNames) {
-    exportedNames = extractExportedNames(sourceCode);
+  let names = exportedNames;
+  if (!names) {
+    names = extractExportedNames(sourceCode);
   }
 
   try {
@@ -846,7 +847,7 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
       varInfo.inferredType = inferVariableType(varInfo)
       varInfo.scope = determineScopeLevel(varInfo.declarationNode, sourceCode)
       varInfo.behavioralPatterns = analyzeBehavioralPatterns(varInfo)
-      varInfo.isExported = exportedNames.has(name)
+      varInfo.isExported = names.has(name)
     }
 
     const allDeclarations = Array.from(declarations.values())
@@ -1035,7 +1036,7 @@ async function main(filePaths, options = {}) {
       if (enableRename) {
         console.log(`Performing intelligent renaming with strategy: ${namingStrategy}`)
         if (!renameAll) {
-          console.log(`Filtering: Only renaming variables with name length < 4 characters`)
+          console.log('Filtering: Only renaming variables with name length < 4 characters')
         }
 
         const exportedVariables = variables.filter(v => v.isExported)
