@@ -791,14 +791,14 @@ function calculateScopeRange(declarationNode, ast, totalLines = 99999) {
 }
 
 /**
- * Creates a unique identifier for a variable declaration
- * @param {string} name - Variable name
+ * Creates a unique identifier for a variable declaration (position-based, not name-dependent)
+ * @param {string} name - Variable name (not included in ID to survive renames)
  * @param {number} line - Declaration line
  * @param {number} column - Declaration column
  * @returns {string} Unique identifier
  */
 function createUniqueVariableId(name, line, column) {
-  return `${name}:${line}:${column}`;
+  return `${line}:${column}`;
 }
 
 /**
@@ -910,9 +910,13 @@ function renameVariableByIdWithExportInfo(ast, variableId, newName, variableInfo
         return;
       }
 
-      // Skip export specifiers
+      // Skip export specifiers only if they're direct exports (public API)
+      // For aliased exports (local !== exported), we should rename the local identifier
       if (parentNode.type === 'ExportSpecifier' && parentNode.local === path.node) {
-        return;
+        const isDirectExport = path.node.name === parentNode.exported.name;
+        if (isDirectExport) {
+          return; // Skip direct exports - they're part of public API
+        }
       }
 
       // Skip function parameter names in function declarations
@@ -975,9 +979,13 @@ function renameVariableInASTWithExportInfo(ast, oldName, newName, exportInfo) {
         return
       }
 
-      // Skip export specifiers
+      // Skip export specifiers only if they're direct exports (public API)
+      // For aliased exports (local !== exported), we should rename the local identifier
       if (parentNode.type === 'ExportSpecifier' && parentNode.local === path.node) {
-        return
+        const isDirectExport = path.node.name === parentNode.exported.name;
+        if (isDirectExport) {
+          return; // Skip direct exports - they're part of public API
+        }
       }
 
       // Skip function parameter names in function declarations
@@ -1215,7 +1223,7 @@ async function processBatchRenames(sourceCode, variables, config, exportInfo) {
 
     // Re-analyze the variable in the current source to get updated references
     const updatedVariables = analyzeVariableReferences(currentSource, 'current', exportInfo.exportedNames)
-    const currentVariable = updatedVariables.find(v => v.name === suggestion.variable.name && v.uniqueId === suggestion.variable.uniqueId)
+    const currentVariable = updatedVariables.find(v => v.uniqueId === suggestion.variable.uniqueId)
 
     if (!currentVariable) {
       results.push({
