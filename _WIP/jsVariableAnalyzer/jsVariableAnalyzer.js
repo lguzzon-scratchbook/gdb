@@ -498,48 +498,75 @@ function determineScopeLevel(declarationNode, sourceCode) {
  * @returns {string} Mock-generated variable name
  */
 function generateMockLLMName(variableInfo) {
-  const adjectives = [
-    'current', 'active', 'total', 'final', 'primary', 'secondary', 'temporary',
-    'cached', 'pending', 'computed', 'derived', 'accumulated', 'initial', 'default',
-    'valid', 'optimized', 'filtered', 'sorted', 'mapped', 'parsed', 'formatted'
-  ]
-
-  const nouns = [
-    'value', 'result', 'data', 'state', 'config', 'context', 'handler', 'manager',
-    'service', 'provider', 'controller', 'wrapper', 'helper', 'instance', 'object',
-    'element', 'item', 'node', 'entry', 'record', 'index', 'key', 'map', 'set',
-    'list', 'array', 'collection', 'buffer', 'queue', 'stack', 'tree', 'graph'
-  ]
-
-  const suffixes = [
-    'Items', 'List', 'Collection', 'Set', 'Map', 'Dict', 'Cache', 'Store',
-    'Pool', 'Registry', 'Factory', 'Builder', 'Handler', 'Processor', 'Parser'
-  ]
-
-  // Pick random components based on variable characteristics
   const patterns = variableInfo.behavioralPatterns
+  const inferredType = variableInfo.inferredType
+  const declarationType = variableInfo.declarationType
+  const originalName = variableInfo.name
+  const usageFreq = patterns.usageFrequency
+
+  // Simple noun pairs for concise, realistic names
+  const nouns = ['value', 'data', 'result', 'item', 'entry', 'key', 'record', 'element']
+  const adjectives = ['current', 'next', 'prev', 'total', 'temp', 'new']
+  const verbs = ['get', 'set', 'process', 'handle', 'validate', 'check', 'create', 'find']
+  const stateNames = ['state', 'store', 'cache', 'config']
+  const loopNames = ['index', 'counter', 'pos', 'idx']
+
+  // Generate name based on variable characteristics
   let name = ''
 
-  if (patterns.isConfiguration) {
-    name = adjectives[Math.floor(Math.random() * adjectives.length)] + 'Config'
-  } else if (patterns.isState) {
-    name = adjectives[Math.floor(Math.random() * adjectives.length)] + 'State'
-  } else if (patterns.isFunction) {
-    const verb = ['get', 'set', 'process', 'handle', 'compute', 'validate', 'format', 'parse'][Math.floor(Math.random() * 8)]
-    name = verb + nouns[Math.floor(Math.random() * nouns.length)]
-  } else if (patterns.isIterator) {
-    name = adjectives[Math.floor(Math.random() * adjectives.length)] + 'Iterator'
-  } else if (variableInfo.declarationType === 'const' || patterns.isReadOnly) {
+  // Function declaration: use verb + noun
+  if (patterns.isFunction && declarationType === 'function') {
+    const verb = verbs[Math.floor(Math.random() * verbs.length)]
     const noun = nouns[Math.floor(Math.random() * nouns.length)]
-    name = adjectives[Math.floor(Math.random() * adjectives.length)] + noun.charAt(0).toUpperCase() + noun.slice(1)
-  } else {
-    // Regular variable - use adjective + noun
+    name = verb + noun.charAt(0).toUpperCase() + noun.slice(1)
+  }
+  // Configuration object: add Config suffix
+  else if (patterns.isConfiguration) {
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
+    name = adj + 'Config'
+  }
+  // State object: simple name with State/Data suffix
+  else if (patterns.isState) {
+    const stateType = stateNames[Math.floor(Math.random() * stateNames.length)]
+    name = stateType.charAt(0).toUpperCase() + stateType.slice(1)
+  }
+  // Read-only constant: simple noun
+  else if (declarationType === 'const' && patterns.isReadOnly && usageFreq <= 2) {
     const noun = nouns[Math.floor(Math.random() * nouns.length)]
-    name = adjectives[Math.floor(Math.random() * adjectives.length)] + noun.charAt(0).toUpperCase() + noun.slice(1)
+    name = noun.charAt(0).toUpperCase() + noun.slice(1)
+  }
+  // Array/Collection: collection-aware name
+  else if (inferredType === 'array' || patterns.commonOperations.includes('array_modification')) {
+    const noun = ['items', 'entries', 'elements', 'collection'][Math.floor(Math.random() * 4)]
+    name = noun.charAt(0).toUpperCase() + noun.slice(1)
+  }
+  // Loop counter: prioritize simple short names
+  // Detect by: single char name, used in loop context, low frequency
+  else if ((originalName.length === 1 && patterns.isIterator) || 
+           (usageFreq <= 3 && patterns.isIterator && !patterns.isModified)) {
+    name = loopNames[Math.floor(Math.random() * loopNames.length)]
+  }
+  // Variable/property that gets modified: adjective + noun
+  else if (patterns.isModified) {
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
+    const noun = nouns[Math.floor(Math.random() * nouns.length)]
+    name = adj + noun.charAt(0).toUpperCase() + noun.slice(1)
+  }
+  // Default: simple noun or adjective + noun
+  else {
+    if (Math.random() > 0.5) {
+      name = nouns[Math.floor(Math.random() * nouns.length)]
+      name = name.charAt(0).toUpperCase() + name.slice(1)
+    } else {
+      const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
+      const noun = nouns[Math.floor(Math.random() * nouns.length)]
+      name = adj + noun.charAt(0).toUpperCase() + noun.slice(1)
+    }
   }
 
-  // Capitalize first letter and ensure camelCase
-  return name.charAt(0).toLowerCase() + name.slice(1)
+  // Ensure camelCase (first letter lowercase) and is not empty
+  const finalName = name.charAt(0).toLowerCase() + name.slice(1)
+  return finalName || 'value'
 }
 
 /**
