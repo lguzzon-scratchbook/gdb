@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 
-import { readFileSync, writeFileSync } from 'node:fs'
-import { basename } from 'node:path'
+import { execSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import jscodeshift from 'jscodeshift'
 
 /**
@@ -391,8 +392,6 @@ function inferVariableType(variableInfo) {
   return 'unknown'
 }
 
-
-
 /**
  * Builds a scope hierarchy from AST
  * @param {Object} ast - jscodeshift AST
@@ -424,7 +423,11 @@ function buildScopeHierarchy(ast) {
     }
 
     // Handle scope-creating nodes
-    if (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression' || node.type === 'ArrowFunctionExpression') {
+    if (
+      node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'ArrowFunctionExpression'
+    ) {
       const funcName = node.id?.name || '<anonymous>'
       const funcScope = {
         type: node.type,
@@ -448,7 +451,10 @@ function buildScopeHierarchy(ast) {
       }
 
       scopeStack.pop()
-    } else if (node.type === 'ClassDeclaration' || node.type === 'ClassExpression') {
+    } else if (
+      node.type === 'ClassDeclaration' ||
+      node.type === 'ClassExpression'
+    ) {
       const className = node.id?.name || '<anonymous>'
       const classScope = {
         type: node.type,
@@ -466,7 +472,15 @@ function buildScopeHierarchy(ast) {
       node.body?.body?.forEach((child) => traverseNode(child, node))
 
       scopeStack.pop()
-    } else if (node.type === 'BlockStatement' && parent && (parent.type === 'IfStatement' || parent.type === 'ForStatement' || parent.type === 'WhileStatement' || parent.type === 'DoWhileStatement' || parent.type === 'TryStatement')) {
+    } else if (
+      node.type === 'BlockStatement' &&
+      parent &&
+      (parent.type === 'IfStatement' ||
+        parent.type === 'ForStatement' ||
+        parent.type === 'WhileStatement' ||
+        parent.type === 'DoWhileStatement' ||
+        parent.type === 'TryStatement')
+    ) {
       // Block creates a new scope for let/const in control structures
       const blockScope = {
         type: 'BlockStatement',
@@ -548,9 +562,16 @@ function getScopePath(scope) {
   while (current) {
     if (current.type === 'Program') {
       path.unshift('global')
-    } else if (current.type === 'FunctionDeclaration' || current.type === 'FunctionExpression' || current.type === 'ArrowFunctionExpression') {
+    } else if (
+      current.type === 'FunctionDeclaration' ||
+      current.type === 'FunctionExpression' ||
+      current.type === 'ArrowFunctionExpression'
+    ) {
       path.unshift(`fn:${current.name}`)
-    } else if (current.type === 'ClassDeclaration' || current.type === 'ClassExpression') {
+    } else if (
+      current.type === 'ClassDeclaration' ||
+      current.type === 'ClassExpression'
+    ) {
       path.unshift(`cls:${current.name}`)
     } else if (current.type === 'BlockStatement') {
       path.unshift(`block:${current.line}`)
@@ -581,11 +602,18 @@ function determineScopeLevel(declarationNode, scopeHierarchy) {
 
   // Determine level
   let level = 'global'
-  if (scope.type === 'FunctionDeclaration' || scope.type === 'FunctionExpression' || scope.type === 'ArrowFunctionExpression') {
+  if (
+    scope.type === 'FunctionDeclaration' ||
+    scope.type === 'FunctionExpression' ||
+    scope.type === 'ArrowFunctionExpression'
+  ) {
     level = 'function'
   } else if (scope.type === 'BlockStatement') {
     level = 'block'
-  } else if (scope.type === 'ClassDeclaration' || scope.type === 'ClassExpression') {
+  } else if (
+    scope.type === 'ClassDeclaration' ||
+    scope.type === 'ClassExpression'
+  ) {
     level = 'class'
   }
 
@@ -789,10 +817,16 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
         if (param.type === 'Identifier') {
           paramName = param.name
           paramNode = param
-        } else if (param.type === 'RestElement' && param.argument?.type === 'Identifier') {
+        } else if (
+          param.type === 'RestElement' &&
+          param.argument?.type === 'Identifier'
+        ) {
           paramName = param.argument.name
           paramNode = param.argument
-        } else if (param.type === 'AssignmentPattern' && param.left?.type === 'Identifier') {
+        } else if (
+          param.type === 'AssignmentPattern' &&
+          param.left?.type === 'Identifier'
+        ) {
           paramName = param.left.name
           paramNode = param.left
         } else if (param.type === 'ArrayPattern') {
@@ -803,9 +837,15 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
             param.elements.forEach((elem) => {
               if (elem?.type === 'Identifier') {
                 identifiers.push(elem)
-              } else if (elem?.type === 'RestElement' && elem.argument?.type === 'Identifier') {
+              } else if (
+                elem?.type === 'RestElement' &&
+                elem.argument?.type === 'Identifier'
+              ) {
                 identifiers.push(elem.argument)
-              } else if (elem?.type === 'AssignmentPattern' && elem.left?.type === 'Identifier') {
+              } else if (
+                elem?.type === 'AssignmentPattern' &&
+                elem.left?.type === 'Identifier'
+              ) {
                 identifiers.push(elem.left)
               }
             })
@@ -975,7 +1015,10 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
     // Enhance variable information with additional analysis
     for (const varInfo of declarationsList) {
       varInfo.inferredType = inferVariableType(varInfo)
-      const scopeInfo = determineScopeLevel(varInfo.declarationNode, scopeHierarchy)
+      const scopeInfo = determineScopeLevel(
+        varInfo.declarationNode,
+        scopeHierarchy
+      )
       varInfo.scope = scopeInfo.level
       varInfo.scopePath = scopeInfo.path
       varInfo.scopeDepth = scopeInfo.depth
@@ -1033,7 +1076,7 @@ function generateMarkdownReport(variables, filename, exportInfo = null) {
       exportedLabel = ' [EXPORTED - Protected from renaming]'
     }
 
-    report += `## Variable: \`${variable.name}\`${exportedLabel}\n\n`
+    report += `## Variable: \`${variable.scopePath} > ${variable.name}\`${exportedLabel}\n\n`
     report += `**Declaration Type:** \`${variable.declarationType}\`  \n`
     report += `**Declared on line:** ${variable.declarationLine}  \n`
     report += `**Inferred Type:** \`${variable.inferredType}\`  \n`
@@ -1042,7 +1085,7 @@ function generateMarkdownReport(variables, filename, exportInfo = null) {
     report += `**Exported:** ${variable.isExported ? 'Yes' : 'No'}  \n`
     report += `**Usage Frequency:** ${variable.references.length}\n\n`
 
-    report += `### Declaration Context: \`${variable.name}\`\n\n`
+    report += `### Declaration Context: \`${variable.scopePath} > ${variable.name}\`\n\n`
     report += '```javascript\n'
     report += variable.declarationContext
     report += '\n```\n\n'
@@ -1067,62 +1110,440 @@ function generateMarkdownReport(variables, filename, exportInfo = null) {
 }
 
 /**
+ * Calls OpenRouter API to generate a meaningful symbol name
+ * @param {Object} symbolInfo - Symbol information including context
+ * @param {string} apiKey - OpenRouter API key
+ * @param {string} model - Model name (default: openai/gpt-5-nano)
+ * @param {number} temperature - Temperature for LLM (default: 0.01)
+ * @returns {Promise<string>} Generated symbol name
+ */
+async function generateSymbolNameViaLLM(
+  symbolInfo,
+  apiKey,
+  model = 'openai/gpt-5-nano',
+  temperature = 0.01
+) {
+  const prompt = `Analyze this JavaScript symbol and suggest a meaningful, descriptive name:
+
+Symbol: ${symbolInfo.name}
+Current Type: ${symbolInfo.inferredType}
+Scope: ${symbolInfo.scope}
+Declaration Context:
+\`\`\`javascript
+${symbolInfo.declarationContext}
+\`\`\`
+
+Usage contexts (showing how this symbol is used):
+${symbolInfo.references
+  .slice(0, 3)
+  .map((ref) => `- ${ref.usagePattern} at line ${ref.line}`)
+  .join('\n')}
+
+Requirements:
+- Name must be a valid JavaScript identifier (alphanumeric, $, _, no leading digits)
+- Name should be camelCase
+- Name should be descriptive and meaningful based on usage
+- Name should be at least 4 characters long
+- Return ONLY the new name, nothing else
+
+New name:`
+
+  try {
+    const response = await fetch(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          temperature,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 50
+        })
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`OpenRouter API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const generatedName = data.choices?.[0]?.message?.content?.trim()
+
+    if (!generatedName || !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(generatedName)) {
+      return null
+    }
+
+    return generatedName
+  } catch (error) {
+    console.warn('LLM generation failed:', error.message)
+    return null
+  }
+}
+
+/**
+ * Generates a mock name for dry-run mode (deterministic)
+ * @param {Object} symbolInfo - Symbol information
+ * @returns {string} Generated mock name
+ */
+function generateMockSymbolName(symbolInfo) {
+  const descriptors = {
+    function: ['handler', 'processor', 'worker', 'task', 'compute'],
+    object: ['config', 'settings', 'context', 'instance', 'entity'],
+    array: ['items', 'list', 'collection', 'set', 'batch'],
+    string: ['text', 'message', 'label', 'title', 'content'],
+    number: ['count', 'total', 'value', 'amount', 'metric'],
+    unknown: ['temp', 'cache', 'state', 'buffer', 'store']
+  }
+
+  const type = symbolInfo.inferredType || 'unknown'
+  const words = descriptors[type] || descriptors['unknown']
+
+  const hash = symbolInfo.name
+    .split('')
+    .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) & 0xffffffff, 0)
+  const wordIndex = Math.abs(hash) % words.length
+  const suffix = Math.abs(hash).toString(16).slice(0, 3)
+
+  return `${words[wordIndex]}${suffix}`
+}
+
+/**
+ * Performs symbol renaming using jscodeshift
+ * @param {string} sourceCode - Source code to transform
+ * @param {string} oldName - Symbol to rename from
+ * @param {string} newName - Symbol to rename to
+ * @returns {string} Transformed source code
+ */
+function renameSymbolWithJscodeshift(sourceCode, oldName, newName) {
+  try {
+    const j = jscodeshift
+    const ast = j(sourceCode)
+
+    ast.find(j.Identifier).forEach((path) => {
+      if (path.node.name === oldName) {
+        // Skip property keys in member expressions
+        if (
+          path.parent?.node?.type === 'MemberExpression' &&
+          path.parent.node.property === path.node &&
+          !path.parent.node.computed
+        ) {
+          return
+        }
+        // Skip object property keys
+        if (
+          path.parent?.node?.type === 'Property' &&
+          path.parent.node.key === path.node
+        ) {
+          return
+        }
+
+        path.node.name = newName
+      }
+    })
+
+    return ast.toSource()
+  } catch (error) {
+    console.warn(`jscodeshift transformation failed: ${error.message}`)
+    return null
+  }
+}
+
+/**
+ * Validates JavaScript syntax using Node.js
+ * @param {string} sourceCode - Source code to validate
+ * @returns {boolean} True if syntax is valid
+ */
+function validateSyntax(sourceCode) {
+  try {
+    const tempFile = `/tmp/syntax_check_${Date.now()}.js`
+    writeFileSync(tempFile, sourceCode)
+    execSync(`node -c "${tempFile}"`, { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Creates the renamed directory and initializes the working file
+ * @param {string} filePath - Original file path
+ * @param {string} sourceCode - Original source code
+ * @returns {Object} Working directory info {renamedDir, workingFile}
+ */
+function setupRenamedDirectory(filePath, sourceCode) {
+  const fileDir = dirname(filePath)
+  const fileName = basename(filePath)
+  const renamedDir = join(fileDir, `${fileName.split('.')[0]}_renamed`)
+
+  mkdirSync(renamedDir, { recursive: true })
+
+  const workingFile = join(renamedDir, fileName)
+  writeFileSync(workingFile, sourceCode)
+
+  return { renamedDir, workingFile }
+}
+
+/**
+ * Saves an intermediate version file
+ * @param {string} renamedDir - Renamed directory path
+ * @param {string} fileName - Original file name
+ * @param {string} sourceCode - Source code
+ * @param {number} sequenceNumber - Sequence number
+ * @param {string} oldSymbol - Old symbol name
+ * @param {string} newSymbol - New symbol name
+ * @returns {string} Path to saved file
+ */
+function saveVersionFile(
+  renamedDir,
+  fileName,
+  sourceCode,
+  sequenceNumber,
+  oldSymbol,
+  newSymbol
+) {
+  const ext = fileName.split('.').pop()
+  const baseName = fileName.split('.')[0]
+  const versionFileName = `${baseName}_${sequenceNumber}_${oldSymbol}_${newSymbol}.${ext}`
+  const versionPath = join(renamedDir, versionFileName)
+
+  writeFileSync(versionPath, sourceCode)
+  return versionPath
+}
+
+/**
+ * Identifies symbols eligible for renaming
+ * @param {VariableInfo[]} variables - Variable information
+ * @param {number} lengthThreshold - Minimum length threshold (symbols shorter than this are eligible)
+ * @returns {VariableInfo[]} Filtered variables eligible for renaming
+ */
+function getRenameCandidates(variables, lengthThreshold = 4) {
+  return variables.filter(
+    (v) =>
+      v.name.length < lengthThreshold &&
+      !v.isExported &&
+      v.references.length > 0
+  )
+}
+
+/**
+ * Executes the full symbol renaming workflow
+ * @param {string} filePath - Path to source file
+ * @param {Object} options - Renaming options
+ * @param {number} options.lengthThreshold - Symbol length threshold (default: 4)
+ * @param {boolean} options.dryRun - Enable dry-run mode (default: false)
+ * @param {string} options.apiKey - OpenRouter API key
+ * @returns {Promise<string>} Path to final renamed file
+ */
+async function executeRenamingWorkflow(filePath, options = {}) {
+  const lengthThreshold = Math.max(4, options.lengthThreshold || 4)
+  const dryRun = options.dryRun || false
+  const apiKey = options.apiKey || process.env.OPENROUTER_API_KEY
+
+  if (!dryRun && !apiKey) {
+    console.warn('No OpenRouter API key provided. Use --dry-run for testing.')
+    return null
+  }
+
+  try {
+    const originalSourceCode = readFileSync(filePath, 'utf-8')
+    const fileName = basename(filePath)
+
+    console.log(`\n[RENAMING] Initializing symbol renaming for: ${fileName}`)
+    const { renamedDir, workingFile } = setupRenamedDirectory(
+      filePath,
+      originalSourceCode
+    )
+    console.log(`  └─ Working directory: ${renamedDir}`)
+
+    let currentCode = originalSourceCode
+    let sequenceNumber = 0
+    let totalRenamed = 0
+
+    let iterationCount = 0
+    const maxIterations = 100
+
+    while (iterationCount < maxIterations) {
+      iterationCount++
+
+      // Analyze current code state
+      const variables = analyzeVariableReferences(currentCode, fileName)
+      const candidates = getRenameCandidates(variables, lengthThreshold)
+
+      if (candidates.length === 0) {
+        console.log(`  └─ Convergence reached: No more candidates for renaming`)
+        break
+      }
+
+      const targetSymbol = candidates[0]
+      console.log(
+        `\n  [Iteration ${iterationCount}] Renaming: '${targetSymbol.name}' (${targetSymbol.references.length} references)`
+      )
+
+      // Generate new name
+      let newName
+      if (dryRun) {
+        newName = generateMockSymbolName(targetSymbol)
+        console.log(`    └─ Generated name (mock): ${newName}`)
+      } else {
+        newName = await generateSymbolNameViaLLM(targetSymbol, apiKey)
+        if (!newName) {
+          console.warn(`    └─ Failed to generate name, skipping`)
+          break
+        }
+        console.log(`    └─ Generated name (LLM): ${newName}`)
+      }
+
+      // Perform renaming
+      const transformedCode = renameSymbolWithJscodeshift(
+        currentCode,
+        targetSymbol.name,
+        newName
+      )
+      if (!transformedCode) {
+        console.warn(`    └─ Transformation failed, skipping`)
+        break
+      }
+
+      // Validate syntax
+      if (!validateSyntax(transformedCode)) {
+        console.warn(`    └─ Syntax validation failed, rolling back`)
+        break
+      }
+
+      console.log(`    └─ Transformation successful`)
+
+      // Save version file
+      sequenceNumber++
+      saveVersionFile(
+        renamedDir,
+        fileName,
+        transformedCode,
+        sequenceNumber,
+        targetSymbol.name,
+        newName
+      )
+
+      // Update working file and code
+      writeFileSync(workingFile, transformedCode)
+      currentCode = transformedCode
+      totalRenamed++
+    }
+
+    console.log(`\n[RENAMING COMPLETE] Renamed ${totalRenamed} symbols`)
+    console.log(`  └─ Final file: ${workingFile}`)
+
+    return workingFile
+  } catch (error) {
+    console.error(`Error during renaming workflow: ${error.message}`)
+    return null
+  }
+}
+
+/**
  * Main function to analyze JavaScript files for variable references
  * @param {string[]} filePaths - Array of file paths to analyze
  * @param {Object} _options - Options for processing (currently unused)
  */
-async function main(filePaths, _options = {}) {
+async function main(filePaths, options = {}) {
   if (!filePaths || filePaths.length === 0) {
-    console.error('Usage: bun jsVariableAnalyzer.js <file1.js> [file2.js] ...')
+    console.error(
+      'Usage: bun jsVariableAnalyzer.js [--rename] [--dry-run] [--limit <num>] <file1.js> [file2.js] ...'
+    )
+    console.error('  --rename      Enable symbol renaming workflow')
+    console.error('  --dry-run     Use mock LLM (no API calls)')
+    console.error('  --limit <num> Symbol length threshold (default: 4)')
     process.exit(1)
   }
 
-  // Calculate total steps for progress tracking
-  // Analysis steps: 1) Read file, 2) Analyze variables, 3) Generate report
-  const stepsPerFile = 3
-  const totalSteps = filePaths.length * stepsPerFile
-  const progress = new ProgressTracker(totalSteps, true)
+  if (options.rename) {
+    const stepsPerFile = 1
+    const totalSteps = filePaths.length * stepsPerFile
+    const progress = new ProgressTracker(totalSteps, true)
 
-  for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
-    const filePath = filePaths[fileIndex]
-    try {
-      progress.nextStep(`Reading file: ${basename(filePath)}`)
-      const sourceCode = readFileSync(filePath, 'utf-8')
-      const filename = basename(filePath)
-
-      progress.nextStep(`Analyzing variables in: ${filename}`)
-      // Extract detailed export information with aliasing analysis
-      const exportInfo = extractDetailedExportInfo(sourceCode)
-      const variables = analyzeVariableReferences(
-        sourceCode,
-        filename,
-        exportInfo.exportedNames
-      )
-      console.log(
-        `  └─ Found ${variables.length} variables with ${variables.reduce((sum, v) => sum + v.references.length, 0)} total references`
-      )
-
-      progress.nextStep(`Generating analysis report for: ${filename}`)
-      const analysisReport = generateMarkdownReport(
-        variables,
-        filename,
-        exportInfo
-      )
-      const analysisOutputPath = `${filePath}-analysis.md`
-      writeFileSync(analysisOutputPath, analysisReport)
-      console.log(`  └─ Report saved: ${analysisOutputPath}`)
-    } catch (error) {
-      console.error(`Error processing ${filePath}:`, error.message)
+    for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
+      const filePath = filePaths[fileIndex]
+      try {
+        progress.nextStep(`Renaming symbols in: ${basename(filePath)}`)
+        await executeRenamingWorkflow(filePath, {
+          lengthThreshold: options.limit || 4,
+          dryRun: options.dryRun || false,
+          apiKey: options.apiKey
+        })
+      } catch (error) {
+        console.error(`Error processing ${filePath}:`, error.message)
+      }
     }
-  }
 
-  progress.complete()
+    progress.complete()
+  } else {
+    const stepsPerFile = 3
+    const totalSteps = filePaths.length * stepsPerFile
+    const progress = new ProgressTracker(totalSteps, true)
+
+    for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
+      const filePath = filePaths[fileIndex]
+      try {
+        progress.nextStep(`Reading file: ${basename(filePath)}`)
+        const sourceCode = readFileSync(filePath, 'utf-8')
+        const filename = basename(filePath)
+
+        progress.nextStep(`Analyzing variables in: ${filename}`)
+        const exportInfo = extractDetailedExportInfo(sourceCode)
+        const variables = analyzeVariableReferences(
+          sourceCode,
+          filename,
+          exportInfo.exportedNames
+        )
+        console.log(
+          `  └─ Found ${variables.length} variables with ${variables.reduce((sum, v) => sum + v.references.length, 0)} total references`
+        )
+
+        progress.nextStep(`Generating analysis report for: ${filename}`)
+        const analysisReport = generateMarkdownReport(
+          variables,
+          filename,
+          exportInfo
+        )
+        const analysisOutputPath = `${filePath}-analysis.md`
+        writeFileSync(analysisOutputPath, analysisReport)
+        console.log(`  └─ Report saved: ${analysisOutputPath}`)
+      } catch (error) {
+        console.error(`Error processing ${filePath}:`, error.message)
+      }
+    }
+
+    progress.complete()
+  }
 }
 
 // Parse command line arguments
 const args = process.argv.slice(2)
-const filePaths = args.filter((arg) => !arg.startsWith('--'))
+const filePaths = []
 const options = {}
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i]
+
+  if (arg === '--rename') {
+    options.rename = true
+  } else if (arg === '--dry-run') {
+    options.dryRun = true
+  } else if (arg === '--limit') {
+    options.limit = Math.max(4, Number.parseInt(args[i + 1], 10))
+    i++
+  } else if (!arg.startsWith('--')) {
+    filePaths.push(arg)
+  }
+}
 
 // Run the script with command line arguments
 if (import.meta.main) {
@@ -1141,5 +1562,13 @@ export {
   buildScopeHierarchy,
   findScopeForNode,
   getScopePath,
-  determineScopeLevel
+  determineScopeLevel,
+  generateSymbolNameViaLLM,
+  generateMockSymbolName,
+  renameSymbolWithJscodeshift,
+  validateSyntax,
+  setupRenamedDirectory,
+  saveVersionFile,
+  getRenameCandidates,
+  executeRenamingWorkflow
 }
