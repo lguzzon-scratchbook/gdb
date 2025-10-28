@@ -1,51 +1,51 @@
 {
-    "author": "Your Name <your.email@example.com>",
-    "bin": {
-        "jsVariableAnalyzer": "./jsVariableAnalyzer.js"
-    },
-    "bugs": {
-        "url": "https://github.com/yourusername/jsVariableAnalyzer/issues"
-    },
-    "dependencies": {
-        "jscodeshift": "^0.15.2",
-        "node-fetch": "^3.3.2"
-    },
-    "description": "A Bun.js script that analyzes JavaScript variable declarations and references using jscodeshift to generate detailed Markdown reports",
-    "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
-        "@types/jscodeshift": "^0.11.11"
-    },
-    "engines": {
-        "bun": ">=1.0.0"
-    },
-    "homepage": "https://github.com/yourusername/jsVariableAnalyzer#readme",
-    "keywords": [
-        "javascript",
-        "ast",
-        "variable-analysis",
-        "jscodeshift",
-        "static-analysis",
-        "code-analysis",
-        "bun",
-        "markdown-report"
-    ],
-    "license": "MIT",
-    "main": "jsVariableAnalyzer.js",
-    "name": "jsVariableAnalyzer",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/yourusername/jsVariableAnalyzer.git"
-    },
-    "scripts": {
-        "analyze": "bun jsVariableAnalyzer.js",
-        "check": "biome check .",
-        "check:fix": "biome check --write .",
-        "format": "biome format --write .",
-        "format:check": "biome format .",
-        "lint": "biome lint .",
-        "start": "bun jsVariableAnalyzer.js",
-        "test": "bun test"
-    },
-    "type": "module",
-    "version": "1.0.0"
+  "author": "Your Name <your.email@example.com>",
+  "bin": {
+    "jsVariableAnalyzer": "./jsVariableAnalyzer.js"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/jsVariableAnalyzer/issues"
+  },
+  "dependencies": {
+    "jscodeshift": "^0.15.2",
+    "node-fetch": "^3.3.2"
+  },
+  "description": "A Bun.js script that analyzes JavaScript variable declarations and references using jscodeshift to generate detailed Markdown reports",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/jscodeshift": "^0.11.11"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "homepage": "https://github.com/yourusername/jsVariableAnalyzer#readme",
+  "keywords": [
+    "javascript",
+    "ast",
+    "variable-analysis",
+    "jscodeshift",
+    "static-analysis",
+    "code-analysis",
+    "bun",
+    "markdown-report"
+  ],
+  "license": "MIT",
+  "main": "jsVariableAnalyzer.js",
+  "name": "jsVariableAnalyzer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/jsVariableAnalyzer.git"
+  },
+  "scripts": {
+    "analyze": "bun jsVariableAnalyzer.js",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "start": "bun jsVariableAnalyzer.js",
+    "test": "bun test"
+  },
+  "type": "module",
+  "version": "1.0.0"
 }

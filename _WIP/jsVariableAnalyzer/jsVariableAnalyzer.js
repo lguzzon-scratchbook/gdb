@@ -6,6 +6,121 @@ import { basename, dirname, join } from 'node:path'
 import jscodeshift from 'jscodeshift'
 
 /**
+ * Logger class for controlling output verbosity levels
+ */
+class Logger {
+  static levels = {
+    SILENT: 0, // No output except critical errors
+    ERROR: 1, // Only error messages
+    WARN: 2, // Errors + warnings
+    INFO: 3, // Errors + warnings + informational (default)
+    DEBUG: 4, // All above + detailed debugging information
+    TRACE: 5 // Most detailed level
+  }
+
+  static currentLevel = Logger.levels.INFO
+  static enableProgress = true
+
+  static setLevel(level) {
+    Logger.currentLevel = level
+    Logger.enableProgress = level >= Logger.levels.INFO
+  }
+
+  static shouldLog(level) {
+    return Logger.currentLevel >= level
+  }
+
+  static formatMessage(level, message) {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0]
+    const levelName = Object.keys(Logger.levels).find(
+      (key) => Logger.levels[key] === level
+    )
+    return `[${timestamp}] [${levelName}] ${message}`
+  }
+
+  static error(message) {
+    if (Logger.shouldLog(Logger.levels.ERROR)) {
+      console.error(Logger.formatMessage(Logger.levels.ERROR, message))
+    }
+  }
+
+  static warn(message) {
+    if (Logger.shouldLog(Logger.levels.WARN)) {
+      console.warn(Logger.formatMessage(Logger.levels.WARN, message))
+    }
+  }
+
+  static info(message) {
+    if (Logger.shouldLog(Logger.levels.INFO)) {
+      console.log(Logger.formatMessage(Logger.levels.INFO, message))
+    }
+  }
+
+  static debug(message) {
+    if (Logger.shouldLog(Logger.levels.DEBUG)) {
+      console.log(Logger.formatMessage(Logger.levels.DEBUG, message))
+    }
+  }
+
+  static trace(message) {
+    if (Logger.shouldLog(Logger.levels.TRACE)) {
+      console.log(Logger.formatMessage(Logger.levels.TRACE, message))
+    }
+  }
+
+  static progress(message) {
+    if (Logger.enableProgress) {
+      console.log(message)
+    }
+  }
+
+  static traceLLM(traceData) {
+    if (Logger.shouldLog(Logger.levels.TRACE)) {
+      const trace = {
+        timestamp: new Date().toISOString(),
+        ...traceData
+      }
+      console.log(
+        Logger.formatMessage(
+          Logger.levels.TRACE,
+          `LLM TRACE: ${JSON.stringify(trace, null, 2)}`
+        )
+      )
+    }
+  }
+
+  static debugLLM(traceData) {
+    if (Logger.shouldLog(Logger.levels.DEBUG)) {
+      const trace = {
+        timestamp: new Date().toISOString(),
+        ...traceData
+      }
+      console.log(
+        Logger.formatMessage(
+          Logger.levels.DEBUG,
+          `LLM DEBUG: ${JSON.stringify(trace, null, 2)}`
+        )
+      )
+    }
+  }
+
+  static infoLLM(traceData) {
+    if (Logger.shouldLog(Logger.levels.INFO)) {
+      const trace = {
+        timestamp: new Date().toISOString(),
+        ...traceData
+      }
+      console.log(
+        Logger.formatMessage(
+          Logger.levels.INFO,
+          `LLM: ${JSON.stringify(trace)}`
+        )
+      )
+    }
+  }
+}
+
+/**
  * Progress tracker for monitoring execution steps
  */
 class ProgressTracker {
@@ -22,11 +137,11 @@ class ProgressTracker {
     if (this.enableProgress) {
       const percentage = Math.round((this.currentStep / this.totalSteps) * 100)
       const elapsed = ((Date.now() - this.startTime) / 1000).toFixed(1)
-      console.log(
+      Logger.progress(
         `\n[PROGRESS ${percentage}%] Step ${this.currentStep}/${this.totalSteps}: ${stepName} (${elapsed}s elapsed)`
       )
       if (substepsTotal > 0) {
-        console.log(`  ├─ Subtasks: 0/${substepsTotal}`)
+        Logger.progress(`  ├─ Subtasks: 0/${substepsTotal}`)
       }
     }
     this.stepDetails.push({ name: stepName, substepsTotal, substepsCurrent: 0 })
@@ -39,14 +154,14 @@ class ProgressTracker {
       const barLength = 20
       const filled = Math.round((current / total) * barLength)
       const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled)
-      console.log(`  ├─ [${bar}] ${current}/${total}: ${substepName}`)
+      Logger.progress(`  ├─ [${bar}] ${current}/${total}: ${substepName}`)
     }
   }
 
   complete() {
     if (this.enableProgress) {
       const totalTime = ((Date.now() - this.startTime) / 1000).toFixed(1)
-      console.log(`\n[✓ COMPLETE] All steps finished in ${totalTime}s\n`)
+      Logger.progress(`\n[✓ COMPLETE] All steps finished in ${totalTime}s\n`)
     }
   }
 }
@@ -189,7 +304,7 @@ function extractDetailedExportInfo(sourceCode) {
       }
     })
   } catch (error) {
-    console.warn('Could not extract export information:', error.message)
+    Logger.warn('Could not extract export information:', error.message)
   }
 
   return {
@@ -1029,7 +1144,7 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
       (a, b) => a.declarationLine - b.declarationLine
     )
   } catch (error) {
-    console.error(`Error parsing JavaScript in ${filename}:`, error.message)
+    Logger.error(`Error parsing JavaScript in ${filename}:`, error.message)
     return []
   }
 }
@@ -1110,6 +1225,99 @@ function generateMarkdownReport(variables, filename, exportInfo = null) {
 }
 
 /**
+ * Generates an enhanced prompt with comprehensive code contexts
+ * @param {Object} symbolInfo - Symbol information including context
+ * @returns {string} Enhanced prompt for LLM
+ */
+function generateEnhancedPrompt(symbolInfo) {
+  // Group references by usage pattern
+  const usageGroups = symbolInfo.references.reduce((groups, ref) => {
+    const pattern = ref.usagePattern || 'unknown'
+    if (!groups[pattern]) {
+      groups[pattern] = []
+    }
+    groups[pattern].push(ref)
+    return groups
+  }, {})
+
+  // Build usage patterns section
+  const usagePatternsSection = Object.entries(usageGroups)
+    .map(([pattern, refs]) => {
+      const count = refs.length
+      const examples = refs.slice(0, 2).map(r => r.context.trim()).join('\n')
+      return `**${pattern}** (${count} occurrences)\n\`\`\`javascript\n${examples}\n\`\`\``
+    })
+    .join('\n\n')
+
+  // Build code contexts section with representative examples
+  const allContexts = symbolInfo.references
+    .filter(ref => ref.context && ref.context.trim())
+    .map(ref => ({
+      context: ref.context.trim(),
+      line: ref.line,
+      type: ref.type,
+      pattern: ref.usagePattern
+    }))
+    .sort((a, b) => a.line - b.line)
+
+  // Select diverse contexts (limit to prevent token overflow)
+  const maxContexts = Math.min(8, allContexts.length)
+  const selectedContexts = []
+  const usedPatterns = new Set()
+
+  // First, ensure we have examples of each usage pattern
+  Object.keys(usageGroups).forEach(pattern => {
+    const context = allContexts.find(c => c.pattern === pattern && !usedPatterns.has(pattern))
+    if (context && selectedContexts.length < maxContexts) {
+      selectedContexts.push(context)
+      usedPatterns.add(pattern)
+    }
+  })
+
+  // Fill remaining slots with other contexts
+  allContexts.forEach(context => {
+    if (selectedContexts.length >= maxContexts) return
+    if (selectedContexts.some(c => c.line === context.line)) return
+    selectedContexts.push(context)
+  })
+
+  const codeContextsSection = selectedContexts
+    .map(ref => `Line ${ref.line} (${ref.type}, ${ref.pattern}):\n\`\`\`javascript\n${ref.context}\n\`\`\``)
+    .join('\n\n')
+
+  // Build the enhanced prompt
+  return `Generate a meaningful JavaScript identifier name based on comprehensive code analysis.
+
+## VARIABLE TO RENAME
+Name: ${symbolInfo.name}
+Type: ${symbolInfo.inferredType}
+Declaration: ${symbolInfo.declarationType}
+Scope: ${symbolInfo.scopePath}
+References: ${symbolInfo.references.length} total
+
+## DECLARATION CONTEXT
+\`\`\`javascript
+${symbolInfo.declarationContext.trim()}
+\`\`\`
+
+## USAGE PATTERNS
+${usagePatternsSection}
+
+## REPRESENTATIVE CODE CONTEXTS
+${codeContextsSection}
+
+## NAMING REQUIREMENTS
+- Return ONLY the camelCase identifier name
+- Must be valid JavaScript identifier
+- Should reflect the variable's purpose and usage patterns
+- Consider the semantic domain and code context
+- Keep it concise but descriptive
+- Follow JavaScript naming conventions
+
+Generated name:`
+}
+
+/**
  * Calls OpenRouter API to generate a meaningful symbol name
  * @param {Object} symbolInfo - Symbol information including context
  * @param {string} apiKey - OpenRouter API key
@@ -1123,10 +1331,23 @@ async function generateSymbolNameViaLLM(
   model = 'openai/gpt-4o-mini',
   temperature = 0.01
 ) {
-  const prompt = `Suggest a meaningful JavaScript identifier name.
-Symbol: ${symbolInfo.name} (type: ${symbolInfo.inferredType}, scope: ${symbolInfo.scope})
-Usage: ${symbolInfo.references.slice(0, 2).map((r) => r.usagePattern).join(', ')}
-Return ONLY the camelCase name, no explanation.`
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const startTime = Date.now()
+
+  const prompt = generateEnhancedPrompt(symbolInfo)
+
+  // Log LLM request initiation
+  Logger.infoLLM({
+    requestId,
+    symbolName: symbolInfo.name,
+    symbolType: symbolInfo.inferredType,
+    symbolScope: symbolInfo.scope,
+    model,
+    temperature,
+    maxTokens: 800,
+    promptLength: prompt.length,
+    phase: 'REQUEST_INITIATED'
+  })
 
   try {
     // Validate API key format before making request
@@ -1140,27 +1361,77 @@ Return ONLY the camelCase name, no explanation.`
       )
     }
 
+    // Log detailed request at DEBUG level
+    Logger.debugLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'API_KEY_VALIDATED',
+      apiKeyPrefix: `${apiKey.substring(0, 7)}...`
+    })
+
+    Logger.traceLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'FULL_PROMPT',
+      prompt
+    })
+
+    const requestBody = {
+      model,
+      temperature,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 800
+    }
+
+    const requestHeaders = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    }
+
+    // Log request details
+    Logger.debugLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'REQUEST_SENT',
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        'Content-Type': requestHeaders['Content-Type'],
+        Authorization: 'Bearer [REDACTED]'
+      },
+      body: requestBody
+    })
+
     const response = await fetch(
       'https://openrouter.ai/api/v1/chat/completions',
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model,
-          temperature,
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 200
-        })
+        headers: requestHeaders,
+        body: JSON.stringify(requestBody)
       }
     )
+
+    const responseTime = Date.now() - startTime
+
+    // Log response received
+    Logger.debugLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'RESPONSE_RECEIVED',
+      status: response.status,
+      statusText: response.statusText,
+      responseTime,
+      headers: {
+        'content-type': response.headers.get('content-type'),
+        'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining'),
+        'x-ratelimit-limit': response.headers.get('x-ratelimit-limit')
+      }
+    })
 
     // Comprehensive HTTP status error handling
     if (!response.ok) {
@@ -1171,19 +1442,32 @@ Return ONLY the camelCase name, no explanation.`
           ' AUTHENTICATION_FAILED: Invalid API key or insufficient permissions'
       } else if (response.status === 403) {
         errorDetails +=
-          ' FORBIDDEN: API key doesn\'t have access to this model or endpoint'
+          " FORBIDDEN: API key doesn't have access to this model or endpoint"
       } else if (response.status === 429) {
         errorDetails +=
           ' RATE_LIMIT: Too many requests, API quota exceeded or rate limited'
       } else if (response.status === 500) {
-        errorDetails += ' SERVER_ERROR: OpenRouter service is experiencing issues'
+        errorDetails +=
+          ' SERVER_ERROR: OpenRouter service is experiencing issues'
       } else if (response.status === 503) {
-        errorDetails += ' SERVICE_UNAVAILABLE: OpenRouter is temporarily unavailable'
+        errorDetails +=
+          ' SERVICE_UNAVAILABLE: OpenRouter is temporarily unavailable'
       } else if (response.status >= 400 && response.status < 500) {
-        errorDetails += ' CLIENT_ERROR: Invalid request parameters or model name'
+        errorDetails +=
+          ' CLIENT_ERROR: Invalid request parameters or model name'
       } else if (response.status >= 500) {
         errorDetails += ' SERVER_ERROR: OpenRouter service error'
       }
+
+      // Log error response
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'API_ERROR',
+        status: response.status,
+        errorDetails,
+        responseTime
+      })
 
       throw new Error(`API_ERROR: ${errorDetails}`)
     }
@@ -1192,7 +1476,26 @@ Return ONLY the camelCase name, no explanation.`
     let data
     try {
       data = await response.json()
+
+      // Log successful response parsing
+      Logger.debugLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'RESPONSE_PARSED',
+        responseSize: JSON.stringify(data).length,
+        hasChoices: !!(data.choices && Array.isArray(data.choices)),
+        choicesCount: data.choices ? data.choices.length : 0
+      })
     } catch (parseError) {
+      // Log parsing error
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'PARSE_ERROR',
+        error: parseError.message,
+        responseTime
+      })
+
       throw new Error(
         `RESPONSE_PARSE_ERROR: Failed to parse JSON response - ${parseError.message}`
       )
@@ -1201,48 +1504,116 @@ Return ONLY the camelCase name, no explanation.`
     // Check for API error in response body
     if (data.error) {
       const errorMsg = data.error.message || data.error.type || 'Unknown error'
+
+      // Log API error from response body
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'API_BODY_ERROR',
+        error: errorMsg,
+        responseTime
+      })
+
       throw new Error(`API_RETURNED_ERROR: ${errorMsg}`)
     }
 
     // Validate response structure
     if (!data.choices || !Array.isArray(data.choices)) {
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'INVALID_STRUCTURE',
+        error: 'Response missing "choices" array',
+        responseTime
+      })
+
       throw new Error(
         'INVALID_RESPONSE_STRUCTURE: Response missing "choices" array'
       )
     }
 
     if (data.choices.length === 0) {
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'EMPTY_RESPONSE',
+        error: 'No choices returned from API',
+        responseTime
+      })
+
       throw new Error('EMPTY_RESPONSE: No choices returned from API')
     }
 
     const firstChoice = data.choices[0]
-    
+
+    // Log choice structure analysis
+    Logger.traceLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'CHOICE_ANALYSIS',
+      choiceStructure: {
+        hasMessage: !!firstChoice.message,
+        hasContent: !!firstChoice.message?.content,
+        hasReasoning: !!firstChoice.message?.reasoning,
+        hasDirectContent: !!firstChoice.content,
+        hasText: !!firstChoice.text,
+        messageKeys: firstChoice.message ? Object.keys(firstChoice.message) : []
+      }
+    })
+
     // Handle both message.content and direct content structures
     let generatedName = null
-    if (firstChoice.message && firstChoice.message.content && firstChoice.message.content.trim()) {
+    let responseStructure = 'unknown'
+
+    if (firstChoice.message?.content?.trim()) {
       generatedName = firstChoice.message.content
-    } else if (firstChoice.content && firstChoice.content.trim()) {
+      responseStructure = 'message.content'
+    } else if (firstChoice.content?.trim()) {
       // Fallback for APIs that return content directly
       generatedName = firstChoice.content
-    } else if (firstChoice.text && firstChoice.text.trim()) {
+      responseStructure = 'direct.content'
+    } else if (firstChoice.text?.trim()) {
       // Fallback for APIs that return text directly
       generatedName = firstChoice.text
-    } else if (firstChoice.message && firstChoice.message.reasoning) {
+      responseStructure = 'direct.text'
+    } else if (firstChoice.message?.reasoning) {
       // If content is empty but reasoning exists, try to extract the answer from reasoning
       const reasoning = firstChoice.message.reasoning
-      const match = reasoning.match(/(?:new\s+)?name[:\s]+[`]?([a-zA-Z_$][a-zA-Z0-9_$]*)[`]?/i)
-      if (match && match[1]) {
+      const match = reasoning.match(
+        /(?:new\s+)?name[:\s]+[`]?([a-zA-Z_$][a-zA-Z0-9_$]*)[`]?/i
+      )
+      if (match?.[1]) {
         generatedName = match[1]
+        responseStructure = 'reasoning.extracted'
       } else {
         // Try to find any valid identifier in the reasoning
         const idMatch = reasoning.match(/\b([a-zA-Z_$][a-zA-Z0-9_$]{3,})\b/)
         generatedName = idMatch ? idMatch[1] : null
+        responseStructure = 'reasoning.fallback'
       }
+
+      Logger.traceLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'REASONING_EXTRACTION',
+        reasoning: `${reasoning.substring(0, 200)}...`,
+        extractedName: generatedName,
+        extractionMethod: responseStructure
+      })
     }
 
     if (!generatedName) {
       // Log actual structure for debugging
       const structureInfo = JSON.stringify(firstChoice, null, 2)
+
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'CONTENT_EXTRACTION_FAILED',
+        structure: structureInfo.substring(0, 500),
+        responseTime
+      })
+
       throw new Error(
         `INVALID_CHOICE_STRUCTURE: Unable to find content in choice. Structure: ${structureInfo.substring(0, 500)}`
       )
@@ -1250,21 +1621,59 @@ Return ONLY the camelCase name, no explanation.`
 
     generatedName = generatedName.trim()
 
+    // Log successful extraction
+    Logger.debugLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'NAME_EXTRACTED',
+      generatedName,
+      responseStructure,
+      originalLength: firstChoice.message?.content?.length || 0,
+      responseTime
+    })
+
     // Validate generated name is not empty
     if (!generatedName) {
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'EMPTY_GENERATION',
+        error: 'API returned empty content',
+        responseTime
+      })
+
       throw new Error('EMPTY_GENERATION: API returned empty content')
     }
 
     // Validate generated name format
     if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(generatedName)) {
+      Logger.infoLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'INVALID_IDENTIFIER',
+        error: `Generated name "${generatedName}" is not a valid JavaScript identifier`,
+        responseTime
+      })
+
       throw new Error(
-        `INVALID_IDENTIFIER: Generated name "${generatedName}" is not a valid JavaScript identifier. ` +
-          'Expected camelCase starting with letter, $, or _, containing only alphanumeric, $, or _ characters'
+        `INVALID_IDENTIFIER: Generated name "${generatedName}" is not a valid JavaScript identifier. Expected camelCase starting with letter, $, or _, containing only alphanumeric, $, or _ characters`
       )
     }
 
+    // Log final success
+    Logger.infoLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'SUCCESS',
+      generatedName,
+      responseStructure,
+      responseTime
+    })
+
     return generatedName
   } catch (error) {
+    const responseTime = Date.now() - startTime
+
     // Format comprehensive error message with multiple details
     let errorSummary = error.message || 'Unknown error occurred'
 
@@ -1277,10 +1686,20 @@ Return ONLY the camelCase name, no explanation.`
       }
     }
 
-    console.error(`\n    [LLM ERROR] Symbol: '${symbolInfo.name}'`)
-    console.error(`    └─ Error Type: ${errorSummary.split(':')[0]}`)
-    console.error(`    └─ Details: ${errorSummary}`)
-    console.error(
+    // Log comprehensive error trace
+    Logger.infoLLM({
+      requestId,
+      symbolName: symbolInfo.name,
+      phase: 'CATCH_ERROR',
+      errorType: errorSummary.split(':')[0],
+      errorDetails: errorSummary,
+      responseTime
+    })
+
+    Logger.error(`\n    [LLM ERROR] Symbol: '${symbolInfo.name}'`)
+    Logger.error(`    └─ Error Type: ${errorSummary.split(':')[0]}`)
+    Logger.error(`    └─ Details: ${errorSummary}`)
+    Logger.error(
       '    └─ Troubleshooting: Check API key validity, rate limits, model availability, and network connectivity'
     )
 
@@ -1304,7 +1723,7 @@ function generateMockSymbolName(symbolInfo) {
   }
 
   const type = symbolInfo.inferredType || 'unknown'
-  const words = descriptors[type] || descriptors['unknown']
+  const words = descriptors[type] || descriptors.unknown
 
   const hash = symbolInfo.name
     .split('')
@@ -1351,7 +1770,7 @@ function renameSymbolWithJscodeshift(sourceCode, oldName, newName) {
 
     return ast.toSource()
   } catch (error) {
-    console.warn(`jscodeshift transformation failed: ${error.message}`)
+    Logger.warn(`jscodeshift transformation failed: ${error.message}`)
     return null
   }
 }
@@ -1528,7 +1947,7 @@ async function executeRenamingWorkflow(filePath, options = {}) {
   const maxRenames = Math.max(1, options.maxRenames || 3)
 
   if (!dryRun && !apiKey) {
-    console.warn('No OpenRouter API key provided. Use --dry-run for testing.')
+    Logger.warn('No OpenRouter API key provided. Use --dry-run for testing.')
     return null
   }
 
@@ -1536,13 +1955,13 @@ async function executeRenamingWorkflow(filePath, options = {}) {
     const originalSourceCode = readFileSync(filePath, 'utf-8')
     const fileName = basename(filePath)
 
-    console.log(`\n[RENAMING] Initializing symbol renaming for: ${fileName}`)
+    Logger.info(`\n[RENAMING] Initializing symbol renaming for: ${fileName}`)
     const { renamedDir, workingFile } = setupRenamedDirectory(
       filePath,
       originalSourceCode
     )
-    console.log(`  └─ Working directory: ${renamedDir}`)
-    console.log(`  └─ Max renames per execution: ${maxRenames}`)
+    Logger.info(`  └─ Working directory: ${renamedDir}`)
+    Logger.info(`  └─ Max renames per execution: ${maxRenames}`)
 
     // Load previous state if it exists
     const previousState = loadRenameState(renamedDir)
@@ -1552,13 +1971,13 @@ async function executeRenamingWorkflow(filePath, options = {}) {
     let sessionStartIndex = 0
 
     if (previousState) {
-      console.log(
+      Logger.info(
         `\n[RESUMING] Previous session found (${previousState.totalRenames} renames completed)`
       )
 
       // Check for external modifications
       if (isSourceModified(currentCode, previousState.sourceFileHash)) {
-        console.warn(
+        Logger.warn(
           '  ⚠ External modifications detected in renamed file. Attempting to continue...'
         )
       }
@@ -1568,14 +1987,14 @@ async function executeRenamingWorkflow(filePath, options = {}) {
       totalRenamed = previousState.totalRenames
 
       if (totalRenamed >= maxRenames) {
-        console.log(
+        Logger.info(
           `  └─ Session already has ${totalRenamed} renames (limit: ${maxRenames})`
         )
-        console.log('  └─ Run again with higher --max-renames to continue')
+        Logger.info('  └─ Run again with higher --max-renames to continue')
         return workingFile
       }
     } else {
-      console.log('  └─ Starting new renaming session')
+      Logger.info('  └─ Starting new renaming session')
       // Clear state file for fresh start
       const sourceHash = computeSourceHash(originalSourceCode)
       currentCode = originalSourceCode
@@ -1596,13 +2015,13 @@ async function executeRenamingWorkflow(filePath, options = {}) {
 
       // Stop if we've reached the max renames limit
       if (totalRenamed >= maxRenames) {
-        console.log(
+        Logger.info(
           `\n[BATCH COMPLETE] Renamed ${totalRenamed}/${maxRenames} symbols in this execution`
         )
-        console.log(
+        Logger.info(
           `  └─ Progress: ${totalRenamed}/${sessionStartIndex + maxRenames} total renames completed`
         )
-        console.log(
+        Logger.info(
           `  └─ Run again to continue renaming. Command: bun jsVariableAnalyzer.js --rename --max-renames ${maxRenames} ${filePath}`
         )
         break
@@ -1613,12 +2032,12 @@ async function executeRenamingWorkflow(filePath, options = {}) {
       const candidates = getRenameCandidates(variables, lengthThreshold)
 
       if (candidates.length === 0) {
-        console.log('  └─ Convergence reached: No more candidates for renaming')
+        Logger.info('  └─ Convergence reached: No more candidates for renaming')
         break
       }
 
       const targetSymbol = candidates[0]
-      console.log(
+      Logger.info(
         `\n  [Iteration ${iterationCount}] Renaming: '${targetSymbol.name}' (${targetSymbol.references.length} references)`
       )
 
@@ -1626,15 +2045,17 @@ async function executeRenamingWorkflow(filePath, options = {}) {
       let newName
       if (dryRun) {
         newName = generateMockSymbolName(targetSymbol)
-        console.log(`    └─ Generated name (mock): ${newName}`)
+        Logger.info(`    └─ Generated name (mock): ${newName}`)
       } else {
         newName = await generateSymbolNameViaLLM(targetSymbol, apiKey)
         if (!newName) {
-          console.error(`    └─ Name generation failed. Review errors above for details.`)
-          console.error(`    └─ Stopping renaming session due to LLM error`)
+          Logger.error(
+            '    └─ Name generation failed. Review errors above for details.'
+          )
+          Logger.error('    └─ Stopping renaming session due to LLM error')
           break
         }
-        console.log(`    └─ Generated name (LLM): ${newName}`)
+        Logger.info(`    └─ Generated name (LLM): ${newName}`)
       }
 
       // Perform renaming
@@ -1644,17 +2065,17 @@ async function executeRenamingWorkflow(filePath, options = {}) {
         newName
       )
       if (!transformedCode) {
-        console.warn(`    └─ Transformation failed, skipping`)
+        Logger.warn('    └─ Transformation failed, skipping')
         break
       }
 
       // Validate syntax
       if (!validateSyntax(transformedCode)) {
-        console.warn(`    └─ Syntax validation failed, rolling back`)
+        Logger.warn('    └─ Syntax validation failed, rolling back')
         break
       }
 
-      console.log(`    └─ Transformation successful`)
+      Logger.info('    └─ Transformation successful')
 
       // Save version file
       sequenceNumber++
@@ -1690,15 +2111,15 @@ async function executeRenamingWorkflow(filePath, options = {}) {
     })
 
     if (totalRenamed > 0) {
-      console.log(
+      Logger.info(
         `\n[RENAMING COMPLETE] Renamed ${totalRenamed} symbols in this execution`
       )
-      console.log(`  └─ Final file: ${workingFile}`)
+      Logger.info(`  └─ Final file: ${workingFile}`)
     }
 
     return workingFile
   } catch (error) {
-    console.error(`Error during renaming workflow: ${error.message}`)
+    Logger.error(`Error during renaming workflow: ${error.message}`)
     return null
   }
 }
@@ -1710,14 +2131,23 @@ async function executeRenamingWorkflow(filePath, options = {}) {
  */
 async function main(filePaths, options = {}) {
   if (!filePaths || filePaths.length === 0) {
-    console.error(
-      'Usage: bun jsVariableAnalyzer.js [--rename] [--dry-run] [--limit <num>] [--max-renames <num>] <file1.js> [file2.js] ...'
+    Logger.error(
+      'Usage: bun jsVariableAnalyzer.js [--rename] [--dry-run] [--limit <num>] [--max-renames <num>] [--verbosity <0-5>] [-v] [-vv] [-vvv] [--silent] [--quiet] <file1.js> [file2.js] ...'
     )
-    console.error('  --rename           Enable symbol renaming workflow')
-    console.error('  --dry-run          Use mock LLM (no API calls)')
-    console.error('  --limit <num>      Symbol length threshold (default: 4)')
-    console.error(
+    Logger.error('  --rename           Enable symbol renaming workflow')
+    Logger.error('  --dry-run          Use mock LLM (no API calls)')
+    Logger.error('  --limit <num>      Symbol length threshold (default: 4)')
+    Logger.error(
       '  --max-renames <num> Max renames per execution, resumes from previous state (default: 3)'
+    )
+    Logger.error(
+      '  --verbosity <0-5>  Set output verbosity level (0=SILENT, 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG, 5=TRACE)'
+    )
+    Logger.error(
+      '  -v, -vv, -vvv      Set verbosity to INFO, DEBUG, or TRACE respectively'
+    )
+    Logger.error(
+      '  --silent, --quiet  Set verbosity to SILENT (no output except errors)'
     )
     process.exit(1)
   }
@@ -1725,7 +2155,7 @@ async function main(filePaths, options = {}) {
   if (options.rename) {
     const stepsPerFile = 1
     const totalSteps = filePaths.length * stepsPerFile
-    const progress = new ProgressTracker(totalSteps, true)
+    const progress = new ProgressTracker(totalSteps, Logger.enableProgress)
 
     for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
       const filePath = filePaths[fileIndex]
@@ -1738,7 +2168,7 @@ async function main(filePaths, options = {}) {
           maxRenames: options.maxRenames || 3
         })
       } catch (error) {
-        console.error(`Error processing ${filePath}:`, error.message)
+        Logger.error(`Error processing ${filePath}:`, error.message)
       }
     }
 
@@ -1746,7 +2176,7 @@ async function main(filePaths, options = {}) {
   } else {
     const stepsPerFile = 3
     const totalSteps = filePaths.length * stepsPerFile
-    const progress = new ProgressTracker(totalSteps, true)
+    const progress = new ProgressTracker(totalSteps, Logger.enableProgress)
 
     for (let fileIndex = 0; fileIndex < filePaths.length; fileIndex++) {
       const filePath = filePaths[fileIndex]
@@ -1762,7 +2192,7 @@ async function main(filePaths, options = {}) {
           filename,
           exportInfo.exportedNames
         )
-        console.log(
+        Logger.info(
           `  └─ Found ${variables.length} variables with ${variables.reduce((sum, v) => sum + v.references.length, 0)} total references`
         )
 
@@ -1774,9 +2204,9 @@ async function main(filePaths, options = {}) {
         )
         const analysisOutputPath = `${filePath}-analysis.md`
         writeFileSync(analysisOutputPath, analysisReport)
-        console.log(`  └─ Report saved: ${analysisOutputPath}`)
+        Logger.info(`  └─ Report saved: ${analysisOutputPath}`)
       } catch (error) {
-        console.error(`Error processing ${filePath}:`, error.message)
+        Logger.error(`Error processing ${filePath}:`, error.message)
       }
     }
 
@@ -1788,6 +2218,9 @@ async function main(filePaths, options = {}) {
 const args = process.argv.slice(2)
 const filePaths = []
 const options = {}
+
+// Set default verbosity level
+Logger.setLevel(Logger.levels.INFO)
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i]
@@ -1802,6 +2235,23 @@ for (let i = 0; i < args.length; i++) {
   } else if (arg === '--max-renames') {
     options.maxRenames = Math.max(1, Number.parseInt(args[i + 1], 10))
     i++
+  } else if (arg === '--verbosity') {
+    const level = Number.parseInt(args[i + 1], 10)
+    if (level >= 0 && level <= 5) {
+      Logger.setLevel(level)
+    } else {
+      Logger.error('Invalid verbosity level. Must be 0-5.')
+      process.exit(1)
+    }
+    i++
+  } else if (arg === '--silent' || arg === '--quiet') {
+    Logger.setLevel(Logger.levels.SILENT)
+  } else if (arg === '-v') {
+    Logger.setLevel(Logger.levels.INFO)
+  } else if (arg === '-vv') {
+    Logger.setLevel(Logger.levels.DEBUG)
+  } else if (arg === '-vvv') {
+    Logger.setLevel(Logger.levels.TRACE)
   } else if (!arg.startsWith('--')) {
     filePaths.push(arg)
   }
@@ -1813,6 +2263,7 @@ if (import.meta.main) {
 }
 
 export {
+  Logger,
   ProgressTracker,
   analyzeVariableReferences,
   generateMarkdownReport,
@@ -1825,6 +2276,7 @@ export {
   findScopeForNode,
   getScopePath,
   determineScopeLevel,
+  generateEnhancedPrompt,
   generateSymbolNameViaLLM,
   generateMockSymbolName,
   renameSymbolWithJscodeshift,
