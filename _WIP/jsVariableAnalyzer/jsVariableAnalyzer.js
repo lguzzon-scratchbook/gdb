@@ -6,75 +6,75 @@ import { basename, dirname, join } from 'node:path'
 import jscodeshift from 'jscodeshift'
 
 /**
- * Logger class for controlling output verbosity levels
+ * Logger object for controlling output verbosity levels
  */
-class Logger {
-  static levels = {
+const Logger = {
+  levels: {
     SILENT: 0, // No output except critical errors
     ERROR: 1, // Only error messages
     WARN: 2, // Errors + warnings
     INFO: 3, // Errors + warnings + informational (default)
     DEBUG: 4, // All above + detailed debugging information
     TRACE: 5 // Most detailed level
-  }
+  },
 
-  static currentLevel = Logger.levels.INFO
-  static enableProgress = true
+  currentLevel: 3,
+  enableProgress: true,
 
-  static setLevel(level) {
+  setLevel(level) {
     Logger.currentLevel = level
     Logger.enableProgress = level >= Logger.levels.INFO
-  }
+  },
 
-  static shouldLog(level) {
+  shouldLog(level) {
     return Logger.currentLevel >= level
-  }
+  },
 
-  static formatMessage(level, message) {
+  formatMessage(level, message) {
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0]
     const levelName = Object.keys(Logger.levels).find(
       (key) => Logger.levels[key] === level
     )
     return `[${timestamp}] [${levelName}] ${message}`
-  }
+  },
 
-  static error(message) {
+  error(message) {
     if (Logger.shouldLog(Logger.levels.ERROR)) {
       console.error(Logger.formatMessage(Logger.levels.ERROR, message))
     }
-  }
+  },
 
-  static warn(message) {
+  warn(message) {
     if (Logger.shouldLog(Logger.levels.WARN)) {
       console.warn(Logger.formatMessage(Logger.levels.WARN, message))
     }
-  }
+  },
 
-  static info(message) {
+  info(message) {
     if (Logger.shouldLog(Logger.levels.INFO)) {
       console.log(Logger.formatMessage(Logger.levels.INFO, message))
     }
-  }
+  },
 
-  static debug(message) {
+  debug(message) {
     if (Logger.shouldLog(Logger.levels.DEBUG)) {
       console.log(Logger.formatMessage(Logger.levels.DEBUG, message))
     }
-  }
+  },
 
-  static trace(message) {
+  trace(message) {
     if (Logger.shouldLog(Logger.levels.TRACE)) {
       console.log(Logger.formatMessage(Logger.levels.TRACE, message))
     }
-  }
+  },
 
-  static progress(message) {
+  progress(message) {
     if (Logger.enableProgress) {
       console.log(message)
     }
-  }
+  },
 
-  static traceLLM(traceData) {
+  traceLLM(traceData) {
     if (Logger.shouldLog(Logger.levels.TRACE)) {
       const trace = {
         timestamp: new Date().toISOString(),
@@ -87,9 +87,9 @@ class Logger {
         )
       )
     }
-  }
+  },
 
-  static debugLLM(traceData) {
+  debugLLM(traceData) {
     if (Logger.shouldLog(Logger.levels.DEBUG)) {
       const trace = {
         timestamp: new Date().toISOString(),
@@ -102,9 +102,9 @@ class Logger {
         )
       )
     }
-  }
+  },
 
-  static infoLLM(traceData) {
+  infoLLM(traceData) {
     if (Logger.shouldLog(Logger.levels.INFO)) {
       const trace = {
         timestamp: new Date().toISOString(),
@@ -559,9 +559,9 @@ function buildScopeHierarchy(ast) {
       // Traverse function body
       if (node.body) {
         if (node.body.type === 'BlockStatement') {
-          node.body.body?.forEach((child) => traverseNode(child, node))
+          node.body.body?.forEach((child) => void traverseNode(child, node))
         } else {
-          traverseNode(node.body, node)
+          void traverseNode(node.body, node)
         }
       }
 
@@ -584,7 +584,7 @@ function buildScopeHierarchy(ast) {
       scopeStack.push(classScope)
 
       // Traverse class body
-      node.body?.body?.forEach((child) => traverseNode(child, node))
+      node.body?.body?.forEach((child) => void traverseNode(child, node))
 
       scopeStack.pop()
     } else if (
@@ -609,16 +609,16 @@ function buildScopeHierarchy(ast) {
       currentScope.children.push(blockScope)
       scopeStack.push(blockScope)
 
-      node.body?.forEach((child) => traverseNode(child, node))
+      node.body?.forEach((child) => void traverseNode(child, node))
 
       scopeStack.pop()
     } else if (node.type === 'Program') {
-      node.body?.forEach((child) => traverseNode(child, node))
+      node.body?.forEach((child) => void traverseNode(child, node))
     } else {
       // Traverse other node types
       if (node.body) {
         if (Array.isArray(node.body)) {
-          node.body.forEach((child) => traverseNode(child, node))
+          node.body.forEach((child) => void traverseNode(child, node))
         } else {
           traverseNode(node.body, node)
         }
@@ -1227,9 +1227,10 @@ function generateMarkdownReport(variables, filename, exportInfo = null) {
 /**
  * Generates an enhanced prompt with comprehensive code contexts
  * @param {Object} symbolInfo - Symbol information including context
+ * @param {boolean} useJsonResponse - Whether to request JSON responses
  * @returns {string} Enhanced prompt for LLM
  */
-function generateEnhancedPrompt(symbolInfo) {
+function generateEnhancedPrompt(symbolInfo, useJsonResponse = false) {
   // Group references by usage pattern
   const usageGroups = symbolInfo.references.reduce((groups, ref) => {
     const pattern = ref.usagePattern || 'unknown'
@@ -1244,15 +1245,18 @@ function generateEnhancedPrompt(symbolInfo) {
   const usagePatternsSection = Object.entries(usageGroups)
     .map(([pattern, refs]) => {
       const count = refs.length
-      const examples = refs.slice(0, 2).map(r => r.context.trim()).join('\n')
+      const examples = refs
+        .slice(0, 2)
+        .map((r) => r.context.trim())
+        .join('\n')
       return `**${pattern}** (${count} occurrences)\n\`\`\`javascript\n${examples}\n\`\`\``
     })
     .join('\n\n')
 
   // Build code contexts section with representative examples
   const allContexts = symbolInfo.references
-    .filter(ref => ref.context && ref.context.trim())
-    .map(ref => ({
+    .filter((ref) => ref.context?.trim())
+    .map((ref) => ({
       context: ref.context.trim(),
       line: ref.line,
       type: ref.type,
@@ -1266,8 +1270,10 @@ function generateEnhancedPrompt(symbolInfo) {
   const usedPatterns = new Set()
 
   // First, ensure we have examples of each usage pattern
-  Object.keys(usageGroups).forEach(pattern => {
-    const context = allContexts.find(c => c.pattern === pattern && !usedPatterns.has(pattern))
+  Object.keys(usageGroups).forEach((pattern) => {
+    const context = allContexts.find(
+      (c) => c.pattern === pattern && !usedPatterns.has(pattern)
+    )
     if (context && selectedContexts.length < maxContexts) {
       selectedContexts.push(context)
       usedPatterns.add(pattern)
@@ -1275,18 +1281,21 @@ function generateEnhancedPrompt(symbolInfo) {
   })
 
   // Fill remaining slots with other contexts
-  allContexts.forEach(context => {
+  allContexts.forEach((context) => {
     if (selectedContexts.length >= maxContexts) return
-    if (selectedContexts.some(c => c.line === context.line)) return
+    if (selectedContexts.some((c) => c.line === context.line)) return
     selectedContexts.push(context)
   })
 
   const codeContextsSection = selectedContexts
-    .map(ref => `Line ${ref.line} (${ref.type}, ${ref.pattern}):\n\`\`\`javascript\n${ref.context}\n\`\`\``)
+    .map(
+      (ref) =>
+        `Line ${ref.line} (${ref.type}, ${ref.pattern}):\n\`\`\`javascript\n${ref.context}\n\`\`\``
+    )
     .join('\n\n')
 
   // Build the enhanced prompt
-  return `Generate a meaningful JavaScript identifier name based on comprehensive code analysis.
+  const basePrompt = `Generate a meaningful JavaScript identifier name based on comprehensive code analysis.
 
 ## VARIABLE TO RENAME
 Name: ${symbolInfo.name}
@@ -1304,7 +1313,33 @@ ${symbolInfo.declarationContext.trim()}
 ${usagePatternsSection}
 
 ## REPRESENTATIVE CODE CONTEXTS
-${codeContextsSection}
+${codeContextsSection}`
+
+  if (useJsonResponse) {
+    return `${basePrompt}
+
+## RESPONSE FORMAT
+Return a JSON object with the following schema:
+\`\`\`json
+{
+  "name": "the_generated_camelCase_identifier",
+  "confidence": 0.0,
+  "reasoning": "brief explanation of the naming choice"
+}
+\`\`\`
+
+## NAMING REQUIREMENTS
+- The "name" field must contain ONLY a valid camelCase JavaScript identifier
+- Must be valid JavaScript identifier (starts with letter/$, contains only alphanumeric/$_)
+- Should reflect the variable's purpose and usage patterns
+- Consider the semantic domain and code context
+- Keep it concise but descriptive
+- Follow JavaScript naming conventions
+
+Generated JSON:`
+  }
+
+  return `${basePrompt}
 
 ## NAMING REQUIREMENTS
 - Return ONLY the camelCase identifier name
@@ -1323,18 +1358,20 @@ Generated name:`
  * @param {string} apiKey - OpenRouter API key
  * @param {string} model - Model name (default: openai/gpt-5-nano)
  * @param {number} temperature - Temperature for LLM (default: 0.01)
+ * @param {boolean} useJsonResponse - Whether to request JSON responses (default: false for backward compatibility)
  * @returns {Promise<string>} Generated symbol name
  */
 async function generateSymbolNameViaLLM(
   symbolInfo,
   apiKey,
-  model = 'openai/gpt-4o-mini',
-  temperature = 0.01
+  model = 'openai/gpt-4.1-nano',
+  temperature = 0.01,
+  useJsonResponse = false
 ) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   const startTime = Date.now()
 
-  const prompt = generateEnhancedPrompt(symbolInfo)
+  const prompt = generateEnhancedPrompt(symbolInfo, useJsonResponse)
 
   // Log LLM request initiation
   Logger.infoLLM({
@@ -1564,18 +1601,59 @@ async function generateSymbolNameViaLLM(
     // Handle both message.content and direct content structures
     let generatedName = null
     let responseStructure = 'unknown'
+    let jsonResponse = null
+
+    // First, try to parse as JSON (new format)
+    const tryParseJson = (content) => {
+      if (!content?.trim()) return null
+      try {
+        const parsed = JSON.parse(content.trim())
+        if (parsed && typeof parsed === 'object' && parsed.name) {
+          return parsed
+        }
+      } catch (jsonError) {
+        // Log malformed JSON for debugging
+        Logger.debugLLM({
+          requestId,
+          symbolName: symbolInfo.name,
+          phase: 'JSON_PARSING_FAILED',
+          error: jsonError.message,
+          contentPreview: content.substring(0, 100)
+        })
+        // Not JSON, continue with fallback
+      }
+      return null
+    }
 
     if (firstChoice.message?.content?.trim()) {
-      generatedName = firstChoice.message.content
-      responseStructure = 'message.content'
+      jsonResponse = tryParseJson(firstChoice.message.content)
+      if (jsonResponse) {
+        generatedName = jsonResponse.name
+        responseStructure = 'message.content.json'
+      } else {
+        generatedName = firstChoice.message.content
+        responseStructure = 'message.content.text'
+      }
     } else if (firstChoice.content?.trim()) {
       // Fallback for APIs that return content directly
-      generatedName = firstChoice.content
-      responseStructure = 'direct.content'
+      jsonResponse = tryParseJson(firstChoice.content)
+      if (jsonResponse) {
+        generatedName = jsonResponse.name
+        responseStructure = 'direct.content.json'
+      } else {
+        generatedName = firstChoice.content
+        responseStructure = 'direct.content.text'
+      }
     } else if (firstChoice.text?.trim()) {
       // Fallback for APIs that return text directly
-      generatedName = firstChoice.text
-      responseStructure = 'direct.text'
+      jsonResponse = tryParseJson(firstChoice.text)
+      if (jsonResponse) {
+        generatedName = jsonResponse.name
+        responseStructure = 'direct.text.json'
+      } else {
+        generatedName = firstChoice.text
+        responseStructure = 'direct.text.text'
+      }
     } else if (firstChoice.message?.reasoning) {
       // If content is empty but reasoning exists, try to extract the answer from reasoning
       const reasoning = firstChoice.message.reasoning
@@ -1621,6 +1699,45 @@ async function generateSymbolNameViaLLM(
 
     generatedName = generatedName.trim()
 
+    // Validate JSON response if present
+    if (jsonResponse) {
+      // Basic schema validation
+      if (
+        typeof jsonResponse.name !== 'string' ||
+        jsonResponse.name.trim().length === 0
+      ) {
+        Logger.warn('Invalid JSON response: name field is missing or empty')
+        // Continue with extracted name but log warning
+      }
+
+      if (
+        typeof jsonResponse.confidence !== 'number' ||
+        jsonResponse.confidence < 0 ||
+        jsonResponse.confidence > 1
+      ) {
+        Logger.warn(
+          'Invalid JSON response: confidence should be a number between 0 and 1'
+        )
+      }
+
+      if (typeof jsonResponse.reasoning !== 'string') {
+        Logger.warn('Invalid JSON response: reasoning field should be a string')
+      }
+
+      // Log JSON metadata
+      Logger.debugLLM({
+        requestId,
+        symbolName: symbolInfo.name,
+        phase: 'JSON_RESPONSE_VALIDATED',
+        hasValidName:
+          typeof jsonResponse.name === 'string' &&
+          jsonResponse.name.trim().length > 0,
+        confidence: jsonResponse.confidence,
+        reasoningLength: jsonResponse.reasoning?.length || 0,
+        responseTime
+      })
+    }
+
     // Log successful extraction
     Logger.debugLLM({
       requestId,
@@ -1645,6 +1762,7 @@ async function generateSymbolNameViaLLM(
       throw new Error('EMPTY_GENERATION: API returned empty content')
     }
 
+    generatedName = generatedName.split(/['"`]/)[1] || generatedName
     // Validate generated name format
     if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(generatedName)) {
       Logger.infoLLM({
@@ -1667,7 +1785,14 @@ async function generateSymbolNameViaLLM(
       phase: 'SUCCESS',
       generatedName,
       responseStructure,
-      responseTime
+      responseTime,
+      jsonMetadata: jsonResponse
+        ? {
+            confidence: jsonResponse.confidence,
+            reasoningLength: jsonResponse.reasoning?.length || 0,
+            hasValidSchema: true
+          }
+        : null
     })
 
     return generatedName
