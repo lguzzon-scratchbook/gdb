@@ -430,7 +430,7 @@ function buildScopeHierarchy(ast) {
         type: node.type,
         name: funcName,
         line: node.loc?.start?.line || 1,
-        endLine: node.loc?.end?.line || Infinity,
+        endLine: node.loc?.end?.line || Number.POSITIVE_INFINITY,
         parent: currentScope,
         children: [],
         nodeMap: new Map()
@@ -454,7 +454,7 @@ function buildScopeHierarchy(ast) {
         type: node.type,
         name: className,
         line: node.loc?.start?.line || 1,
-        endLine: node.loc?.end?.line || Infinity,
+        endLine: node.loc?.end?.line || Number.POSITIVE_INFINITY,
         parent: currentScope,
         children: [],
         nodeMap: new Map()
@@ -472,7 +472,7 @@ function buildScopeHierarchy(ast) {
         type: 'BlockStatement',
         name: '<block>',
         line: node.loc?.start?.line || 1,
-        endLine: node.loc?.end?.line || Infinity,
+        endLine: node.loc?.end?.line || Number.POSITIVE_INFINITY,
         parent: currentScope,
         children: [],
         nodeMap: new Map()
