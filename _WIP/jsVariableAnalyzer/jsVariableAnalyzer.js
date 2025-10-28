@@ -1120,35 +1120,26 @@ function generateMarkdownReport(variables, filename, exportInfo = null) {
 async function generateSymbolNameViaLLM(
   symbolInfo,
   apiKey,
-  model = 'openai/gpt-5-nano',
+  model = 'openai/gpt-4o-mini',
   temperature = 0.01
 ) {
-  const prompt = `Analyze this JavaScript symbol and suggest a meaningful, descriptive name:
-
-Symbol: ${symbolInfo.name}
-Current Type: ${symbolInfo.inferredType}
-Scope: ${symbolInfo.scope}
-Declaration Context:
-\`\`\`javascript
-${symbolInfo.declarationContext}
-\`\`\`
-
-Usage contexts (showing how this symbol is used):
-${symbolInfo.references
-  .slice(0, 3)
-  .map((ref) => `- ${ref.usagePattern} at line ${ref.line}`)
-  .join('\n')}
-
-Requirements:
-- Name must be a valid JavaScript identifier (alphanumeric, $, _, no leading digits)
-- Name should be camelCase
-- Name should be descriptive and meaningful based on usage
-- Name should be at least 4 characters long
-- Return ONLY the new name, nothing else
-
-New name:`
+  const prompt = `Suggest a meaningful JavaScript identifier name.
+Symbol: ${symbolInfo.name} (type: ${symbolInfo.inferredType}, scope: ${symbolInfo.scope})
+Usage: ${symbolInfo.references.slice(0, 2).map((r) => r.usagePattern).join(', ')}
+Return ONLY the camelCase name, no explanation.`
 
   try {
+    // Validate API key format before making request
+    if (!apiKey || apiKey.trim().length === 0) {
+      throw new Error('INVALID_API_KEY: No OpenRouter API key provided')
+    }
+
+    if (!apiKey.startsWith('sk-') && !apiKey.startsWith('Bearer ')) {
+      throw new Error(
+        'INVALID_API_KEY: API key does not appear to be valid (should start with "sk-")'
+      )
+    }
+
     const response = await fetch(
       'https://openrouter.ai/api/v1/chat/completions',
       {
@@ -1166,25 +1157,133 @@ New name:`
               content: prompt
             }
           ],
-          max_tokens: 50
+          max_tokens: 200
         })
       }
     )
 
+    // Comprehensive HTTP status error handling
     if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.status}`)
+      let errorDetails = `HTTP ${response.status}`
+
+      if (response.status === 401) {
+        errorDetails +=
+          ' AUTHENTICATION_FAILED: Invalid API key or insufficient permissions'
+      } else if (response.status === 403) {
+        errorDetails +=
+          ' FORBIDDEN: API key doesn\'t have access to this model or endpoint'
+      } else if (response.status === 429) {
+        errorDetails +=
+          ' RATE_LIMIT: Too many requests, API quota exceeded or rate limited'
+      } else if (response.status === 500) {
+        errorDetails += ' SERVER_ERROR: OpenRouter service is experiencing issues'
+      } else if (response.status === 503) {
+        errorDetails += ' SERVICE_UNAVAILABLE: OpenRouter is temporarily unavailable'
+      } else if (response.status >= 400 && response.status < 500) {
+        errorDetails += ' CLIENT_ERROR: Invalid request parameters or model name'
+      } else if (response.status >= 500) {
+        errorDetails += ' SERVER_ERROR: OpenRouter service error'
+      }
+
+      throw new Error(`API_ERROR: ${errorDetails}`)
     }
 
-    const data = await response.json()
-    const generatedName = data.choices?.[0]?.message?.content?.trim()
+    // Parse response with detailed error context
+    let data
+    try {
+      data = await response.json()
+    } catch (parseError) {
+      throw new Error(
+        `RESPONSE_PARSE_ERROR: Failed to parse JSON response - ${parseError.message}`
+      )
+    }
 
-    if (!generatedName || !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(generatedName)) {
-      return null
+    // Check for API error in response body
+    if (data.error) {
+      const errorMsg = data.error.message || data.error.type || 'Unknown error'
+      throw new Error(`API_RETURNED_ERROR: ${errorMsg}`)
+    }
+
+    // Validate response structure
+    if (!data.choices || !Array.isArray(data.choices)) {
+      throw new Error(
+        'INVALID_RESPONSE_STRUCTURE: Response missing "choices" array'
+      )
+    }
+
+    if (data.choices.length === 0) {
+      throw new Error('EMPTY_RESPONSE: No choices returned from API')
+    }
+
+    const firstChoice = data.choices[0]
+    
+    // Handle both message.content and direct content structures
+    let generatedName = null
+    if (firstChoice.message && firstChoice.message.content && firstChoice.message.content.trim()) {
+      generatedName = firstChoice.message.content
+    } else if (firstChoice.content && firstChoice.content.trim()) {
+      // Fallback for APIs that return content directly
+      generatedName = firstChoice.content
+    } else if (firstChoice.text && firstChoice.text.trim()) {
+      // Fallback for APIs that return text directly
+      generatedName = firstChoice.text
+    } else if (firstChoice.message && firstChoice.message.reasoning) {
+      // If content is empty but reasoning exists, try to extract the answer from reasoning
+      const reasoning = firstChoice.message.reasoning
+      const match = reasoning.match(/(?:new\s+)?name[:\s]+[`]?([a-zA-Z_$][a-zA-Z0-9_$]*)[`]?/i)
+      if (match && match[1]) {
+        generatedName = match[1]
+      } else {
+        // Try to find any valid identifier in the reasoning
+        const idMatch = reasoning.match(/\b([a-zA-Z_$][a-zA-Z0-9_$]{3,})\b/)
+        generatedName = idMatch ? idMatch[1] : null
+      }
+    }
+
+    if (!generatedName) {
+      // Log actual structure for debugging
+      const structureInfo = JSON.stringify(firstChoice, null, 2)
+      throw new Error(
+        `INVALID_CHOICE_STRUCTURE: Unable to find content in choice. Structure: ${structureInfo.substring(0, 500)}`
+      )
+    }
+
+    generatedName = generatedName.trim()
+
+    // Validate generated name is not empty
+    if (!generatedName) {
+      throw new Error('EMPTY_GENERATION: API returned empty content')
+    }
+
+    // Validate generated name format
+    if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(generatedName)) {
+      throw new Error(
+        `INVALID_IDENTIFIER: Generated name "${generatedName}" is not a valid JavaScript identifier. ` +
+          'Expected camelCase starting with letter, $, or _, containing only alphanumeric, $, or _ characters'
+      )
     }
 
     return generatedName
   } catch (error) {
-    console.warn('LLM generation failed:', error.message)
+    // Format comprehensive error message with multiple details
+    let errorSummary = error.message || 'Unknown error occurred'
+
+    // Add additional context for network errors
+    if (error instanceof TypeError) {
+      if (error.message.includes('fetch')) {
+        errorSummary = `NETWORK_ERROR: Failed to connect to OpenRouter API - ${error.message}`
+      } else {
+        errorSummary = `INTERNAL_ERROR: ${error.message}`
+      }
+    }
+
+    console.error(`\n    [LLM ERROR] Symbol: '${symbolInfo.name}'`)
+    console.error(`    └─ Error Type: ${errorSummary.split(':')[0]}`)
+    console.error(`    └─ Details: ${errorSummary}`)
+    console.error(
+      '    └─ Troubleshooting: Check API key validity, rate limits, model availability, and network connectivity'
+    )
+
     return null
   }
 }
@@ -1531,7 +1630,8 @@ async function executeRenamingWorkflow(filePath, options = {}) {
       } else {
         newName = await generateSymbolNameViaLLM(targetSymbol, apiKey)
         if (!newName) {
-          console.warn(`    └─ Failed to generate name, skipping`)
+          console.error(`    └─ Name generation failed. Review errors above for details.`)
+          console.error(`    └─ Stopping renaming session due to LLM error`)
           break
         }
         console.log(`    └─ Generated name (LLM): ${newName}`)
