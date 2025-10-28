@@ -1287,7 +1287,12 @@ function setupRenamedDirectory(filePath, sourceCode) {
   mkdirSync(renamedDir, { recursive: true })
 
   const workingFile = join(renamedDir, fileName)
-  writeFileSync(workingFile, sourceCode)
+
+  // Only initialize the working file if it doesn't exist (fresh start)
+  // If resuming, preserve the existing working file with previous transformations
+  if (!existsSync(workingFile)) {
+    writeFileSync(workingFile, sourceCode)
+  }
 
   return { renamedDir, workingFile }
 }
@@ -1335,18 +1340,93 @@ function getRenameCandidates(variables, lengthThreshold = 4) {
 }
 
 /**
+ * Represents the state of a renaming session
+ * @typedef {Object} RenameSessionState
+ * @property {Array<{old: string, new: string, line: number}>} renamedSymbols - List of completed renames
+ * @property {number} totalRenames - Total renames completed in session
+ * @property {string} timestamp - When state was last updated
+ * @property {string} sourceFileHash - Hash of original source for conflict detection
+ * @property {number} lastSequenceNumber - Last version file sequence number
+ */
+
+/**
+ * Saves renaming state to a JSON file
+ * @param {string} renamedDir - Directory containing rename state
+ * @param {Object} state - State object to save
+ */
+function saveRenameState(renamedDir, state) {
+  const stateFile = join(renamedDir, '.rename-state.json')
+  writeFileSync(
+    stateFile,
+    JSON.stringify(
+      {
+        ...state,
+        timestamp: new Date().toISOString()
+      },
+      null,
+      2
+    )
+  )
+}
+
+/**
+ * Loads renaming state from a JSON file
+ * @param {string} renamedDir - Directory containing rename state
+ * @returns {RenameSessionState|null} State object or null if not found
+ */
+function loadRenameState(renamedDir) {
+  const stateFile = join(renamedDir, '.rename-state.json')
+  if (!existsSync(stateFile)) {
+    return null
+  }
+
+  try {
+    return JSON.parse(readFileSync(stateFile, 'utf-8'))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Computes a simple hash of source code for conflict detection
+ * @param {string} sourceCode - Source code to hash
+ * @returns {string} Hash value
+ */
+function computeSourceHash(sourceCode) {
+  let hash = 0
+  for (let i = 0; i < sourceCode.length; i += 100) {
+    const charCode = sourceCode.charCodeAt(i)
+    hash = ((hash << 5) - hash + charCode) | 0
+  }
+  return hash.toString(16)
+}
+
+/**
+ * Detects if source code has been modified externally
+ * @param {string} sourceCode - Current source code
+ * @param {string} expectedHash - Expected hash from previous state
+ * @returns {boolean} True if source appears to be modified
+ */
+function isSourceModified(sourceCode, expectedHash) {
+  const currentHash = computeSourceHash(sourceCode)
+  return currentHash !== expectedHash
+}
+
+/**
  * Executes the full symbol renaming workflow
  * @param {string} filePath - Path to source file
  * @param {Object} options - Renaming options
  * @param {number} options.lengthThreshold - Symbol length threshold (default: 4)
  * @param {boolean} options.dryRun - Enable dry-run mode (default: false)
  * @param {string} options.apiKey - OpenRouter API key
+ * @param {number} options.maxRenames - Maximum number of renames per execution (default: 3)
  * @returns {Promise<string>} Path to final renamed file
  */
 async function executeRenamingWorkflow(filePath, options = {}) {
   const lengthThreshold = Math.max(4, options.lengthThreshold || 4)
   const dryRun = options.dryRun || false
   const apiKey = options.apiKey || process.env.OPENROUTER_API_KEY
+  const maxRenames = Math.max(1, options.maxRenames || 3)
 
   if (!dryRun && !apiKey) {
     console.warn('No OpenRouter API key provided. Use --dry-run for testing.')
@@ -1363,23 +1443,78 @@ async function executeRenamingWorkflow(filePath, options = {}) {
       originalSourceCode
     )
     console.log(`  └─ Working directory: ${renamedDir}`)
+    console.log(`  └─ Max renames per execution: ${maxRenames}`)
 
-    let currentCode = originalSourceCode
+    // Load previous state if it exists
+    const previousState = loadRenameState(renamedDir)
+    let currentCode = readFileSync(workingFile, 'utf-8')
     let sequenceNumber = 0
     let totalRenamed = 0
+    let sessionStartIndex = 0
+
+    if (previousState) {
+      console.log(
+        `\n[RESUMING] Previous session found (${previousState.totalRenames} renames completed)`
+      )
+
+      // Check for external modifications
+      if (isSourceModified(currentCode, previousState.sourceFileHash)) {
+        console.warn(
+          '  ⚠ External modifications detected in renamed file. Attempting to continue...'
+        )
+      }
+
+      sessionStartIndex = previousState.totalRenames
+      sequenceNumber = previousState.lastSequenceNumber || 0
+      totalRenamed = previousState.totalRenames
+
+      if (totalRenamed >= maxRenames) {
+        console.log(
+          `  └─ Session already has ${totalRenamed} renames (limit: ${maxRenames})`
+        )
+        console.log('  └─ Run again with higher --max-renames to continue')
+        return workingFile
+      }
+    } else {
+      console.log('  └─ Starting new renaming session')
+      // Clear state file for fresh start
+      const sourceHash = computeSourceHash(originalSourceCode)
+      currentCode = originalSourceCode
+      saveRenameState(renamedDir, {
+        renamedSymbols: [],
+        totalRenames: 0,
+        sourceFileHash: sourceHash,
+        lastSequenceNumber: 0
+      })
+    }
 
     let iterationCount = 0
     const maxIterations = 100
+    const renamedSymbols = previousState?.renamedSymbols || []
 
     while (iterationCount < maxIterations) {
       iterationCount++
+
+      // Stop if we've reached the max renames limit
+      if (totalRenamed >= maxRenames) {
+        console.log(
+          `\n[BATCH COMPLETE] Renamed ${totalRenamed}/${maxRenames} symbols in this execution`
+        )
+        console.log(
+          `  └─ Progress: ${totalRenamed}/${sessionStartIndex + maxRenames} total renames completed`
+        )
+        console.log(
+          `  └─ Run again to continue renaming. Command: bun jsVariableAnalyzer.js --rename --max-renames ${maxRenames} ${filePath}`
+        )
+        break
+      }
 
       // Analyze current code state
       const variables = analyzeVariableReferences(currentCode, fileName)
       const candidates = getRenameCandidates(variables, lengthThreshold)
 
       if (candidates.length === 0) {
-        console.log(`  └─ Convergence reached: No more candidates for renaming`)
+        console.log('  └─ Convergence reached: No more candidates for renaming')
         break
       }
 
@@ -1436,10 +1571,30 @@ async function executeRenamingWorkflow(filePath, options = {}) {
       writeFileSync(workingFile, transformedCode)
       currentCode = transformedCode
       totalRenamed++
+
+      // Record this rename
+      renamedSymbols.push({
+        old: targetSymbol.name,
+        new: newName,
+        line: targetSymbol.declarationLine
+      })
     }
 
-    console.log(`\n[RENAMING COMPLETE] Renamed ${totalRenamed} symbols`)
-    console.log(`  └─ Final file: ${workingFile}`)
+    // Update state file
+    const sourceHash = computeSourceHash(originalSourceCode)
+    saveRenameState(renamedDir, {
+      renamedSymbols,
+      totalRenames: totalRenamed,
+      sourceFileHash: sourceHash,
+      lastSequenceNumber: sequenceNumber
+    })
+
+    if (totalRenamed > 0) {
+      console.log(
+        `\n[RENAMING COMPLETE] Renamed ${totalRenamed} symbols in this execution`
+      )
+      console.log(`  └─ Final file: ${workingFile}`)
+    }
 
     return workingFile
   } catch (error) {
@@ -1456,11 +1611,14 @@ async function executeRenamingWorkflow(filePath, options = {}) {
 async function main(filePaths, options = {}) {
   if (!filePaths || filePaths.length === 0) {
     console.error(
-      'Usage: bun jsVariableAnalyzer.js [--rename] [--dry-run] [--limit <num>] <file1.js> [file2.js] ...'
+      'Usage: bun jsVariableAnalyzer.js [--rename] [--dry-run] [--limit <num>] [--max-renames <num>] <file1.js> [file2.js] ...'
     )
-    console.error('  --rename      Enable symbol renaming workflow')
-    console.error('  --dry-run     Use mock LLM (no API calls)')
-    console.error('  --limit <num> Symbol length threshold (default: 4)')
+    console.error('  --rename           Enable symbol renaming workflow')
+    console.error('  --dry-run          Use mock LLM (no API calls)')
+    console.error('  --limit <num>      Symbol length threshold (default: 4)')
+    console.error(
+      '  --max-renames <num> Max renames per execution, resumes from previous state (default: 3)'
+    )
     process.exit(1)
   }
 
@@ -1476,7 +1634,8 @@ async function main(filePaths, options = {}) {
         await executeRenamingWorkflow(filePath, {
           lengthThreshold: options.limit || 4,
           dryRun: options.dryRun || false,
-          apiKey: options.apiKey
+          apiKey: options.apiKey,
+          maxRenames: options.maxRenames || 3
         })
       } catch (error) {
         console.error(`Error processing ${filePath}:`, error.message)
@@ -1540,6 +1699,9 @@ for (let i = 0; i < args.length; i++) {
   } else if (arg === '--limit') {
     options.limit = Math.max(4, Number.parseInt(args[i + 1], 10))
     i++
+  } else if (arg === '--max-renames') {
+    options.maxRenames = Math.max(1, Number.parseInt(args[i + 1], 10))
+    i++
   } else if (!arg.startsWith('--')) {
     filePaths.push(arg)
   }
@@ -1570,5 +1732,9 @@ export {
   setupRenamedDirectory,
   saveVersionFile,
   getRenameCandidates,
-  executeRenamingWorkflow
+  executeRenamingWorkflow,
+  saveRenameState,
+  loadRenameState,
+  computeSourceHash,
+  isSourceModified
 }
