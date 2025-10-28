@@ -795,39 +795,23 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
         } else if (param.type === 'AssignmentPattern' && param.left?.type === 'Identifier') {
           paramName = param.left.name
           paramNode = param.left
-        } else if (
-          param.type === 'ObjectPattern' ||
-          param.type === 'ArrayPattern'
-        ) {
-          // For destructured params, extract individual identifiers
-          const extractIdentifiersFromPattern = (pattern) => {
-            const identifiers = []
-            if (pattern.type === 'ObjectPattern' && pattern.properties) {
-              pattern.properties.forEach((prop) => {
-                if (prop.type === 'RestElement' && prop.argument?.type === 'Identifier') {
-                  identifiers.push(prop.argument)
-                } else if (prop.type === 'Property' && prop.value?.type === 'Identifier') {
-                  identifiers.push(prop.value)
-                } else if (prop.type === 'Property' && prop.value?.type === 'AssignmentPattern' && prop.value.left?.type === 'Identifier') {
-                  identifiers.push(prop.value.left)
-                }
-              })
-            } else if (pattern.type === 'ArrayPattern' && pattern.elements) {
-              pattern.elements.forEach((elem) => {
-                if (elem?.type === 'Identifier') {
-                  identifiers.push(elem)
-                } else if (elem?.type === 'RestElement' && elem.argument?.type === 'Identifier') {
-                  identifiers.push(elem.argument)
-                } else if (elem?.type === 'AssignmentPattern' && elem.left?.type === 'Identifier') {
-                  identifiers.push(elem.left)
-                }
-              })
-            }
-            return identifiers
+        } else if (param.type === 'ArrayPattern') {
+          // For array destructured params, extract individual identifiers
+          // Object patterns are skipped (semantic binding to single param)
+          const identifiers = []
+          if (param.elements) {
+            param.elements.forEach((elem) => {
+              if (elem?.type === 'Identifier') {
+                identifiers.push(elem)
+              } else if (elem?.type === 'RestElement' && elem.argument?.type === 'Identifier') {
+                identifiers.push(elem.argument)
+              } else if (elem?.type === 'AssignmentPattern' && elem.left?.type === 'Identifier') {
+                identifiers.push(elem.left)
+              }
+            })
           }
 
-          const patternIds = extractIdentifiersFromPattern(param)
-          patternIds.forEach((idNode) => {
+          identifiers.forEach((idNode) => {
             const uniqueId = createUniqueVariableId(
               idNode.name,
               funcStartLine,
@@ -846,6 +830,10 @@ function analyzeVariableReferences(sourceCode, filename, exportedNames = null) {
               scopeRange: { start: funcStartLine, end: funcEndLine }
             })
           })
+          return
+        } else if (param.type === 'ObjectPattern') {
+          // Skip object destructuring parameters - they represent a single parameter binding
+          // The object itself is not tracked as a named symbol in the traditional sense
           return
         }
 
