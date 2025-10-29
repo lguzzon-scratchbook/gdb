@@ -1,6 +1,5 @@
 node_modules/
 *.log
 .DS_Store
-jsVariableAnalyzer_renamed/
 *_renamed/
 .rename-state.json

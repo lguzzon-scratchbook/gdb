@@ -1,2 +1,4 @@
 node_modules
-_WIP/jsRefactor/refactor.log
+*.log
+*_renamed/
+
