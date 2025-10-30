@@ -227,7 +227,7 @@ First of all, I want to thank the GunDB community for all the years we shared. Y
 
 ### Project License
 
-The minified builds of GenosDB (GDB) are provided free of charge (`Freeware`) for both personal and commercial use. You are welcome to integrate these builds into your applications without cost.
+The production builds of GenosDB (GDB) are free to use for both personal and commercial projects. You can integrate them into your applications without any licensing fees.
 
 However, the source code for GenosDB is proprietary and is not available under an open-source license. You do not have the right to decompile, reverse-engineer, or modify the core source code.
 
@@ -237,7 +237,7 @@ This project includes third-party dependencies with their own respective license
 
 ## Maintenance
 
-This repository provides minified builds of GenosDB (GDB), a decentralized P2P graph database designed for modern web applications. These builds are freely available for anyone to use and integrate into their projects. Please note that the source code is not publicly available at this time; only the minified versions are provided. The project is actively maintained by Esteban Fuster Pozzi ([@estebanrfp](https://github.com/estebanrfp))
+This repository provides production builds of GenosDB (GDB), a decentralized P2P graph database designed for modern web applications. These builds are freely available for anyone to use and integrate into their projects. Please note that the source code is not publicly available at this time; only the production builds versions are provided. The project is actively maintained by Esteban Fuster Pozzi ([@estebanrfp](https://github.com/estebanrfp))
 
 ## Author
 
