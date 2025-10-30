@@ -219,6 +219,9 @@ Feel free to ask questions, share ideas, or just say hello! 👋
 
 For more details on contributing, check out our [Contributing Guidelines](https://github.com/estebanrfp/gdb/blob/main/CONTRIBUTING.md).
 
+## Special Thanks
+
+First of all, I want to thank the GunDB community for all the years we shared. You gave me the chance to experiment and take part in incredible projects. Though [GunDB](https://github.com/amark/gun) and GenosDB follow completely different approaches, we belong to the same family. My deepest thanks to Mark Nadal for his friendship and unwavering support.”
 
 ## License
 
