@@ -204,10 +204,10 @@ Please read our [Contribution Guidelines](https://github.com/estebanrfp/gdb/blob
 
 ## Community
 
-We value community contributions and discussions! Here's how you can get involved:
+We value community contributions — get involved through:
 
-- **Ask questions or share ideas**: Join our [GitHub Discussions](https://github.com/estebanrfp/gdb/discussions).
-- **Real-time chat**: For quick conversations, join us on [Gitter](https://app.gitter.im/#/room/#GDB:gitter.im).
+- [Issues](https://github.com/estebanrfp/gdb/issues) — report bugs or request features  
+- [Discussions](https://github.com/estebanrfp/gdb/discussions) — ask questions or share ideas
 
 See the discussion on Product Hunt:
 
