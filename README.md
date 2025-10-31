@@ -221,7 +221,7 @@ For more details on contributing, check out our [Contributing Guidelines](https:
 
 ## Special Thanks
 
-Being part of the GunDB community all these years has given me the opportunity to experience and take part in incredible projects. GunDB and GenosDB belong to the same family of distributed systems. My sincerest gratitude to [Mark Nadal](https://github.com/amark/gun), Founder of GunDB, for his friendship and unconditional support.
+Being part of the GunDB community for years has given me the opportunity to experience and take part in incredible projects. GunDB and GenosDB belong to the same family of distributed systems. My sincerest gratitude to [Mark Nadal](https://github.com/amark/gun), Founder of GunDB, for his friendship and unconditional support.
 
 A special mention to [William Blankenship](https://webai.com), Network Fellow at WebAI, for his initial support and kind words about the vision for GenosDB.
 
