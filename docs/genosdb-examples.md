@@ -141,6 +141,11 @@ Distributed Group Chat Application with GenosDB and Vanilla JavaScript
 
 _By: [Esteban Fuster Pozzi (estebanrfp)](https://github.com/estebanrfp)_
 
+### [dKanban](https://github.com/estebanrfp/dKanban)
+Distributed Real-time Kanban board that stores data in GenosDB.
+
+_By: [Esteban Fuster Pozzi (estebanrfp)](https://github.com/estebanrfp)_
+
 ### [dCMS](https://github.com/estebanrfp/dCMS)
 Distributed CMS Application with GenosDB and Vanilla JavaScript
 
