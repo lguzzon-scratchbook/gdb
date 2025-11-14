@@ -16,14 +16,8 @@ Only **production build files**  are included in the `dist/` directory as part o
    No advanced obfuscation techniques have been applied.
 
 3. **Production-Oriented Distribution**  
-   This package is intended for direct use in production environments.  
-   Only the final build output is published, which is a common practice for libraries distributed via npm.
-
-   > Example: many modern libraries publish only minified bundles in their final production build output.
-
-4. **Full Compatibility with Modern Tooling**  
-   The public API is fully documented and available through TypeScript definition files (`.d.ts`).  
-   This allows code editors, development environments, and end users to use the package without needing access to the source code.
+   This package is intended for direct use in production environments.
+   Only the final build output is published, following common practices for libraries distributed via npm.
 
 ---
 
