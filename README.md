@@ -176,14 +176,6 @@ Below is a list of internal dependencies and their purposes within the project:
 
 > **General Note**: These dependencies are integral to the project's performance and functionality, ensuring efficient data handling and real-time synchronization while leveraging decentralized technologies like Nostr.
 
-## Repository Diagram
-
-The project includes an interactive visualization of the repository's history and structure, which you can explore here:  
-
-[gdb repository diagram](https://gitdiagram.com/estebanrfp/gdb)  
-
-This graphical view is especially useful for new contributors or anyone looking to gain deeper insight into the project’s evolution and structure, providing a clear and visual understanding of the workflow.
-
 ## Presentation Video
 
 <div align="center">
