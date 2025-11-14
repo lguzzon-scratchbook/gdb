@@ -34,4 +34,4 @@ const db = await gdb("my-db", { rtc: true });
 
 ## 📖 Learn More About Our Initiative
 
-For a deeper understanding of why GenosDB's source code is not publicly available and our commitment to quality and sustainability, read our [PHILOSOPHY.md](https://github.com/estebanrfp/gdb/blob/main/PHILOSOPHY.md).
+For more details about GenosDB’s design decisions, licensing model, and long-term sustainability approach, see our [PHILOSOPHY.md](https://github.com/estebanrfp/gdb/blob/main/PHILOSOPHY.md).
