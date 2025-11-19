@@ -22,7 +22,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'genosdb': path.resolve(__dirname, '../gdb/dist/index.js'),
-    },
+      // 'genosdb': path.resolve(__dirname, './dist/index.js'),
+      'file:///dist/genosrtc.min.js': path.resolve(__dirname, './dist/genosrtc.min.js'),
+      'file:///dist/sm.min.js': path.resolve(__dirname, './dist/sm.min.js'),
+    }
   },
 });
