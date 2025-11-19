@@ -1,4 +1,4 @@
-import { gdb } from '../../gdb/dist/index.js';
+import { gdb } from '../../GenosDB/dist/index.js';
 
 test('Direct WebRTC: P2P connection creation', async () => {
   const db = await gdb('test-db', { rtc: true });
