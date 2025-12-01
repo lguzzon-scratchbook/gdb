@@ -96,6 +96,9 @@ A single-page HTML application demonstrating secure, real-time, peer-to-peer not
 
 ## Tools & Testbeds
 
+### [GenosDB - Mesh Cells Monitor (D3)](https://estebanrfp.github.io/gdb/examples/mesh-cells-monitor-d3.html)
+A real-time visualization tool that displays the Cellular Mesh topology, bridge nodes, routing paths, and network metrics using D3.js.
+
 ### [GenosDB - Perf & Stress Test](https://estebanrfp.github.io/gdb/examples/perf-stress-test.html)
 A dedicated environment for benchmarking GenosDB under high-load scenarios. 
 Allows you to test mass insertions, real-time P2P synchronization, and subscription performance. 
