@@ -264,57 +264,16 @@ document
 
 ## Cellular Mesh for Large-Scale Applications
 
-For applications expecting **100+ concurrent peers**, enable the Cellular Mesh to scale efficiently. The mesh organizes peers into cells with bridge nodes, reducing connections from O(N²) to O(N).
-
-### Basic Usage
+For applications expecting **100+ concurrent peers**, GenosRTC includes a Cellular Mesh overlay that organizes peers into cells with bridge nodes, reducing connections from O(N²) to O(N).
 
 ```javascript
-// Enable cellular mesh for large rooms
+// Enable cellular mesh
 const db = await gdb("large-event", { rtc: { cells: true } })
 
 // The API remains identical - your existing code works unchanged
 const chat = db.room.channel("chat")
 chat.send({ text: "Hello everyone!" })
-
-// Audio/video streaming also works the same way
-navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-  .then(stream => db.room.addStream(stream))
 ```
-
-### Monitoring Mesh State
-
-For debugging or building network visualizations:
-
-```javascript
-// Your local cell status
-db.room.on("mesh:state", (state) => {
-  console.log(`Cell: ${state.cellId}`)
-  console.log(`Is Bridge: ${state.isBridge}`)
-  console.log(`Cell Size: ${state.cellSize}`)
-})
-
-// Remote peer states (useful for visualization)
-db.room.on("mesh:peer-state", ({ id, cell, bridges }) => {
-  console.log(`Peer ${id} is in cell ${cell}`)
-})
-```
-
-### Advanced Configuration
-
-```javascript
-const db = await gdb("massive-app", {
-  rtc: {
-    cells: {
-      cellSize: "auto",      // or fixed number like 30
-      bridgesPerEdge: 3,     // more bridges = more redundancy
-      maxCellSize: 50,       // max peers per cell
-      debug: true            // verbose logging
-    }
-  }
-})
-```
-
-### When to Enable Cells
 
 | Scenario | Recommendation |
 |----------|----------------|
@@ -323,4 +282,6 @@ const db = await gdb("massive-app", {
 | Large event/webinar (100+) | `rtc: { cells: true }` |
 | Massive multiplayer (1000+) | `rtc: { cells: { bridgesPerEdge: 3 } }` |
 
-> **Note:** All peers in the same room should use the same `cells` configuration for optimal performance.
+For detailed configuration options, mesh API, and architecture documentation, see:
+- **[genosrtc-api-reference.md](genosrtc-api-reference.md#-cellular-mesh-network)** — Quick API reference
+- **[genosrtc-cells.md](genosrtc-cells.md)** — Full technical documentation (architecture, metrics, TTL, bridges)
