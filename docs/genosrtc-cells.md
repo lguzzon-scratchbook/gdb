@@ -72,29 +72,6 @@ They are sorted by `healthScore` and the top `bridgesPerEdge` are selected.
 
 ## Configuration
 
-### Option 1: Direct usage with `join` (GenosRTC)
-
-```javascript
-import { join, selfId } from 'genosrtc-cells.min.js';
-
-const room = join(
-  { 
-    appId: 'my-app',
-    overlay: {           // Cellular overlay options
-      cellSize: 'auto',
-      bridgesPerEdge: 2,
-      debug: true
-    }
-  }, 
-  'room-id',
-  err => console.error(err)
-);
-
-const mesh = room.mesh;  // Access to cellular mesh
-```
-
-### Option 2: Usage with GenosDB (recommended)
-
 ```javascript
 import { gdb } from 'genosdb';
 
@@ -137,6 +114,8 @@ const selfId = db.selfId;
 | `maxCellSize` | `number` | `50` | Maximum peers per cell in auto mode |
 | `targetCells` | `number` | `100` | Target number of cells in the network (auto mode) |
 | `debug` | `boolean` | `false` | Enables debug logs in console |
+
+> **Note:** For direct usage with GenosRTC (without GenosDB), see [genosrtc-guide.md](genosrtc-guide.md).
 
 ---
 
@@ -325,13 +304,6 @@ Only peers with `lastSeen` within the last 30 seconds are considered active.
 ### Connection
 
 ```javascript
-// Option 1: Direct usage with join (GenosRTC)
-import { join, selfId } from 'genosrtc-cells.min.js';
-
-const room = join(config, roomId, onError);
-const mesh = room.mesh;
-
-// Option 2: Usage with GenosDB (recommended)
 import { gdb } from 'genosdb';
 
 const db = await gdb('mydb', { rtc: { cells: true } });
@@ -463,8 +435,6 @@ room.on('mesh:health', healthData => {
 
 ## Complete Example
 
-### With GenosDB (recommended)
-
 ```javascript
 import { gdb } from 'genosdb';
 
@@ -509,46 +479,6 @@ async function main() {
 main();
 ```
 
-### With direct join (GenosRTC)
-
-```javascript
-import { join, selfId } from 'genosrtc-cells.min.js';
-
-// Connect
-const room = join(
-  { appId: 'my-app', overlay: { cellSize: 'auto', bridgesPerEdge: 2 } },
-  'main-room',
-  err => console.error('Error:', err)
-);
-
-const mesh = room.mesh;
-
-// Listen for events
-room.on('peer:join', id => console.log('New peer:', id));
-room.on('peer:leave', id => console.log('Peer left:', id));
-
-room.on('mesh:state', state => {
-  console.log(`I'm in ${state.cellId}, bridge: ${state.isBridge}`);
-});
-
-// Receive messages
-mesh.on('message', (data, from) => {
-  console.log(`[${from}]:`, data);
-});
-
-// Send message
-document.getElementById('sendBtn').onclick = () => {
-  const text = document.getElementById('input').value;
-  mesh.send({ type: 'chat', text, author: selfId });
-};
-
-// Monitoring
-setInterval(() => {
-  const state = mesh.getState();
-  console.log(`Cells: ${state.totalCells}, TTL: ${state.dynamicTTL}`);
-}, 10000);
-```
-
 ---
 
 ## Scalability
@@ -584,10 +514,8 @@ Compared to traditional mesh (`N × (N-1) / 2`), the reduction is **100x to 1000
 
 ## Usage Comparison
 
-| Method | File | Auto Cells | Configuration |
-|--------|------|------------|---------------|
-| `gdb()` with `rtc: true` | `genosrtc.min.js` | ❌ No | Basic RTC only |
-| `gdb()` with `rtc: { cells: true }` | `genosrtc-cells.min.js` | ✅ Yes | Defaults |
-| `gdb()` with `rtc: { cells: {...} }` | `genosrtc-cells.min.js` | ✅ Yes | Custom |
-| `join()` from `genosrtc.min.js` | `index.js` | ❌ No | Basic RTC only |
-| `join()` from `genosrtc-cells.min.js` | `cells.js` | ✅ Yes | Via `config.overlay` |
+| Configuration | Cells | Description |
+|---------------|-------|-------------|
+| `rtc: true` | ❌ No | Basic RTC without cellular mesh |
+| `rtc: { cells: true }` | ✅ Yes | Cellular mesh with defaults |
+| `rtc: { cells: { ... } }` | ✅ Yes | Cellular mesh with custom options |
