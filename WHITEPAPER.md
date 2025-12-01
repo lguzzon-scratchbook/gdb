@@ -160,6 +160,22 @@ chatChannel.on("message", (msg, peerId) => console.log(`${peerId}: ${msg.text}`)
 chatChannel.send({ text: "Hello, everyone!" });
 ```
 
+### 5.3 Cellular Mesh for Horizontal Scalability
+
+The traditional full-mesh topology, while optimal for latency, creates O(N²) connections—impractical beyond ~100 peers. GenosRTC addresses this with an optional **Cellular Mesh Overlay**:
+
+-   **Topology**: Peers are organized into logical cells via consistent hashing. Each cell maintains a local full-mesh, while designated bridge nodes interconnect adjacent cells.
+-   **Complexity Reduction**: Connections per peer are reduced from O(N) to O(cell_size), enabling large-scale networks.
+-   **Trade-off**: Message delivery shifts from single-hop to multi-hop (approximately log(N)), introducing slight latency in exchange for massive scalability.
+-   **Activation**: Enabled via `{ rtc: { cells: true } }` with configurable parameters for cell size, bridge redundancy, and TTL.
+
+```plaintext
+┌─────────┐       ┌─────────┐       ┌─────────┐
+│ Cell A  │◄─────►│ Cell B  │◄─────►│ Cell C  │
+│ (mesh)  │bridges│ (mesh)  │bridges│ (mesh)  │
+└─────────┘       └─────────┘       └─────────┘
+```
+
 ## 6. Security
 
 The Security Module (SM) ensures trust and access control in P2P environments through a zero-trust model where every action is cryptographically signed and explicitly authorized.
