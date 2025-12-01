@@ -45,6 +45,7 @@ A lightweight, decentralized graph database designed for modern web applications
 - **Real-time Synchronization:**
     - **Between Devices (P2P):** Employs an intelligent hybrid system (via GenosRTC) that combines real-time delta updates with a full-state fallback to ensure data consistency across all peers. This feature is enabled by initializing the database with the `{ rtc: true }` option.
     - **Between Tabs:** Uses BroadcastChannel for instant, local synchronization.
+    - **Massive Scalability:** Optional Cellular Mesh topology (`{ rtc: { cells: true } }`) enables horizontal scaling to large-scale networks by organizing peers into cells with bridge interconnections.
 - **Optimized Data Handling:** Efficiently serializes data with MessagePack and compresses it with Pako to reduce storage footprint and network payload.
 - **Extensible & Modular:** The core is lightweight, but its capabilities can be easily extended with external modules for features like advanced indexing (e.g., Radix Tree).
 
@@ -161,7 +162,7 @@ Below is a list of internal dependencies and their purposes within the project:
   Provides gzip compression to optimize data storage and network communication.
 
 - **`GenosRTC`** (Internal Module for GenosDB) :  
-  GenosRTC is the real-time communication module for GenosDB, implementing peer-to-peer connections via WebRTC with signaling over the Nostr protocol.
+  GenosRTC is the real-time communication module for GenosDB, implementing peer-to-peer connections via WebRTC with signaling over the Nostr protocol. For large-scale applications (100+ peers), GenosRTC includes an optional Cellular Mesh overlay that reduces connection complexity from O(N²) to O(N), enabling large-scale networks.
 
   This module was developed internally for the specific needs of GenosDB and leverages state-of-the-art cryptographic dependencies, such as `@noble/curves`, to ensure maximum security and performance.
 
