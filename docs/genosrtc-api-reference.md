@@ -156,3 +156,75 @@ startWebcam()
 - **`db.room.leave()`**: Disconnects the local user from the room and all peers.
 - **`db.room.getPeers()`**: Returns a `Map` of the active `RTCPeerConnection` objects, keyed by `peerId`.
 - **`db.room.ping(peerId)`**: Measures the latency (in ms) to a specific peer. Returns a promise that resolves with the round-trip time.
+
+---
+
+## 🔷 Cellular Mesh Network
+
+For massive scalability, GenosRTC includes a **Cellular Mesh Overlay** that organizes peers into "cells" with bridge nodes for inter-cell communication, reducing connections from O(N²) to O(N).
+
+### Enabling
+
+```javascript
+const db = await gdb("my-app", {
+  rtc: { cells: true }  // defaults
+})
+
+// With options
+const db = await gdb("my-app", {
+  rtc: {
+    cells: {
+      cellSize: "auto",      // "auto" or fixed number
+      bridgesPerEdge: 2,     // bridge redundancy
+      maxCellSize: 50,       // max peers per cell
+      targetCells: 100,      // target cell count
+      debug: false           // verbose logging
+    }
+  }
+})
+```
+
+### Mesh API
+
+```javascript
+const mesh = db.room.mesh
+
+// Send to all peers across all cells
+mesh.send({ type: "chat", text: "Hello!" })
+
+// Receive messages
+mesh.on("message", (data, fromPeerId) => {
+  console.log(`From ${fromPeerId}:`, data)
+})
+```
+
+### Mesh Events
+
+```javascript
+// Your cell status
+db.room.on("mesh:state", (state) => {
+  // state: { cellId, isBridge, bridges, dynamicTTL, cellSize }
+})
+
+// Remote peer states (for visualization)
+db.room.on("mesh:peer-state", (data) => {
+  // data: { id, cell, bridges }
+})
+```
+
+### Scalability
+
+| Metric | Standard | Cellular (10k peers) |
+|--------|----------|----------------------|
+| Connections/peer | ~10,000 | ~100 |
+| Message hops | 1 | ~10 |
+| Max peers | ~100 | Massive scale |
+
+### When to Use
+
+| Peers | Recommendation |
+|-------|----------------|
+| < 100 | `rtc: true` |
+| 100+ | `rtc: { cells: true }` |
+
+> **Note:** All peers should use the same `cells` configuration for optimal performance.

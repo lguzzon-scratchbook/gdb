@@ -85,9 +85,65 @@ From an architectural perspective, the typical flow for a peer is as follows:
 5.  **Communication**: The application uses the high-level Data Channel and Media Stream APIs to send and receive information directly with other peers.
 6.  **Disconnection**: When a user leaves the room (e.g., closes the tab or calls `db.room.leave()`), the connections are torn down, and a `peer:leave` event is broadcast to the remaining peers.
 
+## Cellular Mesh Architecture (Scalability Layer)
+
+### The Scalability Problem
+
+The traditional mesh topology described above connects every peer to every other peer. While this provides optimal latency (single-hop), it creates O(N²) connections. For 100 peers, this means ~10,000 connections—quickly becoming impractical for large-scale applications.
+
+### Solution: Cellular Overlay
+
+When enabled via `rtc: { cells: true }`, GenosRTC introduces a **Cellular Mesh Overlay** that organizes peers into logical "cells":
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Cellular Mesh Network                    │
+│                                                              │
+│   ┌─────────┐         ┌─────────┐         ┌─────────┐       │
+│   │ Cell A  │◄───────►│ Cell B  │◄───────►│ Cell C  │       │
+│   │ ○ ○ ○   │ bridges │ ○ ○ ○   │ bridges │ ○ ○ ○   │       │
+│   │  ○ ○    │         │  ○ ○    │         │  ○ ○    │       │
+│   └─────────┘         └─────────┘         └─────────┘       │
+│        ▲                                       ▲            │
+│        └───────────────────────────────────────┘            │
+│                    inter-cell bridges                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Architectural Components
+
+-   **Cells**: Logical groups of ~20-50 peers with full mesh connectivity within the cell. Peers are assigned to cells via consistent hashing for stability during churn.
+-   **Bridge Nodes**: Peers elected to maintain connections between adjacent cells in the hash ring. Multiple bridges per edge (configurable via `bridgesPerEdge`) provide redundancy.
+-   **Dynamic TTL**: Message hop limit calculated based on network topology (`2 × numberOfCells + buffer`), preventing infinite propagation while ensuring delivery.
+-   **Consistent Hashing**: Peers assigned to cells via hash ring, ensuring stable cell membership even as peers join and leave.
+
+### Message Propagation
+
+1.  **Intra-cell**: Messages within a cell are delivered directly (single hop) via the local mesh.
+2.  **Inter-cell**: Messages destined for other cells are forwarded through bridge nodes, hopping across cells until reaching the destination.
+3.  **Broadcast**: Global broadcasts propagate through bridges with TTL decrementation and seen-message deduplication.
+
+### Scalability Trade-offs
+
+| Aspect | Traditional Mesh | Cellular Mesh |
+|--------|------------------|---------------|
+| Connections/peer | O(N) | O(cellSize) |
+| Message latency | 1 hop | ~log(N) hops |
+| Max practical peers | ~100 | Massive scale |
+| Complexity | Simple | Higher |
+| Use case | Small rooms | Large-scale apps |
+
+### When to Use
+
+-   **Traditional Mesh (`rtc: true`)**: Best for applications with < 100 concurrent peers where single-hop latency is critical.
+-   **Cellular Mesh (`rtc: { cells: true }`)**: Recommended for applications expecting 100+ peers, or where horizontal scalability is a requirement.
+
+---
+
 ## Security Model
 
 Security is a fundamental component of the GenosRTC architecture.
 
 -   **Transport Encryption**: All WebRTC communications (both data and media) are mandatorily encrypted using DTLS (Datagram Transport Layer Security) and SRTP (Secure Real-time Transport Protocol). This prevents eavesdropping on the P2P link.
 -   **End-to-End Encryption (E2EE)**: GenosRTC adds an additional layer of security. By providing an optional `password` during initialization, all signaling data exchanged over Nostr relays is encrypted. Furthermore, all data sent through the `Data Channels` is also end-to-end encrypted using this shared secret. This ensures that not even the signaling relays can decipher the application's data.
+-   **Cellular Mesh Security**: In cellular mode, inter-cell messages maintain the same encryption guarantees. Bridge nodes forward encrypted payloads without access to plaintext content.

@@ -259,3 +259,68 @@ document
 - **Progress Feedback**: The base `db.room.channel` API does not provide built-in progress tracking. If you implement chunking, you can also send progress messages through the same channel to create a progress bar. For example: `fileChannel.send({ type: 'progress', fileId: '...', percent: 50 })`.
 - **Error Handling**: Add logic to manage cases where file transfers fail due to network issues or peer disconnections.
 - **Handling Multiple Transfers**: To differentiate between simultaneous transfers, include a unique identifier in the metadata for each file (e.g., `{ id: 'unique-file-123' }`). This allows both sender and receiver to track the state and progress of each file independently.
+
+---
+
+## Cellular Mesh for Large-Scale Applications
+
+For applications expecting **100+ concurrent peers**, enable the Cellular Mesh to scale efficiently. The mesh organizes peers into cells with bridge nodes, reducing connections from O(N²) to O(N).
+
+### Basic Usage
+
+```javascript
+// Enable cellular mesh for large rooms
+const db = await gdb("large-event", { rtc: { cells: true } })
+
+// The API remains identical - your existing code works unchanged
+const chat = db.room.channel("chat")
+chat.send({ text: "Hello everyone!" })
+
+// Audio/video streaming also works the same way
+navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+  .then(stream => db.room.addStream(stream))
+```
+
+### Monitoring Mesh State
+
+For debugging or building network visualizations:
+
+```javascript
+// Your local cell status
+db.room.on("mesh:state", (state) => {
+  console.log(`Cell: ${state.cellId}`)
+  console.log(`Is Bridge: ${state.isBridge}`)
+  console.log(`Cell Size: ${state.cellSize}`)
+})
+
+// Remote peer states (useful for visualization)
+db.room.on("mesh:peer-state", ({ id, cell, bridges }) => {
+  console.log(`Peer ${id} is in cell ${cell}`)
+})
+```
+
+### Advanced Configuration
+
+```javascript
+const db = await gdb("massive-app", {
+  rtc: {
+    cells: {
+      cellSize: "auto",      // or fixed number like 30
+      bridgesPerEdge: 3,     // more bridges = more redundancy
+      maxCellSize: 50,       // max peers per cell
+      debug: true            // verbose logging
+    }
+  }
+})
+```
+
+### When to Enable Cells
+
+| Scenario | Recommendation |
+|----------|----------------|
+| Small team collaboration (< 50) | `rtc: true` |
+| Medium rooms (50-100) | Either works |
+| Large event/webinar (100+) | `rtc: { cells: true }` |
+| Massive multiplayer (1000+) | `rtc: { cells: { bridgesPerEdge: 3 } }` |
+
+> **Note:** All peers in the same room should use the same `cells` configuration for optimal performance.
