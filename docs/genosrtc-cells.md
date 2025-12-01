@@ -1,8 +1,8 @@
-# cells.js — Technical Documentation
+# Cells — Technical Documentation
 
 ## Introduction
 
-`cells.js` is a P2P cellular mesh protocol that organizes peers into interconnected cells to achieve efficient and scalable broadcast communication.
+**Cells** is a P2P cellular mesh protocol that organizes peers into interconnected cells to achieve efficient and scalable broadcast communication.
 
 ### Key Features
 
