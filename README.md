@@ -45,7 +45,7 @@ A lightweight, decentralized graph database designed for modern web applications
 - **Real-time Synchronization:**
     - **Between Devices (P2P):** Employs an intelligent hybrid system (via GenosRTC) that combines real-time delta updates with a full-state fallback to ensure data consistency across all peers. This feature is enabled by initializing the database with the `{ rtc: true }` option.
     - **Between Tabs:** Uses BroadcastChannel for instant, local synchronization.
-    - **Massive Scalability:** Optional Cellular Mesh topology (`{ rtc: { cells: true } }`) enables horizontal scaling to large-scale networks by organizing peers into cells with bridge interconnections.
+    - **Massive Scalability:** Optional Cellular Mesh topology (`{ rtc: { cells: true } }`) enables horizontal scaling to large-scale networks by organizing peers into cells with bridge interconnections. ([GenosRTC Cells](https://github.com/estebanrfp/gdb/blob/main/docs/genosrtc-cells.md))
 - **Optimized Data Handling:** Efficiently serializes data with MessagePack and compresses it with Pako to reduce storage footprint and network payload.
 - **Extensible & Modular:** The core is lightweight, but its capabilities can be easily extended with external modules for features like advanced indexing (e.g., Radix Tree).
 
