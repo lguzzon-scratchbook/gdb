@@ -16,6 +16,7 @@ As of today, GenosDB is in a stable beta phase, offering a robust set of feature
     -   Graph database with `put`, `get`, `link`, `map`, `remove` operations ([See details](https://medium.com/genosdb/genosdb-distributed-graph-based-database-7f03b878507b)).
     -   Recursive graph traversal with the `$edge` operator for complex queries ([See article](https://medium.com/genosdb/introducing-recursive-graph-traversal-queries-in-genosdb-7a2eff62c5bf)).
     -   GenosRTC: P2P streaming for real-time audio, video, and file transfers.
+    -   Cellular Mesh architecture for horizontal scaling to large-scale networks.
     -   Advanced Security Module: Featuring Role-Based Access Control (RBAC), WebAuthn biometric authentication, and a solution to the Distributed Trust Paradox ([See RBAC](https://medium.com/genosdb/role-based-access-control-rbac-in-genosdb-bde218a1a0df), [See Trust Paradox](https://medium.com/genosdb/how-genosdb-solved-the-distributed-trust-paradox-a-guide-to-p2p-security-a552aa3e3318)).
     -   Intelligent Delta Synchronization via an oplog, compressed payloads, full-state fallback, and signaling over the Nostr network for maximum efficiency ([See article](https://medium.com/genosdb/genosdb-v0-4-0-introducing-oplog-driven-intelligent-delta-sync-and-full-state-fallback-741fe8ff132c)).
     -   High-performance asynchronous engine capable of handling tens of thousands of writes per second ([See article](https://medium.com/genosdb/genosdbs-new-async-engine-unlocking-unparalleled-performance-and-simplicity-in-a-real-time-c666f1a9a5d2)).
@@ -28,6 +29,7 @@ As of today, GenosDB is in a stable beta phase, offering a robust set of feature
 
 Based on our [CHANGELOG.md](https://github.com/estebanrfp/gdb/blob/main/CHANGELOG.md), here are key features and enhancements that have shaped GenosDB's evolution. *(Note: Please adjust dates to reflect reality.)*
 
+-   **v0.12.0 (December 2025)**: Cellular Mesh Overlay for massive horizontal scalability with configurable cell topology and bridge redundancy.
 -   **v0.9.8 (July 2024)**: Instantaneous P2P network startup with hybrid relay management for faster peer discovery and resilience.
 -   **v0.9.7 (June 2024)**: Autonomous Governance Engine for automated enforcement of business logic and data policies.
 -   **v0.9.6 (May 2024)**: Secure-by-default user onboarding with instantaneous superadmin recognition.
