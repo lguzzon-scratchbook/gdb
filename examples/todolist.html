@@ -95,7 +95,7 @@
   <input type="text" id="taskInput" placeholder="New task">
   <ul id="taskList"></ul>
   <script type="module">
-    import { gdb } from "../dist/gdb.min.js";
+    import { gdb } from "../dist/index.js";
 
     const db = await gdb('todoList', { rtc: true });
 
