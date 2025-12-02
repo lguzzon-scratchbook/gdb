@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cellular Mesh Graph (Universal Monitor)</title>
+  <title>Cellular Mesh Graph (Universal Monitor) v2</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -462,7 +462,7 @@
   <div class="container">
     <!-- Header -->
     <header class="header">
-      <h1>🔷 Cellular Mesh<span class="lite">MONITOR</span></h1>
+      <h1>🔷 Cellular Mesh<span class="lite">MONITOR v2</span></h1>
       <span class="status-badge self" id="selfBadge">YOU</span>
       <span class="status-badge bridge" id="roleBadge" style="display:none">BRIDGE</span>
       <div class="status-item">Cell: <code id="cellId">-</code></div>
@@ -535,7 +535,6 @@
     // ════════════════════════════════════════════════════════════════
     import { gdb } from "../dist/index.js";
 
-    // selfId will be obtained after initializing gdb
     let selfId = null;
 
     // ════════════════════════════════════════════════════════════════
@@ -543,11 +542,11 @@
     // ════════════════════════════════════════════════════════════════
 
     const COLORS = {
-      cell: "#3fb950",      // Bright green
-      bridge: "#f0c000",    // Golden yellow
-      peer: "#ff6b35",      // Reddish orange
-      self: "#58a6ff",      // Blue
-      message: "#39c5cf",   // Cyan
+      cell: "#3fb950",
+      bridge: "#f0c000",
+      peer: "#ff6b35",
+      self: "#58a6ff",
+      message: "#39c5cf",
       green: "#3fb950"
     };
 
@@ -556,7 +555,7 @@
 
     let db = null, room = null, mesh = null;
 
-    // SELF state (simplified, without super-cells)
+    // Self state
     let selfState = {
       cellId: null,
       isBridge: false,
@@ -567,6 +566,77 @@
 
     // Remote peers
     const remotePeerStates = new Map();
+
+    // ════════════════════════════════════════════════════════════════
+    // THROTTLED UPDATE SYSTEM - Single source of truth
+    // ════════════════════════════════════════════════════════════════
+    let updatePending = false;
+    let lastUpdateTime = 0;
+    const UPDATE_THROTTLE = 300; // Max ~3 updates per second
+
+    function scheduleUpdate(restart = false) {
+      // Store whether we need a full restart
+      if (restart) scheduleUpdate._needsRestart = true;
+
+      if (updatePending) return;
+
+      const now = Date.now();
+      const elapsed = now - lastUpdateTime;
+
+      if (elapsed >= UPDATE_THROTTLE) {
+        updatePending = true;
+        requestAnimationFrame(() => doUpdate());
+      } else {
+        updatePending = true;
+        setTimeout(() => {
+          requestAnimationFrame(() => doUpdate());
+        }, UPDATE_THROTTLE - elapsed);
+      }
+    }
+
+    function doUpdate() {
+      const needsRestart = scheduleUpdate._needsRestart || false;
+      scheduleUpdate._needsRestart = false;
+
+      render(needsRestart);
+      lastUpdateTime = Date.now();
+      updatePending = false;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // CACHED BRIDGE COMPUTATION
+    // ════════════════════════════════════════════════════════════════
+    let cachedBridgeMap = new Map();
+    let cacheValid = false;
+
+    function invalidateCache() {
+      cacheValid = false;
+    }
+
+    function computeAllBridges() {
+      if (cacheValid) return cachedBridgeMap;
+
+      cachedBridgeMap.clear();
+      const allPeers = getAllPeers();
+      const allPeerIds = [...allPeers.keys()];
+
+      for (const [pid, st] of allPeers) {
+        const isBridge = isPeerBridgeRaw(pid, st.cellId, allPeerIds);
+        cachedBridgeMap.set(pid, isBridge);
+      }
+
+      cacheValid = true;
+      return cachedBridgeMap;
+    }
+
+    function isCachedBridge(peerId) {
+      const map = computeAllBridges();
+      return map.get(peerId) || false;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ════════════════════════════════════════════════════════════════
 
     const getCellIndex = cid => {
       const m = String(cid || "").match(/cell-(\d+)/);
@@ -582,30 +652,25 @@
       return arr;
     };
 
-    // Get all peers
     function getAllPeers() {
       const all = new Map();
-
       for (const [pid, state] of remotePeerStates) {
         all.set(pid, { ...state });
       }
-
       all.set(selfId, {
         cellId: selfState.cellId,
         isBridge: selfState.isBridge,
         bridges: selfState.bridges || []
       });
-
       return all;
     }
 
     // ════════════════════════════════════════════════════════════════
-    // BRIDGE DETECTION - Computed locally
+    // BRIDGE DETECTION - Raw computation (use isCachedBridge instead)
     // ════════════════════════════════════════════════════════════════
 
     const BRIDGES_PER_EDGE = 1;
 
-    // Use dynamic cellSize from state
     function getCellSize() {
       return selfState.cellSize || 2;
     }
@@ -640,7 +705,7 @@
       return bridges;
     }
 
-    function isPeerBridge(peerId, cellId, allPeerIds) {
+    function isPeerBridgeRaw(peerId, cellId, allPeerIds) {
       if (!cellId) return false;
       const bridges = computeBridgesForCell(cellId, allPeerIds);
       return bridges.has(peerId);
@@ -732,7 +797,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // GRAPH RENDERING (without super-cells)
+    // GRAPH RENDERING - Optimized with cached bridges
     // ════════════════════════════════════════════════════════════════
     function buildGraph() {
       const nodes = [];
@@ -740,9 +805,8 @@
       const cellIds = new Set();
 
       const allPeers = getAllPeers();
-      const allPeerIds = [...allPeers.keys()];
 
-      // Collect cells (without super-cells)
+      // Collect cells
       for (const [pid, st] of allPeers) {
         if (st.cellId) {
           cellIds.add(st.cellId);
@@ -759,17 +823,10 @@
         });
       }
 
-      // Peer nodes
+      // Peer nodes - use cached bridge computation
       for (const [pid, st] of allPeers) {
         const isSelf = pid === selfId;
-
-        let isBridge;
-        if (isSelf) {
-          isBridge = selfState.isBridge;
-        } else {
-          isBridge = isPeerBridge(pid, st.cellId, allPeerIds);
-        }
-
+        const isBridge = isSelf ? selfState.isBridge : isCachedBridge(pid);
         const bridgesArray = Array.isArray(st.bridges) ? st.bridges : [];
 
         nodes.push({
@@ -899,10 +956,12 @@
       simulation.nodes(nodes);
       simulation.force("link").links(links);
 
+      // Only restart simulation when topology changes significantly
       if (restart) {
         simulation.alpha(0.8).restart();
       } else {
-        simulation.alpha(0.3).restart();
+        // Gentle update without full restart
+        simulation.alpha(0.1).restart();
       }
 
       updateUI();
@@ -914,10 +973,9 @@
 
     function findBridgeBetweenCells(fromCellId, toCellId) {
       const allPeers = getAllPeers();
-      const allPeerIds = [...allPeers.keys()];
 
       for (const [pid, st] of allPeers) {
-        if (!isPeerBridge(pid, st.cellId, allPeerIds)) continue;
+        if (!isCachedBridge(pid)) continue;
 
         const peerCell = st.cellId;
         const bridgeCells = st.bridges?.length > 0 ? st.bridges : neighborCells(peerCell);
@@ -1207,7 +1265,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // UI UPDATES (simplified, without super-cells)
+    // UI UPDATES - Optimized with cached bridges
     // ════════════════════════════════════════════════════════════════
     function updateUI() {
       $("cellId").textContent = selfState.cellId || "-";
@@ -1228,13 +1286,11 @@
       let bridges = 0;
 
       const allPeers = getAllPeers();
-      const allPeerIds = [...allPeers.keys()];
+      const bridgeMap = computeAllBridges();
 
       for (const [pid, st] of allPeers) {
         if (st.cellId) cells.add(st.cellId);
-        if (isPeerBridge(pid, st.cellId, allPeerIds)) {
-          bridges++;
-        }
+        if (bridgeMap.get(pid)) bridges++;
       }
 
       $("metricPeers").textContent = allPeers.size;
@@ -1242,10 +1298,10 @@
       $("metricBridges").textContent = bridges;
       $("metricCellSize").textContent = selfState.cellSize || "-";
 
-      renderCellList(cells, allPeerIds);
+      renderCellList(cells);
     }
 
-    function renderCellList(cells, allPeerIds) {
+    function renderCellList(cells) {
       const structure = new Map();
       const allPeers = getAllPeers();
 
@@ -1269,8 +1325,7 @@
 
         for (const pid of [...peerSet].sort()) {
           const isSelf = pid === selfId;
-          const st = allPeers.get(pid) || {};
-          const isBridge = isPeerBridge(pid, st.cellId, allPeerIds);
+          const isBridge = isCachedBridge(pid);
 
           let badges = "";
           if (isSelf) badges += `<span class="badge badge-you">YOU</span>`;
@@ -1307,34 +1362,28 @@
     // ════════════════════════════════════════════════════════════════
     // UNIVERSAL MONITOR: Deduplication and formatting
     // ════════════════════════════════════════════════════════════════
-    
-    // Set to avoid duplicates (same data may arrive through multiple channels)
+
     const seenMessages = new Set();
-    const SEEN_TTL = 5000; // 5 seconds
+    const SEEN_TTL = 5000;
 
     function handleIncomingData(data, from, source) {
-      // Ignore own messages
       if (from === selfId) return;
 
-      // Create simple hash to detect duplicates
       const dataStr = typeof data === "string" ? data : JSON.stringify(data);
       const hash = `${from}:${dataStr.slice(0, 100)}:${Math.floor(Date.now() / 1000)}`;
-      
+
       if (seenMessages.has(hash)) return;
       seenMessages.add(hash);
-      
-      // Clean old messages
+
       setTimeout(() => seenMessages.delete(hash), SEEN_TTL);
 
-      // Format content for display
       const content = formatDataForDisplay(data, source);
-      
+
       const allPeers = getAllPeers();
       const fromState = allPeers.get(from);
       const fromCell = fromState?.cellId || "cell-?";
       const myCell = selfState.cellId || "cell-0";
 
-      // Log with source indicator
       const sourceIcon = {
         mesh: "💬",
         data: "📦",
@@ -1346,7 +1395,6 @@
         { from: fromCell, to: [myCell] }
       );
 
-      // Animate
       if (fromCell !== myCell) {
         animateIncomingMessage(from, fromCell, selfId, myCell, content);
       } else {
@@ -1358,43 +1406,40 @@
       if (typeof data === "string") {
         return data.length > 50 ? data.slice(0, 50) + "…" : data;
       }
-      
+
       if (typeof data === "object" && data !== null) {
-        // Detect common operation types
         if (data.type) {
           switch (data.type) {
             case "put": return `📝 PUT ${data.id || data.key || ""}`;
-            case "del": 
+            case "del":
             case "remove": return `🗑️ DEL ${data.id || data.key || ""}`;
             case "link": return `🔗 LINK ${data.sourceId || ""}→${data.targetId || ""}`;
-            case "sync": return `🔄 SYNC`;
+            // case "sync": return `🔄 SYNC`;
             case "ack": return `✓ ACK`;
             case "state": return `📊 STATE`;
             default: return `${data.type}`;
           }
         }
-        
-        // For generic objects, show summary
+
         const keys = Object.keys(data);
         if (keys.length <= 3) {
           return keys.map(k => `${k}:${String(data[k]).slice(0, 10)}`).join(", ");
         }
         return `{${keys.length} keys}`;
       }
-      
+
       return String(data).slice(0, 50);
     }
 
     // ════════════════════════════════════════════════════════════════
-    // CONNECT & EVENTS (using gdb with db.room) - UNIVERSAL MONITOR
+    // CONNECT & EVENTS - Optimized with throttled updates
     // ════════════════════════════════════════════════════════════════
     async function connect() {
       try {
-        // Initialize GenosDB with RTC enabled
         db = await gdb('mesh-cells-monitor', {
           rtc: {
             cells: {
-              cellSize:'auto',
+              cellSize: 'auto',
               bridgesPerEdge: 2,
               maxCellSize: 50,
               targetCells: 100,
@@ -1403,21 +1448,21 @@
           }
         });
 
-        // Get room and mesh from db.room
         room = db.room;
         mesh = room.mesh;
-
         selfId = db.selfId;
 
         room.on("peer:join", id => {
           log(`<span style="color:var(--green)">+ ${shortId(id)}</span>`);
-          render(true);
+          invalidateCache();
+          scheduleUpdate(true);
         });
 
         room.on("peer:leave", id => {
           remotePeerStates.delete(id);
           log(`<span style="color:var(--muted)">- ${shortId(id)}</span>`);
-          render(true);
+          invalidateCache();
+          scheduleUpdate(true);
         });
 
         room.on("mesh:state", state => {
@@ -1428,56 +1473,50 @@
             dynamicTTL: state.dynamicTTL,
             cellSize: state.cellSize || 2
           };
-          render(true);
+          invalidateCache();
+          scheduleUpdate(true);
         });
 
         room.on("mesh:peer-state", data => {
           if (data.id === selfId) return;
-
           remotePeerStates.set(data.id, {
             cellId: data.cell,
             isBridge: false,
             bridges: Array.isArray(data.bridges) ? data.bridges : []
           });
-          render(false);
+          invalidateCache();
+          scheduleUpdate(false);
         });
 
-        // ════════════════════════════════════════════════════════════════
-        // UNIVERSAL MONITOR: Use middleware to intercept operations
-        // ════════════════════════════════════════════════════════════════
-        
-        // The middleware intercepts ALL incoming operations before processing them
+        // Tipos de operaciones que queremos animar (acciones de usuario reales)
+        const ANIMATABLE_OP_TYPES = new Set(['upsert', 'remove', 'link', 'put', 'del']);
+
         db.use(async (ops, prevStates) => {
-          // ops is an array of operations: [{type: "upsert", id, value, timestamp}, ...]
           for (const op of ops) {
             if (!op || !op.type) continue;
-            
-            // Format the operation for display
+
+            // Solo animar operaciones de usuario reales, no sync/fullStateSync/deltaSync
+            if (!ANIMATABLE_OP_TYPES.has(op.type)) continue;
+
             const content = formatOpForDisplay(op);
-            
-            // We don't know exactly who sent it (current limitation),
-            // but we can show the operation
+
             log(
               `<span class="from">🔄 SYNC:</span> ${content}`,
               { from: "remote", to: [selfState.cellId || "cell-0"] }
             );
-            
-            // Animate from a random peer in another cell (visual)
+
             animateRemoteSync(op);
           }
-          
-          // IMPORTANT: return ops unmodified so gdb can process them
+
           return ops;
         });
-        
+
         log(`<span style="color:var(--cyan)">📡 Middleware installed to intercept sync</span>`);
 
-        // 1. Direct messages from mesh (local chat)
         mesh.on("message", (msg, from) => {
           handleIncomingData(msg, from, "mesh");
         });
 
-        // 2. Intercept raw messages from room (any channel/app)
         if (room.on) {
           room.on("data", (data, from) => {
             handleIncomingData(data, from, "data");
@@ -1487,18 +1526,17 @@
         $("msgInput").disabled = false;
         $("sendBtn").disabled = false;
 
-        log(`<span style="color:var(--accent)">🔗 Connected via GenosDB (Universal Monitor)</span>`);
+        log(`<span style="color:var(--accent)">🔗 Connected via GenosDB (Universal Monitor v2)</span>`);
 
       } catch (error) {
         log(`<span style="color:var(--red)">⚠️ Error: ${error.message}</span>`);
         console.error("Error initializing:", error);
       }
     }
-    
-    // Format sync operation for display
+
     function formatOpForDisplay(op) {
       if (!op || !op.type) return "?";
-      
+
       switch (op.type) {
         case "upsert":
           const val = op.value;
@@ -1509,37 +1547,35 @@
             return `📝 PUT {${Object.keys(val).slice(0, 2).join(', ')}...}`;
           }
           return `📝 PUT ${String(val).slice(0, 20)}`;
-          
+
         case "remove":
           return `🗑️ DEL ${shortId(op.id)}`;
-          
+
         case "link":
           return `🔗 LINK ${shortId(op.sourceId)}→${shortId(op.targetId)}`;
-          
-        case "sync":
-          return `🔄 SYNC REQUEST`;
-          
-        case "deltaSync":
-          return `📦 DELTA SYNC`;
-          
-        case "fullStateSync":
-          return `📦 FULL SYNC`;
-          
+
+        // case "sync":
+        //   return `🔄 SYNC REQUEST`;
+
+        // case "deltaSync":
+        //   return `📦 DELTA SYNC`;
+
+        // case "fullStateSync":
+        //   return `📦 FULL SYNC`;
+
         default:
           return `${op.type}`;
       }
     }
-    
-    // Animate remote sync operation (full traversal like animateFullMessage)
+
     function animateRemoteSync(op) {
       const allPeers = getAllPeers();
       const allCells = getAllCellIds();
       const myCell = selfState.cellId || "cell-0";
-      
-      // Find a remote peer to use as animation source
+
       let remotePeerId = null;
       let remoteCell = null;
-      
+
       for (const [pid, st] of allPeers) {
         if (pid !== selfId && st.cellId) {
           remotePeerId = pid;
@@ -1547,25 +1583,22 @@
           break;
         }
       }
-      
+
       if (!remotePeerId) {
-        // No remote peers, create animation from graph center
         const centerX = width / 2;
         const centerY = height / 2;
         createPulse(centerX, centerY, COLORS.message);
         return;
       }
-      
+
       const content = formatOpForDisplay(op);
       const fromPeerPos = nodePositions.get(`peer:${remotePeerId}`);
-      
+
       if (!fromPeerPos) return;
 
-      // Create initial pulse on the remote peer
       createPulse(fromPeerPos.x, fromPeerPos.y, COLORS.message);
       flashNode(`peer:${remotePeerId}`, COLORS.message);
 
-      // Animate towards peers in the same cell as remote
       const sameCellPeers = getPeersInCell(remoteCell).filter(pid => pid !== remotePeerId);
       sameCellPeers.forEach((peerId, idx) => {
         setTimeout(() => {
@@ -1573,7 +1606,6 @@
         }, idx * 150);
       });
 
-      // Animate towards all other cells (including mine)
       const otherCells = allCells.filter(cid => cid !== remoteCell);
       otherCells.forEach((toCellId, index) => {
         const fullPath = buildFullMessagePath(remotePeerId, remoteCell, toCellId);
@@ -1631,7 +1663,7 @@
       });
 
       connect();
-      render(true);
+      scheduleUpdate(true);
     });
   </script>
 </body>
