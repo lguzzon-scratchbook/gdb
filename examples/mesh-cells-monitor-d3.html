@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cellular Mesh Graph (Solution Monitor)</title>
+  <title>Cellular Mesh Graph (Monitor)</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -449,7 +449,7 @@
 <body>
   <div class="container">
     <header class="header">
-      <h1>🔷 Cellular Mesh<span class="lite">MONITOR v2</span></h1>
+      <h1>🔷 Cellular Mesh<span class="lite">MONITOR v3</span></h1>
       <span class="status-badge self" id="selfBadge">YOU</span>
       <span class="status-badge bridge" id="roleBadge" style="display:none">BRIDGE</span>
       <div class="status-item">Cell: <code id="cellId">-</code></div>
@@ -526,13 +526,13 @@
       cellToCellDistance: 120,      // Distance between adjacent cells
       bridgeToCellDistance: 70,     // Distance from bridge to neighboring cell
       peerToCellDistance: 70,       // Distance from peer to its cell
-      
+
       // Node sizes (radius)
       cellRadius: 10,               // Cell node size
       selfRadius: 5,               // "You" peer size
       bridgeRadius: 5,             // Bridge peer size
       peerRadius: 5,               // Regular peer size
-      
+
       // Force simulation
       chargeStrength: -120,         // Repulsion between nodes (negative = repel)
       collisionPadding: 8,          // Extra space around nodes for collision
@@ -982,7 +982,7 @@
           return pid;
         }
       }
-      
+
       // SOLUCIÓN: Retornar null si no encontramos el bridge
       // La animación continuará sin mostrar el peer bridge intermedio
       return null;
@@ -1145,7 +1145,7 @@
         if (lastCellNode && lastCellNode.type === "cell") {
           const destCellId = lastCellNode.id;
           const destCellPos = nodePositions.get(`cell:${destCellId}`);
-          
+
           if (destCellPos) {
             if (destPeers.length > 0) {
               // Animar desde la celda a cada peer destino
@@ -1170,7 +1170,7 @@
     function animateCellToPeer(cellId, peerId, messageText, showLabel = false) {
       const cellPos = nodePositions.get(`cell:${cellId}`);
       const peerPos = nodePositions.get(`peer:${peerId}`);
-      
+
       if (!cellPos || !peerPos) return;
 
       const points = [
@@ -1561,10 +1561,22 @@
     // ════════════════════════════════════════════════════════════════
     // CONNECT & EVENTS
     // ════════════════════════════════════════════════════════════════
+    const relayUrls = [
+      "wss://relay.orangepill.ovh",
+      // "wss://purplerelay.com",
+      // "wss://pyramid.fiatjaf.com",
+      // "wss://nostr.azzamo.net",
+      // "wss://strfry.elswa-dev.online",
+      // "wss://relay.letsfo.com",
+      // "wss://nostr.gleeze.com",
+      // "wss://relay.angor.io"
+    ];
+
     async function connect() {
       try {
         db = await gdb('mesh-cells-monitor-solution', {
           rtc: {
+            relayUrls,
             cells: {
               cellSize: 'auto',
               bridgesPerEdge: 2,
@@ -1638,7 +1650,7 @@
           return ops;
         });
 
-        log(`<span style="color:var(--cyan)">📡 Middleware installed (Solution Monitor)</span>`);
+        log(`<span style="color:var(--cyan)">📡 Middleware installed (Monitor)</span>`);
 
         mesh.on("message", (msg, from) => {
           handleIncomingData(msg, from, "mesh");
@@ -1653,7 +1665,7 @@
         $("msgInput").disabled = false;
         $("sendBtn").disabled = false;
 
-        log(`<span style="color:var(--accent)">🔗 Connected via GenosDB (Solution Monitor)</span>`);
+        log(`<span style="color:var(--accent)">🔗 Connected via GenosDB (Monitor)</span>`);
 
       } catch (error) {
         log(`<span style="color:var(--red)">⚠️ Error: ${error.message}</span>`);
@@ -1709,7 +1721,7 @@
       }
 
       const content = formatOpForDisplay(op);
-      
+
       // Usar la misma lógica de broadcast completo
       animateFullBroadcast(remotePeerId, remoteCell, content);
     }
