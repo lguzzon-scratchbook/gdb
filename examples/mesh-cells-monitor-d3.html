@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cellular Mesh Graph (Universal Monitor) v2</title>
+  <title>Cellular Mesh Graph (Solution Monitor)</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -38,7 +38,6 @@
       overflow: hidden;
     }
 
-    /* Layout */
     .container {
       display: grid;
       grid-template-columns: 1fr 300px;
@@ -48,7 +47,6 @@
       background: var(--border);
     }
 
-    /* Header */
     .header {
       grid-column: 1 / -1;
       background: var(--surface);
@@ -70,7 +68,7 @@
 
     .header h1 .lite {
       font-size: 0.7rem;
-      background: var(--cyan);
+      background: var(--green);
       color: var(--bg);
       padding: 2px 6px;
       border-radius: 4px;
@@ -112,7 +110,6 @@
       color: var(--text);
     }
 
-    /* Graph area */
     #graph {
       background: var(--bg);
       position: relative;
@@ -124,7 +121,6 @@
       height: 100%;
     }
 
-    /* Sidebar */
     .sidebar {
       background: var(--surface);
       display: flex;
@@ -147,7 +143,6 @@
       gap: 6px;
     }
 
-    /* Metrics grid */
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -174,7 +169,6 @@
       text-transform: uppercase;
     }
 
-    /* Cell list */
     .cell-list {
       flex: 1;
       overflow-y: auto;
@@ -228,7 +222,6 @@
       color: var(--bg);
     }
 
-    /* Chat footer */
     .chat-footer {
       grid-column: 1 / -1;
       background: var(--surface);
@@ -307,7 +300,6 @@
       cursor: not-allowed;
     }
 
-    /* D3 Styles */
     .link {
       fill: none;
       stroke-linecap: round;
@@ -344,7 +336,6 @@
       font-weight: 600;
     }
 
-    /* Message animation */
     .message-particle {
       fill: var(--cyan);
       filter: drop-shadow(0 0 10px var(--cyan)) drop-shadow(0 0 20px var(--cyan));
@@ -374,7 +365,6 @@
       dominant-baseline: middle;
     }
 
-    /* Pulse animation */
     @keyframes pulse {
       0% {
         r: 8;
@@ -396,7 +386,6 @@
       animation: pulse 0.8s ease-out forwards;
     }
 
-    /* Node glow when active */
     @keyframes nodeGlow {
       0% {
         filter: drop-shadow(0 0 5px currentColor);
@@ -415,7 +404,6 @@
       animation: nodeGlow 0.5s ease-in-out;
     }
 
-    /* Legend */
     .legend {
       position: absolute;
       bottom: 10px;
@@ -460,7 +448,6 @@
 
 <body>
   <div class="container">
-    <!-- Header -->
     <header class="header">
       <h1>🔷 Cellular Mesh<span class="lite">MONITOR v2</span></h1>
       <span class="status-badge self" id="selfBadge">YOU</span>
@@ -471,7 +458,6 @@
       <div class="status-item">Peers: <code id="peerCount">0</code></div>
     </header>
 
-    <!-- Graph -->
     <div id="graph">
       <div class="legend">
         <div class="legend-item">
@@ -492,7 +478,6 @@
       </div>
     </div>
 
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-section">
         <h3>📊 Metrics</h3>
@@ -518,7 +503,6 @@
       <div class="cell-list" id="cellList"></div>
     </aside>
 
-    <!-- Chat -->
     <footer class="chat-footer">
       <div class="chat-log" id="log"></div>
       <div class="chat-input-group">
@@ -530,9 +514,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script type="module">
-    // ════════════════════════════════════════════════════════════════
-    // IMPORT: GenosDB (gdb) with RTC support
-    // ════════════════════════════════════════════════════════════════
     import { gdb } from "../dist/index.js";
 
     let selfId = null;
@@ -555,7 +536,6 @@
 
     let db = null, room = null, mesh = null;
 
-    // Self state
     let selfState = {
       cellId: null,
       isBridge: false,
@@ -564,18 +544,16 @@
       cellSize: 2
     };
 
-    // Remote peers
     const remotePeerStates = new Map();
 
     // ════════════════════════════════════════════════════════════════
-    // THROTTLED UPDATE SYSTEM - Single source of truth
+    // THROTTLED UPDATE SYSTEM
     // ════════════════════════════════════════════════════════════════
     let updatePending = false;
     let lastUpdateTime = 0;
-    const UPDATE_THROTTLE = 300; // Max ~3 updates per second
+    const UPDATE_THROTTLE = 300;
 
     function scheduleUpdate(restart = false) {
-      // Store whether we need a full restart
       if (restart) scheduleUpdate._needsRestart = true;
 
       if (updatePending) return;
@@ -666,7 +644,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // BRIDGE DETECTION - Raw computation (use isCachedBridge instead)
+    // BRIDGE DETECTION
     // ════════════════════════════════════════════════════════════════
 
     const BRIDGES_PER_EDGE = 1;
@@ -797,7 +775,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // GRAPH RENDERING - Optimized with cached bridges
+    // GRAPH RENDERING
     // ════════════════════════════════════════════════════════════════
     function buildGraph() {
       const nodes = [];
@@ -806,14 +784,12 @@
 
       const allPeers = getAllPeers();
 
-      // Collect cells
       for (const [pid, st] of allPeers) {
         if (st.cellId) {
           cellIds.add(st.cellId);
         }
       }
 
-      // Cell nodes
       for (const cid of cellIds) {
         nodes.push({
           id: `cell:${cid}`,
@@ -823,7 +799,6 @@
         });
       }
 
-      // Peer nodes - use cached bridge computation
       for (const [pid, st] of allPeers) {
         const isSelf = pid === selfId;
         const isBridge = isSelf ? selfState.isBridge : isCachedBridge(pid);
@@ -841,7 +816,6 @@
         });
       }
 
-      // Links: peer → cell
       for (const n of nodes) {
         if (n.kind === "peer" && n.cellId) {
           links.push({
@@ -852,7 +826,6 @@
         }
       }
 
-      // Links: cell → cell (adjacent)
       const sortedCells = [...cellIds]
         .map(cid => ({ cid, idx: getCellIndex(cid) }))
         .filter(o => !Number.isNaN(o.idx))
@@ -870,7 +843,6 @@
         }
       }
 
-      // Links: bridge peer → neighbor cells
       for (const n of nodes) {
         if (n.kind !== "peer" || !n.isBridge || !n.cellId) continue;
 
@@ -894,7 +866,6 @@
     function render(restart = false) {
       const { nodes, links } = buildGraph();
 
-      // Links
       const link = linkLayer.selectAll("line")
         .data(links, d => `${d.source.id || d.source}-${d.target.id || d.target}-${d.kind}`);
 
@@ -915,7 +886,6 @@
       linkEnter.transition().duration(300).style("opacity", 1);
       linkEnter.merge(link);
 
-      // Nodes
       const node = nodeLayer.selectAll("circle")
         .data(nodes, d => d.id);
 
@@ -941,7 +911,6 @@
         .attr("stroke-width", d => d.isSelf ? 3 : 0)
         .attr("filter", d => d.isBridge ? "url(#glow)" : null);
 
-      // Labels
       const label = labelLayer.selectAll("text")
         .data(nodes, d => d.id);
 
@@ -956,11 +925,9 @@
       simulation.nodes(nodes);
       simulation.force("link").links(links);
 
-      // Only restart simulation when topology changes significantly
       if (restart) {
         simulation.alpha(0.8).restart();
       } else {
-        // Gentle update without full restart
         simulation.alpha(0.1).restart();
       }
 
@@ -968,9 +935,15 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // MESSAGE ANIMATION
+    // MESSAGE ANIMATION - SOLUTION: Tolerant path building
     // ════════════════════════════════════════════════════════════════
 
+    /**
+     * SOLUCIÓN: Busca el bridge entre dos celdas, pero si no lo encuentra,
+     * retorna null y la animación simplemente salta a la siguiente celda.
+     * Esto permite que la animación siempre muestre el recorrido completo
+     * aunque no conozca todos los bridges intermedios.
+     */
     function findBridgeBetweenCells(fromCellId, toCellId) {
       const allPeers = getAllPeers();
 
@@ -987,6 +960,9 @@
           return pid;
         }
       }
+      
+      // SOLUCIÓN: Retornar null si no encontramos el bridge
+      // La animación continuará sin mostrar el peer bridge intermedio
       return null;
     }
 
@@ -1002,9 +978,16 @@
       return peers;
     }
 
+    /**
+     * SOLUCIÓN: Construye el path completo usando originCell y destino (myCellId).
+     * Las celdas son secuenciales, así que el camino es determinístico.
+     * Si no conoce un bridge intermedio, simplemente lo omite y la animación
+     * va directo de celda a celda.
+     */
     function buildFullMessagePath(fromPeerId, fromCellId, toCellId) {
       const path = [];
 
+      // Inicio: peer origen
       path.push({ type: "peer", id: fromPeerId, cellId: fromCellId });
       path.push({ type: "cell", id: fromCellId });
 
@@ -1020,11 +1003,15 @@
           const nextCellIdx = currentCellIdx + step;
           const nextCell = `cell-${nextCellIdx}`;
 
+          // SOLUCIÓN: Intentar encontrar bridge, pero continuar aunque no exista
           const bridgePeer = findBridgeBetweenCells(currentCell, nextCell);
 
           if (bridgePeer) {
+            // Si conocemos el bridge, lo agregamos al path
             path.push({ type: "bridge", id: bridgePeer, fromCell: currentCell, toCell: nextCell });
           }
+          // Si NO conocemos el bridge, simplemente pasamos a la siguiente celda
+          // La animación irá directamente de celda a celda
 
           path.push({ type: "cell", id: nextCell });
 
@@ -1032,6 +1019,7 @@
         }
       }
 
+      // Agregar todos los peers destino en la celda final
       const destPeers = getPeersInCell(toCellId).filter(pid => pid !== fromPeerId);
       for (const peerId of destPeers) {
         path.push({ type: "dest-peer", id: peerId, cellId: toCellId });
@@ -1040,15 +1028,21 @@
       return path;
     }
 
+    /**
+     * SOLUCIÓN: Anima el mensaje desde el emisor a TODAS las celdas y peers.
+     * Usa buildFullMessagePath que es tolerante a bridges desconocidos.
+     */
     function animateFullMessage(fromPeerId, fromCellId, messageText) {
       const allCells = getAllCellIds();
       const fromPeerPos = nodePositions.get(`peer:${fromPeerId}`);
 
       if (!fromPeerPos) return;
 
+      // Pulso inicial en el emisor
       createPulse(fromPeerPos.x, fromPeerPos.y, COLORS.message);
       flashNode(`peer:${fromPeerId}`, COLORS.message);
 
+      // 1. Primero animar a peers en la misma celda
       const sameCellPeers = getPeersInCell(fromCellId).filter(pid => pid !== fromPeerId);
       sameCellPeers.forEach((peerId, idx) => {
         setTimeout(() => {
@@ -1056,8 +1050,10 @@
         }, idx * 150);
       });
 
+      // 2. Luego animar a todas las otras celdas
       const otherCells = allCells.filter(cid => cid !== fromCellId);
       otherCells.forEach((toCellId, index) => {
+        // SOLUCIÓN: buildFullMessagePath ahora es tolerante
         const fullPath = buildFullMessagePath(fromPeerId, fromCellId, toCellId);
         setTimeout(() => {
           animateAlongFullPath(fullPath, messageText, index === 0);
@@ -1084,12 +1080,20 @@
       }, true);
     }
 
+    /**
+     * SOLUCIÓN: Anima la partícula a lo largo del path hasta la celda destino,
+     * luego anima a CADA peer en esa celda por separado.
+     */
     function animateAlongFullPath(path, messageText, showLabel = true) {
       if (path.length < 2) return;
 
-      const points = path.map(node => {
+      // Separar el path: recorrido de celdas vs peers destino
+      const cellPath = path.filter(n => n.type !== "dest-peer");
+      const destPeers = path.filter(n => n.type === "dest-peer");
+
+      const points = cellPath.map(node => {
         let pos;
-        if (node.type === "peer" || node.type === "dest-peer") {
+        if (node.type === "peer") {
           pos = nodePositions.get(`peer:${node.id}`);
         } else if (node.type === "bridge") {
           pos = nodePositions.get(`peer:${node.id}`);
@@ -1108,7 +1112,54 @@
 
       if (points.length < 2) return;
 
-      animateParticleAlongPoints(points, messageText, showLabel, null, true);
+      // Calcular duración total del recorrido de celdas
+      const segmentDuration = 250;
+      const totalCellPathDuration = (points.length - 1) * segmentDuration + 100;
+
+      // Animar el recorrido por celdas
+      animateParticleAlongPoints(points, messageText, showLabel, () => {
+        // Al llegar a la celda destino, animar a cada peer de esa celda
+        const lastCellNode = cellPath[cellPath.length - 1];
+        if (lastCellNode && lastCellNode.type === "cell") {
+          const destCellId = lastCellNode.id;
+          const destCellPos = nodePositions.get(`cell:${destCellId}`);
+          
+          if (destCellPos) {
+            if (destPeers.length > 0) {
+              // Animar desde la celda a cada peer destino
+              destPeers.forEach((destPeer, idx) => {
+                setTimeout(() => {
+                  animateCellToPeer(destCellId, destPeer.id, messageText, idx === 0);
+                }, idx * 120);
+              });
+            } else {
+              // No hay peers destino específicos, pero aún así hacer pulso en la celda
+              createPulse(destCellPos.x, destCellPos.y, COLORS.green);
+              flashNode(`cell:${destCellId}`, COLORS.green);
+            }
+          }
+        }
+      }, true);
+    }
+
+    /**
+     * Anima desde una celda hacia un peer específico
+     */
+    function animateCellToPeer(cellId, peerId, messageText, showLabel = false) {
+      const cellPos = nodePositions.get(`cell:${cellId}`);
+      const peerPos = nodePositions.get(`peer:${peerId}`);
+      
+      if (!cellPos || !peerPos) return;
+
+      const points = [
+        { ...cellPos, nodeType: "cell", nodeId: cellId },
+        { ...peerPos, nodeType: "dest-peer", nodeId: peerId }
+      ];
+
+      animateParticleAlongPoints(points, messageText, showLabel, () => {
+        createPulse(peerPos.x, peerPos.y, COLORS.green);
+        flashNode(`peer:${peerId}`, COLORS.green);
+      }, false);
     }
 
     function animateParticleAlongPoints(points, messageText, showLabel, onComplete, flashIntermediates = false) {
@@ -1243,9 +1294,15 @@
         .attr("filter", originalFilter);
     }
 
+    /**
+     * SOLUCIÓN: Anima mensaje entrante usando la celda de origen del mensaje.
+     * El receptor reconstruye el path desde originCell hasta su propia celda.
+     */
     function animateIncomingMessage(fromPeerId, fromCellId, myPeerId, myCellId, messageText) {
+      // SOLUCIÓN: Construir el path desde la celda origen hasta la celda del receptor
       const fullPath = buildFullMessagePath(fromPeerId, fromCellId, myCellId);
 
+      // Filtrar dest-peers y agregar solo el receptor actual
       const finalPath = fullPath.filter(n => n.type !== "dest-peer");
       finalPath.push({ type: "dest-peer", id: myPeerId, cellId: myCellId });
 
@@ -1265,7 +1322,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // UI UPDATES - Optimized with cached bridges
+    // UI UPDATES
     // ════════════════════════════════════════════════════════════════
     function updateUI() {
       $("cellId").textContent = selfState.cellId || "-";
@@ -1360,7 +1417,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // UNIVERSAL MONITOR: Deduplication and formatting
+    // MESSAGE HANDLING
     // ════════════════════════════════════════════════════════════════
 
     const seenMessages = new Set();
@@ -1395,11 +1452,60 @@
         { from: fromCell, to: [myCell] }
       );
 
-      if (fromCell !== myCell) {
-        animateIncomingMessage(from, fromCell, selfId, myCell, content);
+      // SOLUCIÓN: Animar el mensaje completo como si fuera broadcast
+      // Cada receptor ve la animación completa desde el emisor hacia TODOS los peers
+      if (fromCell !== "cell-?") {
+        animateFullBroadcast(from, fromCell, content);
       } else {
-        animatePeerToPeer(from, selfId, myCell, content, true);
+        // Si no conocemos la celda del emisor, solo hacer pulso local
+        const myPos = nodePositions.get(`peer:${selfId}`);
+        if (myPos) {
+          createPulse(myPos.x, myPos.y, COLORS.message);
+          flashNode(`peer:${selfId}`, COLORS.green);
+        }
       }
+    }
+
+    /**
+     * SOLUCIÓN: Anima el mensaje como broadcast completo.
+     * Cada receptor ve la animación desde el emisor hacia TODOS los peers,
+     * igual que como lo ve el emisor.
+     */
+    function animateFullBroadcast(fromPeerId, fromCellId, messageText) {
+      const allCells = getAllCellIds();
+      const fromPeerPos = nodePositions.get(`peer:${fromPeerId}`);
+
+      // Si no conocemos la posición del emisor, usar el centro del grafo
+      const startX = fromPeerPos?.x || width / 2;
+      const startY = fromPeerPos?.y || height / 2;
+
+      // Pulso inicial en el emisor (o centro si no lo conocemos)
+      createPulse(startX, startY, COLORS.message);
+      if (fromPeerPos) {
+        flashNode(`peer:${fromPeerId}`, COLORS.message);
+      }
+
+      // 1. Animar a peers en la misma celda del emisor
+      const sameCellPeers = getPeersInCell(fromCellId).filter(pid => pid !== fromPeerId);
+      sameCellPeers.forEach((peerId, idx) => {
+        setTimeout(() => {
+          if (fromPeerPos) {
+            animatePeerToPeer(fromPeerId, peerId, fromCellId, messageText, idx === 0);
+          } else {
+            // Si no conocemos al emisor, animar desde la celda
+            animateCellToPeer(fromCellId, peerId, messageText, idx === 0);
+          }
+        }, idx * 150);
+      });
+
+      // 2. Animar a todas las otras celdas y sus peers
+      const otherCells = allCells.filter(cid => cid !== fromCellId);
+      otherCells.forEach((toCellId, index) => {
+        const fullPath = buildFullMessagePath(fromPeerId, fromCellId, toCellId);
+        setTimeout(() => {
+          animateAlongFullPath(fullPath, messageText, index === 0);
+        }, (sameCellPeers.length * 150) + (index * 200));
+      });
     }
 
     function formatDataForDisplay(data, source) {
@@ -1414,7 +1520,6 @@
             case "del":
             case "remove": return `🗑️ DEL ${data.id || data.key || ""}`;
             case "link": return `🔗 LINK ${data.sourceId || ""}→${data.targetId || ""}`;
-            // case "sync": return `🔄 SYNC`;
             case "ack": return `✓ ACK`;
             case "state": return `📊 STATE`;
             default: return `${data.type}`;
@@ -1432,11 +1537,11 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // CONNECT & EVENTS - Optimized with throttled updates
+    // CONNECT & EVENTS
     // ════════════════════════════════════════════════════════════════
     async function connect() {
       try {
-        db = await gdb('mesh-cells-monitor', {
+        db = await gdb('mesh-cells-monitor-solution', {
           rtc: {
             cells: {
               cellSize: 'auto',
@@ -1488,14 +1593,14 @@
           scheduleUpdate(false);
         });
 
-        // Tipos de operaciones que queremos animar (acciones de usuario reales)
+        // Middleware para interceptar operaciones de sync
         const ANIMATABLE_OP_TYPES = new Set(['upsert', 'remove', 'link', 'put', 'del']);
 
         db.use(async (ops, prevStates) => {
           for (const op of ops) {
             if (!op || !op.type) continue;
 
-            // Solo animar operaciones de usuario reales, no sync/fullStateSync/deltaSync
+            // Solo animar operaciones de usuario reales
             if (!ANIMATABLE_OP_TYPES.has(op.type)) continue;
 
             const content = formatOpForDisplay(op);
@@ -1511,7 +1616,7 @@
           return ops;
         });
 
-        log(`<span style="color:var(--cyan)">📡 Middleware installed to intercept sync</span>`);
+        log(`<span style="color:var(--cyan)">📡 Middleware installed (Solution Monitor)</span>`);
 
         mesh.on("message", (msg, from) => {
           handleIncomingData(msg, from, "mesh");
@@ -1526,7 +1631,7 @@
         $("msgInput").disabled = false;
         $("sendBtn").disabled = false;
 
-        log(`<span style="color:var(--accent)">🔗 Connected via GenosDB (Universal Monitor v2)</span>`);
+        log(`<span style="color:var(--accent)">🔗 Connected via GenosDB (Solution Monitor)</span>`);
 
       } catch (error) {
         log(`<span style="color:var(--red)">⚠️ Error: ${error.message}</span>`);
@@ -1554,15 +1659,6 @@
         case "link":
           return `🔗 LINK ${shortId(op.sourceId)}→${shortId(op.targetId)}`;
 
-        // case "sync":
-        //   return `🔄 SYNC REQUEST`;
-
-        // case "deltaSync":
-        //   return `📦 DELTA SYNC`;
-
-        // case "fullStateSync":
-        //   return `📦 FULL SYNC`;
-
         default:
           return `${op.type}`;
       }
@@ -1570,9 +1666,8 @@
 
     function animateRemoteSync(op) {
       const allPeers = getAllPeers();
-      const allCells = getAllCellIds();
-      const myCell = selfState.cellId || "cell-0";
 
+      // Encontrar el primer peer remoto como origen
       let remotePeerId = null;
       let remoteCell = null;
 
@@ -1584,7 +1679,7 @@
         }
       }
 
-      if (!remotePeerId) {
+      if (!remotePeerId || !remoteCell) {
         const centerX = width / 2;
         const centerY = height / 2;
         createPulse(centerX, centerY, COLORS.message);
@@ -1592,27 +1687,9 @@
       }
 
       const content = formatOpForDisplay(op);
-      const fromPeerPos = nodePositions.get(`peer:${remotePeerId}`);
-
-      if (!fromPeerPos) return;
-
-      createPulse(fromPeerPos.x, fromPeerPos.y, COLORS.message);
-      flashNode(`peer:${remotePeerId}`, COLORS.message);
-
-      const sameCellPeers = getPeersInCell(remoteCell).filter(pid => pid !== remotePeerId);
-      sameCellPeers.forEach((peerId, idx) => {
-        setTimeout(() => {
-          animatePeerToPeer(remotePeerId, peerId, remoteCell, content, idx === 0);
-        }, idx * 150);
-      });
-
-      const otherCells = allCells.filter(cid => cid !== remoteCell);
-      otherCells.forEach((toCellId, index) => {
-        const fullPath = buildFullMessagePath(remotePeerId, remoteCell, toCellId);
-        setTimeout(() => {
-          animateAlongFullPath(fullPath, content, index === 0);
-        }, (sameCellPeers.length * 150) + (index * 200));
-      });
+      
+      // Usar la misma lógica de broadcast completo
+      animateFullBroadcast(remotePeerId, remoteCell, content);
     }
 
     function sendMessage() {
