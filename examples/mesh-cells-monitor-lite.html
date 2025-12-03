@@ -418,12 +418,21 @@
 
     let db = null, room = null, mesh = null;
 
+    // Configuración centralizada (debe coincidir con cells: {...} en connect())
+    const CELLS_CONFIG = {
+      cellSize: 'auto',
+      bridgesPerEdge: 2,
+      maxCellSize: 50,
+      targetCells: 100
+    };
+
     // Self state
     let selfState = {
       cellId: null,
       isBridge: false,
       bridges: [],
-      cellSize: 2
+      cellSize: CELLS_CONFIG.cellSize,
+      bridgesPerEdge: CELLS_CONFIG.bridgesPerEdge
     };
 
     // Remote peers
@@ -521,14 +530,22 @@
     // ════════════════════════════════════════════════════════════════
     // BRIDGE DETECTION - Computed locally (same as D3 version)
     // ════════════════════════════════════════════════════════════════
-    const BRIDGES_PER_EDGE = 1;
+
+    function getBridgesPerEdge() {
+      return selfState.bridgesPerEdge ?? CELLS_CONFIG.bridgesPerEdge;
+    }
 
     function getCellSize() {
-      return selfState.cellSize || 2;
+      return selfState.cellSize || CELLS_CONFIG.cellSize;
     }
 
     function computeBridgesForCell(cellId, allPeerIds) {
+      const bridgesPerEdge = getBridgesPerEdge();
       const bridges = new Set();
+      
+      // Si bridgesPerEdge es 0, no hay bridges
+      if (bridgesPerEdge === 0) return bridges;
+      
       const cellIdx = getCellIndex(cellId);
       if (Number.isNaN(cellIdx)) return bridges;
 
@@ -548,7 +565,7 @@
 
         if (edgeGroup.length === 0) continue;
 
-        const bridgePeers = edgeGroup.slice(0, BRIDGES_PER_EDGE);
+        const bridgePeers = edgeGroup.slice(0, bridgesPerEdge);
         for (const pid of bridgePeers) {
           bridges.add(pid);
         }
@@ -881,10 +898,7 @@
         db = await gdb('mesh-cells-monitor-lite', {
           rtc: {
             cells: {
-              cellSize: 'auto',
-              bridgesPerEdge: 2,
-              maxCellSize: 50,
-              targetCells: 100,
+              ...CELLS_CONFIG,
               debug: false
             }
           }
@@ -912,7 +926,8 @@
             cellId: state.cellId,
             isBridge: state.isBridge === true,
             bridges: Array.isArray(state.bridges) ? state.bridges : [],
-            cellSize: state.cellSize || 2
+            cellSize: state.cellSize || CELLS_CONFIG.cellSize,
+            bridgesPerEdge: state.bridgesPerEdge ?? CELLS_CONFIG.bridgesPerEdge
           };
           invalidateCache();
           scheduleUpdate();
