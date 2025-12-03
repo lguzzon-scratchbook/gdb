@@ -410,8 +410,279 @@
       peer: "#ff6b35",
       self: "#58a6ff",
       link: "#30363d",
-      bridgeLink: "#f0c000"
+      bridgeLink: "#f0c000",
+      pulse: "#58a6ff"
     };
+
+    // ════════════════════════════════════════════════════════════════
+    // MESSAGE ANIMATIONS - Particles that travel along paths
+    // ════════════════════════════════════════════════════════════════
+    const particles = [];  // Moving particles
+    const pulses = [];     // Expanding rings
+    const nodePositions = new Map();  // peerId -> {x, y}
+    const cellPositions = new Map();  // cellId -> {x, y}
+    let animationRunning = false;
+
+    const MESSAGE_COLOR = "#39c5cf";  // Cyan for messages
+
+    function createPulse(x, y, color = MESSAGE_COLOR) {
+      pulses.push({ x, y, radius: 8, alpha: 1, color });
+      startAnimation();
+    }
+
+    function createParticle(path, color = MESSAGE_COLOR, onComplete = null) {
+      if (!path || path.length < 2) return;
+      particles.push({
+        path,
+        currentSegment: 0,
+        progress: 0,
+        color,
+        onComplete
+      });
+      startAnimation();
+    }
+
+    function updateAnimations() {
+      // Update pulses
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        p.radius += 2;
+        p.alpha -= 0.05;
+        if (p.alpha <= 0) pulses.splice(i, 1);
+      }
+
+      // Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.progress += 0.08;  // Speed of particle
+
+        if (p.progress >= 1) {
+          p.progress = 0;
+          p.currentSegment++;
+
+          // Flash intermediate node
+          if (p.currentSegment < p.path.length) {
+            const node = p.path[p.currentSegment];
+            createPulse(node.x, node.y, p.color);
+          }
+
+          if (p.currentSegment >= p.path.length - 1) {
+            // Reached destination
+            const lastNode = p.path[p.path.length - 1];
+            createPulse(lastNode.x, lastNode.y, COLORS.cell);
+            if (p.onComplete) p.onComplete();
+            particles.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    function renderAnimations() {
+      // Render pulses
+      for (const p of pulses) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Render particles with trail
+      for (const p of particles) {
+        if (p.currentSegment >= p.path.length - 1) continue;
+
+        const from = p.path[p.currentSegment];
+        const to = p.path[p.currentSegment + 1];
+        const x = from.x + (to.x - from.x) * p.progress;
+        const y = from.y + (to.y - from.y) * p.progress;
+
+        // Draw trail (path traveled so far)
+        ctx.beginPath();
+        ctx.moveTo(p.path[0].x, p.path[0].y);
+        for (let i = 1; i <= p.currentSegment; i++) {
+          ctx.lineTo(p.path[i].x, p.path[i].y);
+        }
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = p.color;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+
+        // Draw particle (glowing circle)
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function startAnimation() {
+      if (animationRunning) return;
+      animationRunning = true;
+      animateLoop();
+    }
+
+    function animateLoop() {
+      if (pulses.length === 0 && particles.length === 0) {
+        animationRunning = false;
+        return;
+      }
+      updateAnimations();
+      render();
+      requestAnimationFrame(animateLoop);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // PATH BUILDING - Build paths between nodes for animation
+    // ════════════════════════════════════════════════════════════════
+    function getPeersInCell(cellId) {
+      const peers = [];
+      const allPeers = getAllPeers();
+      for (const [pid, st] of allPeers) {
+        if (st.cellId === cellId) peers.push(pid);
+      }
+      return peers;
+    }
+
+    function getAllCellIds() {
+      const cells = new Set();
+      const allPeers = getAllPeers();
+      for (const [pid, st] of allPeers) {
+        if (st.cellId) cells.add(st.cellId);
+      }
+      return [...cells].sort((a, b) => getCellIndex(a) - getCellIndex(b));
+    }
+
+    function buildPathToCell(fromPeerId, fromCellId, toCellId) {
+      const path = [];
+      
+      // Start at sender peer
+      const fromPos = nodePositions.get(fromPeerId);
+      if (fromPos) path.push({ ...fromPos, type: 'peer', id: fromPeerId });
+
+      // Go to sender's cell
+      const fromCellPos = cellPositions.get(fromCellId);
+      if (fromCellPos) path.push({ ...fromCellPos, type: 'cell', id: fromCellId });
+
+      // Traverse cells
+      const fromIdx = getCellIndex(fromCellId);
+      const toIdx = getCellIndex(toCellId);
+
+      if (!Number.isNaN(fromIdx) && !Number.isNaN(toIdx) && fromIdx !== toIdx) {
+        const step = fromIdx < toIdx ? 1 : -1;
+        let currentIdx = fromIdx + step;
+
+        while (currentIdx !== toIdx + step) {
+          const cellId = `cell-${currentIdx}`;
+          const cellPos = cellPositions.get(cellId);
+          if (cellPos) path.push({ ...cellPos, type: 'cell', id: cellId });
+          currentIdx += step;
+        }
+      }
+
+      return path;
+    }
+
+    function animateMessageSent() {
+      animateFullBroadcast(selfId, selfState.cellId || "cell-0");
+    }
+
+    function animateMessageReceived(fromId) {
+      const allPeers = getAllPeers();
+      const fromState = allPeers.get(fromId);
+      const fromCellId = fromState?.cellId;
+
+      // Si conocemos la celda del emisor, animar broadcast completo
+      if (fromCellId) {
+        animateFullBroadcast(fromId, fromCellId);
+      } else {
+        // Si no conocemos la celda, solo pulso local
+        const myPos = nodePositions.get(selfId);
+        if (myPos) createPulse(myPos.x, myPos.y, MESSAGE_COLOR);
+      }
+    }
+
+    /**
+     * Anima el mensaje como broadcast completo desde el emisor hacia TODOS los peers.
+     * Igual que en D3: animateFullBroadcast
+     */
+    function animateFullBroadcast(fromPeerId, fromCellId) {
+      const fromPos = nodePositions.get(fromPeerId);
+      const fromCellPos = cellPositions.get(fromCellId);
+      
+      // Pulso inicial en el emisor
+      if (fromPos) {
+        createPulse(fromPos.x, fromPos.y, MESSAGE_COLOR);
+      } else if (fromCellPos) {
+        createPulse(fromCellPos.x, fromCellPos.y, MESSAGE_COLOR);
+      }
+
+      // 1. Animar a peers en la misma celda del emisor
+      const sameCellPeers = getPeersInCell(fromCellId).filter(pid => pid !== fromPeerId);
+      sameCellPeers.forEach((peerId, idx) => {
+        setTimeout(() => {
+          const toPos = nodePositions.get(peerId);
+          if (fromPos && fromCellPos && toPos) {
+            createParticle([fromPos, fromCellPos, toPos], MESSAGE_COLOR);
+          } else if (fromCellPos && toPos) {
+            createParticle([fromCellPos, toPos], MESSAGE_COLOR);
+          }
+        }, idx * 100);
+      });
+
+      // 2. Animar a otras celdas solo si hay bridges configurados
+      if (getBridgesPerEdge() > 0) {
+        const allCells = getAllCellIds();
+        const otherCells = allCells.filter(cid => cid !== fromCellId);
+
+        otherCells.forEach((toCellId, cellIdx) => {
+          setTimeout(() => {
+            const path = buildPathToCell(fromPeerId, fromCellId, toCellId);
+            
+            // Si no tenemos posición del emisor, empezar desde su celda
+            if (path.length === 0 && fromCellPos) {
+              path.push({ ...fromCellPos, type: 'cell', id: fromCellId });
+              
+              // Añadir celdas intermedias
+              const fromIdx = getCellIndex(fromCellId);
+              const toIdx = getCellIndex(toCellId);
+              if (!Number.isNaN(fromIdx) && !Number.isNaN(toIdx) && fromIdx !== toIdx) {
+                const step = fromIdx < toIdx ? 1 : -1;
+                let currentIdx = fromIdx + step;
+                while (currentIdx !== toIdx + step) {
+                  const cellId = `cell-${currentIdx}`;
+                  const cellPos = cellPositions.get(cellId);
+                  if (cellPos) path.push({ ...cellPos, type: 'cell', id: cellId });
+                  currentIdx += step;
+                }
+              }
+            }
+            
+            if (path.length >= 1) {
+              // Animar a cada peer en la celda destino
+              const destPeers = getPeersInCell(toCellId);
+              destPeers.forEach((destPeerId, peerIdx) => {
+                setTimeout(() => {
+                  const destPos = nodePositions.get(destPeerId);
+                  if (destPos) {
+                    const fullPath = [...path, destPos];
+                    createParticle(fullPath, MESSAGE_COLOR);
+                  }
+                }, peerIdx * 80);
+              });
+            }
+          }, (sameCellPeers.length * 100) + (cellIdx * 150));
+        });
+      }
+    }
 
     const $ = id => document.getElementById(id);
     const shortId = id => id?.length > 10 ? `${id.slice(0, 4)}…${id.slice(-4)}` : id;
@@ -636,6 +907,9 @@
         const cellX = startX + cellIndex * cellWidth;
         const cellY = height / 2;
 
+        // Cache cell position for animations
+        cellPositions.set(cellId, { x: cellX, y: cellY });
+
         layout.cells.push({
           id: cellId,
           x: cellX,
@@ -652,6 +926,9 @@
           const angle = angleStep * peerIndex - Math.PI / 2;
           const px = cellX + Math.cos(angle) * radius;
           const py = cellY + Math.sin(angle) * radius;
+
+          // Cache position for animations
+          nodePositions.set(peer.id, { x: px, y: py });
 
           // Use cached bridge computation
           const isSelf = peer.id === selfId;
@@ -798,6 +1075,9 @@
         ctx.textBaseline = "top";
         ctx.fillText(peer.label, peer.x, peer.y + radius + 3);
       }
+
+      // Draw animations on top (particles + pulses)
+      renderAnimations();
     }
 
     // scheduleRender now just calls scheduleUpdate for backwards compatibility
@@ -962,6 +1242,7 @@
           if (from === selfId) return;
           const content = typeof msg === "string" ? msg : JSON.stringify(msg).slice(0, 30);
           log(`<span class="from">${shortId(from)}:</span> ${content}`);
+          animateMessageReceived(from);
         });
 
         $("msgInput").disabled = false;
@@ -982,6 +1263,7 @@
 
       mesh.send(text);
       log(`<span class="self">You:</span> ${text}`);
+      animateMessageSent();
       input.value = "";
     }
 
