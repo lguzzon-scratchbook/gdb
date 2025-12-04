@@ -4,6 +4,27 @@ The **Streaming** feature in `GDB`, powered by **GenosRTC**, enables real-time c
 
 ## Overview
 
+### Verify that WebRTC is enabled
+
+GenosDB requires an active WebRTC environment to establish peer-to-peer connections.  
+You can quickly check whether your browser supports WebRTC using the following external tool:
+
+#### WebRTC Leak Test
+
+URL: https://browserleaks.com/webrtc  
+Description: This page detects whether your browser has WebRTC enabled and shows the IP addresses exposed through WebRTC. If the tool reports that WebRTC is disabled or blocked, GenosDB will not be able to initiate P2P communication.
+
+##### Finding public, private, and paid Nostr relays
+
+When using custom relay configurations through the `relayUrls` option, developers may need a reliable directory of active Nostr relays. This is useful for selecting high-availability relays, building private relay sets, or evaluating which relays to include for production environments.
+
+You can explore and filter available relays using the following external resource:
+
+###### Nostr Relay Finder
+  
+URL: https://legacy.nostr.watch/relays/find  
+Description: A searchable directory of Nostr relays that includes information about availability, latency, geographic distribution, access policies, pricing, and stability. This resource helps developers select the appropriate relays to include in the `relayUrls` array when configuring GenosDB.
+
 Streaming allows peers (clients) to send and receive data in real time through shared communication channels. Each peer can publish data to a channel, and all other connected peers will receive the updates instantly. This ensures that all participants in the system stay synchronized with minimal latency.
 
 ### Key Concepts
