@@ -67,6 +67,9 @@ A real-time collaborative rich‑text editor powered by GenosDB: live typing syn
 Secure, Decentralized & Collaborative Notes App powered by GenosDB
 A minimalist and secure note-taking app showcasing decentralized identity management (Mnemonic & WebAuthn Passkeys), real-time note sharing with granular read/write permissions enforced via P2P security middleware, live full-text search, and a responsive UI with light/dark modes.
 
+### [Real-time IoT Thermostat Control powered by GenosDB](https://estebanrfp.github.io/gdb/examples/thermostat.html)
+A real-time peer-to-peer thermostat control demo showcasing GenosDB's reactive synchronization. Multiple users can adjust target temperature, toggle eco-mode (Leaf), and set away status — all changes instantly sync across connected browsers without any backend server. Demonstrates `db.put()`, reactive `db.get()` subscriptions, and P2P room events for peer counting.
+
 ---
 
 ## Security Manager (SM) Examples
