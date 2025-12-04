@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Nest Thermostat Control - GenosDB Real-time Sync</title>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+	<style>
+		@import url(https://fonts.googleapis.com/css?family=Open+Sans:300);
+		body {
+			background-color: #012129;
+			margin: 0;
+			height: 100vh;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		#container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		#thermostat {
+			width: 75vmin;
+			height: 75vmin;
+			-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+		}
+		.dial {
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+		}
+		.dial.away .dial__ico__leaf {
+			visibility: hidden;
+		}
+		.dial.away .dial__lbl--target {
+			visibility: hidden;
+		}
+		.dial.away .dial__lbl--target--half {
+			visibility: hidden;
+		}
+		.dial.away .dial__lbl--away {
+			opacity: 1;
+		}
+		.dial .dial__border {
+			fill: none;
+			stroke: #ff9000;
+			stroke-width: 8;
+		}
+		.dial .dial__shape {
+			-webkit-transition: fill 0.5s;
+			transition: fill 0.5s;
+		}
+		.dial__ico__leaf {
+			fill: #13EB13;
+			opacity: 0;
+			-webkit-transition: opacity 0.5s;
+			transition: opacity 0.5s;
+			pointer-events: none;
+		}
+		.dial.has-leaf .dial__ico__leaf {
+			display: block;
+			opacity: 1;
+			pointer-events: initial;
+		}
+		.dial__editableIndicator {
+			fill: white;
+			fill-rule: evenodd;
+			opacity: 0;
+			-webkit-transition: opacity 0.5s;
+			transition: opacity 0.5s;
+		}
+		.dial--edit .dial__editableIndicator {
+			opacity: 1;
+		}
+		.dial--state--off .dial__shape {
+			fill: rgba(34, 34, 34, 0.09);
+		}
+		.dial--state--heating .dial__shape {
+			fill: #ff8a65;
+		}
+		.dial--state--cooling .dial__shape {
+			fill: #1b7ec4;
+		}
+		.dial--state--normal .dial__shape {
+			fill: #1d861d;
+		}
+		.dial__ticks path {
+			fill: rgba(255, 255, 255, 0.3);
+		}
+		.dial__ticks path.active {
+			fill: rgba(255, 255, 255, 0.8);
+		}
+		.dial text {
+			fill: white;
+			text-anchor: middle;
+			font-family: Helvetica, sans-serif;
+			alignment-baseline: central;
+		}
+		.dial__lbl--target {
+			font-size: 5em;
+			font-weight: bold;
+		}
+		.dial__lbl--target--half {
+			font-size: 40px;
+			font-weight: bold;
+			opacity: 0;
+			-webkit-transition: opacity 0.1s;
+			transition: opacity 0.1s;
+		}
+		.dial__lbl--target--half.shown {
+			opacity: 1;
+			-webkit-transition: opacity 0s;
+			transition: opacity 0s;
+		}
+		.dial__lbl--ambient {
+			font-size: 22px;
+			font-weight: bold;
+		}
+		.dial__lbl--away {
+			font-size: 72px;
+			font-weight: bold;
+			opacity: 0;
+			pointer-events: none;
+		}
+		.dial__btn {
+			fill: rgba(255, 255, 255, 0.3);
+			cursor: pointer;
+			transition: fill 0.2s;
+		}
+		.dial__btn:hover {
+			fill: rgba(255, 255, 255, 0.6);
+		}
+		.dial__btn:active {
+			fill: rgba(255, 255, 255, 0.8);
+		}
+		.dial__btn text {
+			font-size: 18px;
+			font-weight: bold;
+			pointer-events: none;
+		}
+		.dial__checkbox {
+			cursor: pointer;
+		}
+		.dial__checkbox circle {
+			fill: transparent;
+			stroke: rgba(255, 255, 255, 0.4);
+			stroke-width: 2;
+			transition: all 0.2s;
+		}
+		.dial__checkbox:hover circle {
+			stroke: rgba(255, 255, 255, 0.7);
+		}
+		.dial__checkbox.active circle {
+			fill: rgba(255, 255, 255, 0.8);
+			stroke: rgba(255, 255, 255, 0.8);
+		}
+		.dial__checkbox text {
+			font-size: 10px;
+			opacity: 0.6;
+			pointer-events: none;
+		}
+	</style>
+</head>
+
+<body>
+	<div id='container'>
+		<div id='thermostat'></div>
+		<!-- Connection status indicator -->
+		<div id="status" style="position: fixed; top: 10px; right: 10px; padding: 8px 16px; border-radius: 20px; font-family: 'Open Sans', sans-serif; font-size: 12px; background: rgba(255,255,255,0.1); color: #888;">
+			Connecting...
+		</div>
+		<!-- Peers indicator -->
+		<div id="peers" style="position: fixed; top: 50px; right: 10px; padding: 8px 16px; border-radius: 20px; font-family: 'Open Sans', sans-serif; font-size: 12px; background: rgba(255,255,255,0.1); color: #666;">
+			Peers: 0
+		</div>
+	</div>
+
+	<script type="module">
+		import { gdb } from '../dist/index.js';
+
+		// Initialize GenosDB with P2P real-time sync enabled
+		const db = await gdb('thermostat-sync', { rtc: true });
+
+		// UI elements
+		const statusEl = document.getElementById('status');
+		const peersEl = document.getElementById('peers');
+		
+		// Use a Set to track unique peers
+		const connectedPeers = new Set();
+
+		// Update peers display
+		function updatePeersDisplay() {
+			const count = connectedPeers.size;
+			peersEl.textContent = `Peers: ${count}`;
+			peersEl.style.color = count > 0 ? '#4CAF50' : '#666';
+		}
+
+		// Update status indicator
+		function updateStatus(connected) {
+			statusEl.textContent = connected ? '🟢 Synced' : '🔴 Disconnected';
+			statusEl.style.color = connected ? '#4CAF50' : '#f44336';
+		}
+
+		// Track peers using Set to avoid duplicates
+		db.room.on('peer:join', (peerId) => {
+			connectedPeers.add(peerId);
+			updatePeersDisplay();
+			console.log(`Peer connected: ${peerId} (Total: ${connectedPeers.size})`);
+		});
+
+		db.room.on('peer:leave', (peerId) => {
+			connectedPeers.delete(peerId);
+			updatePeersDisplay();
+			console.log(`Peer disconnected: ${peerId} (Total: ${connectedPeers.size})`);
+		});
+
+		// Mark as connected after initialization
+		updateStatus(true);
+		var thermostatDial = (function() {
+			
+			/*
+			 * Utility functions
+			 */
+			
+			// Create an element with proper SVG namespace, optionally setting its attributes and appending it to another element
+			function createSVGElement(tag,attributes,appendTo) {
+				var element = document.createElementNS('http://www.w3.org/2000/svg',tag);
+				attr(element,attributes);
+				if (appendTo) {
+					appendTo.appendChild(element);
+				}
+				return element;
+			}
+			
+			// Set attributes for an element
+			function attr(element,attrs) {
+				for (var i in attrs) {
+					element.setAttribute(i,attrs[i]);
+				}
+			}
+			
+			// Rotate a cartesian point about given origin by X degrees
+			function rotatePoint(point, angle, origin) {
+				var radians = angle * Math.PI/180;
+				var x = point[0]-origin[0];
+				var y = point[1]-origin[1];
+				var x1 = x*Math.cos(radians) - y*Math.sin(radians) + origin[0];
+				var y1 = x*Math.sin(radians) + y*Math.cos(radians) + origin[1];
+				return [x1,y1];
+			}
+			
+			// Rotate an array of cartesian points about a given origin by X degrees
+			function rotatePoints(points, angle, origin) {
+				return points.map(function(point) {
+					return rotatePoint(point, angle, origin);
+				});
+			}
+			
+			// Given an array of points, return an SVG path string representing the shape they define
+			function pointsToPath(points) {
+				return points.map(function(point, iPoint) {
+					return (iPoint>0?'L':'M') + point[0] + ' ' + point[1];
+				}).join(' ')+'Z';
+			}
+			
+			function circleToPath(cx, cy, r) {
+				return [
+					"M",cx,",",cy,
+					"m",0-r,",",0,
+					"a",r,",",r,0,1,",",0,r*2,",",0,
+					"a",r,",",r,0,1,",",0,0-r*2,",",0,
+					"z"
+				].join(' ').replace(/\s,\s/g,",");
+			}
+			
+			function donutPath(cx,cy,rOuter,rInner) {
+				return circleToPath(cx,cy,rOuter) + " " + circleToPath(cx,cy,rInner);
+			}
+			
+			// Restrict a number to a min + max range
+			function restrictToRange(val,min,max) {
+				if (val < min) return min;
+				if (val > max) return max;
+				return val;
+			}
+			
+			// Round a number to the nearest 0.5
+			function roundHalf(num) {
+				return Math.round(num*2)/2;
+			}
+			
+			function setClass(el, className, state) {
+				el.classList[state ? 'add' : 'remove'](className);
+			}
+			
+			/*
+			 * The "MEAT"
+			 */
+
+			return function(targetElement, options) {
+				var self = this;
+				
+				/*
+				 * Options
+				 */
+				options = options || {};
+				options = {
+					diameter: options.diameter || 400,
+					minValue: options.minValue || 10,
+					maxValue: options.maxValue || 30,
+					numTicks: options.numTicks || 30,
+					onSetTargetTemperature: options.onSetTargetTemperature || function() {},
+					onSetLeaf: options.onSetLeaf || function() {},
+					onSetAway: options.onSetAway || function() {},
+				};
+				
+				/*
+				 * Properties - calculated from options in many cases
+				 */
+				var properties = {
+					tickDegrees: 300,
+					rangeValue: options.maxValue - options.minValue,
+					radius: options.diameter/2,
+					ticksOuterRadius: options.diameter / 30,
+					ticksInnerRadius: options.diameter / 10,
+					hvac_states: ['off', 'heating', 'cooling', 'normal'],
+					dragLockAxisDistance: 15,
+				}
+				properties.lblAmbientPosition = [properties.radius, properties.ticksOuterRadius-(properties.ticksOuterRadius-properties.ticksInnerRadius)/2]
+				properties.offsetDegrees = 176-(360-properties.tickDegrees)/2;
+				
+				/*
+				 * Object state
+				 */
+				var state = {
+					target_temperature: options.minValue,
+					ambient_temperature: options.minValue,
+					hvac_state: properties.hvac_states[0],
+					has_leaf: false,
+					away: false
+				};
+				
+				/*
+				 * Property getter / setters
+				 */
+				Object.defineProperty(this,'target_temperature',{
+					get: function() {
+						return state.target_temperature;
+					},
+					set: function(val) {
+						state.target_temperature = restrictTargetTemperature(+val);
+						render();
+					}
+				});
+				Object.defineProperty(this,'ambient_temperature',{
+					get: function() {
+						return state.ambient_temperature;
+					},
+					set: function(val) {
+						state.ambient_temperature = roundHalf(+val);
+						render();
+					}
+				});
+				Object.defineProperty(this,'hvac_state',{
+					get: function() {
+						return state.hvac_state;
+					},
+					set: function(val) {
+						if (properties.hvac_states.indexOf(val)>=0) {
+							state.hvac_state = val;
+							render();
+						}
+					}
+				});
+				Object.defineProperty(this,'has_leaf',{
+					get: function() {
+						return state.has_leaf;
+					},
+					set: function(val) {
+						state.has_leaf = !!val;
+						render();
+					}
+				});
+				Object.defineProperty(this,'away',{
+					get: function() {
+						return state.away;
+					},
+					set: function(val) {
+						state.away = !!val;
+						render();
+					}
+				});
+				
+				/*
+				 * SVG
+				 */
+				var borderWidth = 8;
+				var dialExpand = 4; // Cuánto más grande es el círculo verde respecto a los elementos internos
+				var padding = 20;
+				var svg = createSVGElement('svg',{
+					width: '100%',
+					height: '100%',
+					viewBox: (-padding)+' '+(-padding)+' '+(options.diameter + padding*2)+' '+(options.diameter + padding*2),
+					class: 'dial'
+				},targetElement);
+				// OUTER BORDER RING
+				var borderRing = createSVGElement('circle',{
+					cx: properties.radius,
+					cy: properties.radius,
+					r: properties.radius + dialExpand + borderWidth/2,
+					class: 'dial__border'
+				},svg);
+				// CIRCULAR DIAL (más grande que los elementos internos)
+				var circle = createSVGElement('circle',{
+					cx: properties.radius,
+					cy: properties.radius,
+					r: properties.radius + dialExpand,
+					class: 'dial__shape'
+				},svg);
+				// EDITABLE INDICATOR
+				var editCircle = createSVGElement('path',{
+					d: donutPath(properties.radius,properties.radius,properties.radius-4,properties.radius-8),
+					class: 'dial__editableIndicator',
+				},svg);
+				
+				/*
+				 * Ticks
+				 */
+				var ticks = createSVGElement('g',{
+					class: 'dial__ticks'	
+				},svg);
+				var tickPoints = [
+					[properties.radius-1, properties.ticksOuterRadius],
+					[properties.radius+1, properties.ticksOuterRadius],
+					[properties.radius+1, properties.ticksInnerRadius],
+					[properties.radius-1, properties.ticksInnerRadius]
+				];
+				var tickPointsLarge = [
+					[properties.radius-1.5, properties.ticksOuterRadius],
+					[properties.radius+1.5, properties.ticksOuterRadius],
+					[properties.radius+1.5, properties.ticksInnerRadius+10],
+					[properties.radius-1.5, properties.ticksInnerRadius+10]
+				];
+				var theta = properties.tickDegrees/options.numTicks;
+				var tickArray = [];
+				for (var iTick=0; iTick<options.numTicks; iTick++) {
+					tickArray.push(createSVGElement('path',{d:pointsToPath(tickPoints)},ticks));
+				};
+				
+				/*
+				 * Labels
+				 */
+				var lblTarget = createSVGElement('text',{
+					x: properties.radius,
+					y: properties.radius,
+					class: 'dial__lbl dial__lbl--target'
+				},svg);
+				var lblTarget_text = document.createTextNode('');
+				lblTarget.appendChild(lblTarget_text);
+				//
+				var lblTargetHalf = createSVGElement('text',{
+					x: properties.radius + properties.radius/3,
+					y: properties.radius - properties.radius/8,
+					class: 'dial__lbl dial__lbl--target--half'
+				},svg);
+				var lblTargetHalf_text = document.createTextNode('5');
+				lblTargetHalf.appendChild(lblTargetHalf_text);
+				//
+				var lblAmbient = createSVGElement('text',{
+					class: 'dial__lbl dial__lbl--ambient'
+				},svg);
+				var lblAmbient_text = document.createTextNode('');
+				lblAmbient.appendChild(lblAmbient_text);
+				//
+				var lblAway = createSVGElement('text',{
+					x: properties.radius,
+					y: properties.radius,
+					class: 'dial__lbl dial__lbl--away'
+				},svg);
+				var lblAway_text = document.createTextNode('AWAY');
+				lblAway.appendChild(lblAway_text);
+				//
+				var icoLeaf = createSVGElement('path',{
+					class: 'dial__ico__leaf'
+				},svg);
+				
+				/*
+				 * LEAF
+				 */
+				var leafScale = properties.radius/5/100;
+				var leafDef = ["M", 3, 84, "c", 24, 17, 51, 18, 73, -6, "C", 100, 52, 100, 22, 100, 4, "c", -13, 15, -37, 9, -70, 19, "C", 4, 32, 0, 63, 0, 76, "c", 6, -7, 18, -17, 33, -23, 24, -9, 34, -9, 48, -20, -9, 10, -20, 16, -43, 24, "C", 22, 63, 8, 78, 3, 84, "z"].map(function(x) {
+					return isNaN(x) ? x : x*leafScale;
+				}).join(' ');
+				var translate = [properties.radius-(leafScale*100*0.5),properties.radius*1.5]
+				var icoLeaf = createSVGElement('path',{
+					class: 'dial__ico__leaf',
+					d: leafDef,
+					transform: 'translate('+translate[0]+','+translate[1]+')'
+				},svg);
+				
+				/*
+				 * TEMPERATURE CONTROL BUTTONS
+				 */
+				var btnSize = 18;
+				var btnY = 280; // Alineado con la consigna (lblAmbient)
+				var btnSpacing = 50;
+				
+				// Decrease button <
+				var btnDecrease = createSVGElement('g',{
+					class: 'dial__btn dial__btn--decrease'
+				},svg);
+				createSVGElement('circle',{
+					cx: properties.radius - btnSpacing,
+					cy: btnY,
+					r: btnSize
+				},btnDecrease);
+				var btnDecreaseText = createSVGElement('text',{
+					x: properties.radius - btnSpacing,
+					y: btnY
+				},btnDecrease);
+				btnDecreaseText.appendChild(document.createTextNode('<'));
+				
+				// Increase button >
+				var btnIncrease = createSVGElement('g',{
+					class: 'dial__btn dial__btn--increase'
+				},svg);
+				createSVGElement('circle',{
+					cx: properties.radius + btnSpacing,
+					cy: btnY,
+					r: btnSize
+				},btnIncrease);
+				var btnIncreaseText = createSVGElement('text',{
+					x: properties.radius + btnSpacing,
+					y: btnY
+				},btnIncrease);
+				btnIncreaseText.appendChild(document.createTextNode('>'));
+				
+				// Button event handlers
+				btnDecrease.addEventListener('click', function(e) {
+					e.stopPropagation();
+					self.target_temperature = self.target_temperature - 0.5;
+					if (typeof options.onSetTargetTemperature == 'function') {
+						options.onSetTargetTemperature(self.target_temperature);
+					}
+				});
+				
+				btnIncrease.addEventListener('click', function(e) {
+					e.stopPropagation();
+					self.target_temperature = self.target_temperature + 0.5;
+					if (typeof options.onSetTargetTemperature == 'function') {
+						options.onSetTargetTemperature(self.target_temperature);
+					}
+				});
+				
+				/*
+				 * CHECKBOX INDICATORS (Leaf & Away)
+				 */
+				var checkboxY = 365;
+				var checkboxRadius = 8;
+				var checkboxSpacing = 25;
+				
+				// Leaf checkbox
+				var chkLeaf = createSVGElement('g',{
+					class: 'dial__checkbox dial__checkbox--leaf'
+				},svg);
+				createSVGElement('circle',{
+					cx: properties.radius - checkboxSpacing,
+					cy: checkboxY,
+					r: checkboxRadius
+				},chkLeaf);
+				var chkLeafLabel = createSVGElement('text',{
+					x: properties.radius - checkboxSpacing,
+					y: checkboxY + 22
+				},chkLeaf);
+				chkLeafLabel.appendChild(document.createTextNode('LEAF'));
+				
+				// Away checkbox
+				var chkAway = createSVGElement('g',{
+					class: 'dial__checkbox dial__checkbox--away'
+				},svg);
+				createSVGElement('circle',{
+					cx: properties.radius + checkboxSpacing,
+					cy: checkboxY,
+					r: checkboxRadius
+				},chkAway);
+				var chkAwayLabel = createSVGElement('text',{
+					x: properties.radius + checkboxSpacing,
+					y: checkboxY + 22
+				},chkAway);
+				chkAwayLabel.appendChild(document.createTextNode('AWAY'));
+				
+				// Checkbox event handlers
+				chkLeaf.addEventListener('click', function(e) {
+					e.stopPropagation();
+					self.has_leaf = !self.has_leaf;
+					if (typeof options.onSetLeaf == 'function') {
+						options.onSetLeaf(self.has_leaf);
+					}
+				});
+				
+				chkAway.addEventListener('click', function(e) {
+					e.stopPropagation();
+					self.away = !self.away;
+					if (typeof options.onSetAway == 'function') {
+						options.onSetAway(self.away);
+					}
+				});
+					
+				/*
+				 * RENDER
+				 */
+				function render() {
+					renderAway();
+					renderHvacState();
+					renderTicks();
+					renderTargetTemperature();
+					renderAmbientTemperature();
+					renderLeaf();
+				}
+				render();
+
+				/*
+				 * RENDER - ticks
+				 */
+				function renderTicks() {
+					var vMin, vMax;
+					if (self.away) {
+						vMin = self.ambient_temperature;
+						vMax = vMin;
+					} else {
+						vMin = Math.min(self.ambient_temperature, self.target_temperature);
+						vMax = Math.max(self.ambient_temperature, self.target_temperature);
+					}
+					var min = restrictToRange(Math.round((vMin-options.minValue)/properties.rangeValue * options.numTicks),0,options.numTicks-1);
+					var max = restrictToRange(Math.round((vMax-options.minValue)/properties.rangeValue * options.numTicks),0,options.numTicks-1);
+					//
+					tickArray.forEach(function(tick,iTick) {
+						var isLarge = iTick==min || iTick==max;
+						var isActive = iTick >= min && iTick <= max;
+						attr(tick,{
+							d: pointsToPath(rotatePoints(isLarge ? tickPointsLarge: tickPoints,iTick*theta-properties.offsetDegrees,[properties.radius, properties.radius])),
+							class: isActive ? 'active' : ''
+						});
+					});
+				}
+			
+				/*
+				 * RENDER - ambient temperature
+				 */
+				function renderAmbientTemperature() {
+					lblAmbient_text.nodeValue = Math.floor(self.target_temperature);
+					if (self.target_temperature%1!=0) {
+						lblAmbient_text.nodeValue += ' ⁵';
+					}
+					var peggedValue = restrictToRange(self.ambient_temperature, options.minValue, options.maxValue);
+					var degs = properties.tickDegrees * (peggedValue-options.minValue)/properties.rangeValue - properties.offsetDegrees;
+					if (peggedValue > self.target_temperature) {
+						degs += 18;
+					} else {
+						degs -= 8;
+					}
+					var pos = rotatePoint(properties.lblAmbientPosition,degs,[properties.radius, properties.radius]);
+					attr(lblAmbient,{
+						x: 200,
+						y: 280
+					});
+				}
+
+				/*
+				 * RENDER - target temperature
+				 */
+				function renderTargetTemperature() {
+					lblTarget_text.nodeValue = Math.floor(self.ambient_temperature);
+					setClass(lblTargetHalf,'shown',self.ambient_temperature%1!=0);
+				}
+				
+				/*
+				 * RENDER - leaf
+				 */
+				function renderLeaf() {
+					setClass(svg,'has-leaf',self.has_leaf);
+					setClass(chkLeaf,'active',self.has_leaf);
+				}
+				
+				/*
+				 * RENDER - HVAC state
+				 */
+				function renderHvacState() {
+					Array.prototype.slice.call(svg.classList).forEach(function(c) {
+						if (c.match(/^dial--state--/)) {
+							svg.classList.remove(c);
+						};
+					});
+					svg.classList.add('dial--state--'+self.hvac_state);
+				}
+				
+				/*
+				 * RENDER - away
+				 */
+				function renderAway() {
+					svg.classList[self.away ? 'add' : 'remove']('away');
+					setClass(chkAway,'active',self.away);
+				}
+				
+				/*
+				 * Drag to control
+				 */
+				var _drag = {
+					inProgress: false,
+					startPoint: null,
+					startTemperature: 0,
+					lockAxis: undefined
+				};
+				
+				function eventPosition(ev) {
+					if (ev.targetTouches && ev.targetTouches.length) {
+						return  [ev.targetTouches[0].clientX, ev.targetTouches[0].clientY];
+					} else {
+						return [ev.x, ev.y];
+					};
+				}
+				
+				var startDelay;
+				function dragStart(ev) {
+					startDelay = setTimeout(function() {
+						setClass(svg, 'dial--edit', true);
+						_drag.inProgress = true;
+						_drag.startPoint = eventPosition(ev);
+						_drag.startTemperature = self.target_temperature || options.minValue;
+						_drag.lockAxis = undefined;
+					},1000);
+				};
+				
+				function dragEnd (ev) {
+					clearTimeout(startDelay);
+					setClass(svg, 'dial--edit', false);
+					if (!_drag.inProgress) return;
+					_drag.inProgress = false;
+					if (self.target_temperature != _drag.startTemperature) {
+						if (typeof options.onSetTargetTemperature == 'function') {
+							options.onSetTargetTemperature(self.target_temperature);
+						};
+					};
+				};
+				
+				function dragMove(ev) {
+					ev.preventDefault();
+					if (!_drag.inProgress) return;
+					var evPos =  eventPosition(ev);
+					var dy = _drag.startPoint[1]-evPos[1];
+					var dx = evPos[0] - _drag.startPoint[0];
+					var dxy;
+					if (_drag.lockAxis == 'x') {
+						dxy  = dx;
+					} else if (_drag.lockAxis == 'y') {
+						dxy = dy;
+					} else if (Math.abs(dy) > properties.dragLockAxisDistance) {
+						_drag.lockAxis = 'y';
+						dxy = dy;
+					} else if (Math.abs(dx) > properties.dragLockAxisDistance) {
+						_drag.lockAxis = 'x';
+						dxy = dx;
+					} else {
+						dxy = (Math.abs(dy) > Math.abs(dx)) ? dy : dx;
+					};
+					var dValue = (dxy*getSizeRatio())/(options.diameter)*properties.rangeValue;
+					self.target_temperature = roundHalf(_drag.startTemperature+dValue);
+				}
+				
+				svg.addEventListener('mousedown',dragStart);
+				svg.addEventListener('touchstart',dragStart);
+				
+				svg.addEventListener('mouseup',dragEnd);
+				svg.addEventListener('mouseleave',dragEnd);
+				svg.addEventListener('touchend',dragEnd);
+				
+				svg.addEventListener('mousemove',dragMove);
+				svg.addEventListener('touchmove',dragMove);
+				
+				/*
+				 * Helper functions
+				 */
+				function restrictTargetTemperature(t) {
+					return restrictToRange(roundHalf(t),options.minValue,options.maxValue);
+				}
+				
+				function angle(point) {
+					var dx = point[0] - properties.radius;
+					var dy = point[1] - properties.radius;
+					var theta = Math.atan(dx/dy) / (Math.PI/180);
+					if (point[0]>=properties.radius && point[1] < properties.radius) {
+						theta = 90-theta - 90;
+					} else if (point[0]>=properties.radius && point[1] >= properties.radius) {
+						theta = 90-theta + 90;
+					} else if (point[0]<properties.radius && point[1] >= properties.radius) {
+						theta = 90-theta + 90;
+					} else if (point[0]<properties.radius && point[1] < properties.radius) {
+						theta = 90-theta+270;
+					}
+					return theta;
+				};
+				
+				function getSizeRatio() {
+					return options.diameter / targetElement.clientWidth;
+				}
+				
+			};
+		})();
+
+		/* ==== GenosDB Real-time Thermostat ==== */
+
+		// Fixed ID for the shared thermostat state
+		const THERMOSTAT_ID = 'shared-thermostat';
+		
+		// Flag to prevent feedback loops when receiving remote updates
+		let isRemoteUpdate = false;
+
+		// Helper function to sync state to GenosDB
+		async function syncState(updates = {}) {
+			if (isRemoteUpdate) return;
+			
+			const state = {
+				type: 'thermostat',
+				target_temperature: nest.target_temperature,
+				has_leaf: nest.has_leaf,
+				away: nest.away,
+				updatedAt: Date.now(),
+				...updates
+			};
+			
+			await db.put(state, THERMOSTAT_ID);
+		}
+
+		// Initialize the thermostat UI
+		var nest = new thermostatDial(document.getElementById('thermostat'), {
+			onSetTargetTemperature: async function(temperature) {
+				if (!isRemoteUpdate) {
+					console.log('📤 Sending temperature:', temperature);
+					await syncState({ target_temperature: temperature });
+				}
+			},
+			onSetLeaf: async function(hasLeaf) {
+				if (!isRemoteUpdate) {
+					console.log('🍃 Sending leaf status:', hasLeaf);
+					await syncState({ has_leaf: hasLeaf });
+				}
+			},
+			onSetAway: async function(away) {
+				if (!isRemoteUpdate) {
+					console.log('🏠 Sending away status:', away);
+					await syncState({ away: away });
+				}
+			}
+		});
+
+		// Subscribe to real-time updates from GenosDB
+		const { result: initialState } = await db.get(THERMOSTAT_ID, (node) => {
+			if (node && node.value) {
+				const { target_temperature, has_leaf, away } = node.value;
+				
+				// Set flag to prevent feedback loop
+				isRemoteUpdate = true;
+				
+				// Update thermostat UI with remote values
+				if (target_temperature !== undefined && target_temperature !== nest.target_temperature) {
+					console.log('📥 Received remote temperature:', target_temperature);
+					nest.target_temperature = target_temperature;
+				}
+				if (has_leaf !== undefined && has_leaf !== nest.has_leaf) {
+					console.log('🍃 Received remote leaf status:', has_leaf);
+					nest.has_leaf = has_leaf;
+				}
+				if (away !== undefined && away !== nest.away) {
+					console.log('🏠 Received remote away status:', away);
+					nest.away = away;
+				}
+				
+				// Reset flag
+				isRemoteUpdate = false;
+			}
+		});
+
+		// Initialize with saved state if exists, otherwise set defaults
+		if (initialState?.value) {
+			const { target_temperature, has_leaf, away } = initialState.value;
+			nest.target_temperature = target_temperature ?? 20;
+			nest.has_leaf = has_leaf ?? false;
+			nest.away = away ?? false;
+			nest.ambient_temperature = 20;
+			console.log('🔄 Initial state loaded:', initialState.value);
+		} else {
+			// Initialize with defaults and save to DB
+			nest.ambient_temperature = 20;
+			nest.target_temperature = 20;
+			await db.put({
+				type: 'thermostat',
+				target_temperature: 20,
+				has_leaf: false,
+				away: false,
+				updatedAt: Date.now()
+			}, THERMOSTAT_ID);
+			console.log('🆕 Initial state created');
+		}
+
+		// Simulate ambient temperature changes (heating/cooling effect)
+		setInterval(function() {
+			if (nest.ambient_temperature < 23 && nest.ambient_temperature > 19) {
+				nest.has_leaf = 1;
+			} else {
+				nest.has_leaf = 0;
+			}
+			if (nest.ambient_temperature < nest.target_temperature) {
+				nest.ambient_temperature = nest.ambient_temperature + 0.5;
+				nest.hvac_state = 'heating';
+			} else if (nest.ambient_temperature > nest.target_temperature) {
+				nest.ambient_temperature = nest.ambient_temperature - 0.5;
+				nest.hvac_state = 'cooling';
+			} else if (nest.ambient_temperature == nest.target_temperature) {
+				nest.hvac_state = 'normal';
+			}
+		}, 500);
+
+		console.log('🌡️ GenosDB Thermostat started - Open this page in another browser to see real-time sync!');
+	</script>
+
+</body>
+
+</html>
