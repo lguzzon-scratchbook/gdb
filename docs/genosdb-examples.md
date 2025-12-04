@@ -102,6 +102,18 @@ A single-page HTML application demonstrating secure, real-time, peer-to-peer not
 ### [GenosDB - Mesh Cells Monitor (D3)](https://estebanrfp.github.io/gdb/examples/mesh-cells-monitor-d3.html)
 A real-time visualization tool that displays the Cellular Mesh topology, bridge nodes, routing paths, and network metrics using D3.js.
 
+### [GenosDB - Mesh Cells Monitor (Lite)](https://estebanrfp.github.io/gdb/examples/mesh-cells-monitor-lite.html)
+A lightweight Canvas-based real-time visualization of the Cellular Mesh topology. Optimized for performance with minimal resource usage, featuring animated message particles and network metrics.
+
+### [GenosDB - Mesh Cells Monitor (Retro)](https://estebanrfp.github.io/gdb/examples/mesh-cells-monitor-retro.html)
+A retro-styled ASCII terminal monitor displaying the Cellular Mesh network in 80s CRT aesthetic. Features green phosphor text, scanline effects, and real-time system metrics with minimal CPU overhead.
+
+### [GenosDB - Mesh Cells Monitor (Modern)](https://estebanrfp.github.io/gdb/examples/mesh-cells-monitor-modern.html)
+A clean, minimalist Canvas-based visualization with modern UI design. Features smooth particle animations, real-time metrics, and an elegant dark interface.
+
+### [GenosDB - Mesh Cells Monitor (3D Particles)](https://estebanrfp.github.io/gdb/examples/mesh-cells-monitor-particles.html)
+An immersive 3D visualization of the Cellular Mesh network using Three.js. Features rotating cell geometries, glowing peer nodes, animated message particles with trails, and interactive camera controls.
+
 ### [GenosDB - Perf & Stress Test](https://estebanrfp.github.io/gdb/examples/perf-stress-test.html)
 A dedicated environment for benchmarking GenosDB under high-load scenarios. 
 Allows you to test mass insertions, real-time P2P synchronization, and subscription performance. 
