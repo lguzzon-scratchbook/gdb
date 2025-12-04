@@ -26,6 +26,7 @@ Welcome to the official technical documentation for GenosDB.
 
   - 🔐 [Security Manager (SM API Reference)](sm-api-reference.md) (RBAC, identity (WebAuthn/mnemonic), signing/verification)
   - 📡 [GenosRTC API Reference](genosrtc-api-reference.md) (P2P WebRTC API: rooms, data channels, audio/video)
+  - 🛰️ [Nostr Relay Deployment Guide](nostr-guide.md) (How to run your own Nostr signaling relay for GenosDB/GenosRTC)
   - ⚙️ [GenosRTC Architecture](genosrtc-architecture.md) (A technical breakdown of GenosDB's GenosRTC Module architecture, explaining its key components, including the decentralized signaling layer with Nostr, the P2P transport layer with WebRTC, and the communication abstractions for data and media.)
   - 🔷 [GenosRTC Cells](genosrtc-cells.md) (Cellular mesh overlay: architecture, bridges, TTL, metrics, and scalability)
 
