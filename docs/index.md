@@ -50,6 +50,8 @@ Welcome to the official technical documentation for GenosDB.
 
   - 🧯 [GenosDB Fallback Server](genosdb-fallback-server.md) (Optional superpeer Node.js service to improve availability)
 
+  - 📦 [Bundler Configuration](bundler-configuration.md) (Vite, Webpack, Bun, esbuild, and CDN usage)
+
 
 ## Roadmap & Whitepaper
 
