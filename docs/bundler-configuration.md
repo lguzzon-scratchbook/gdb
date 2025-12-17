@@ -24,6 +24,24 @@ No additional configuration is typically required for Webpack 5+.
 
 ## esbuild / Bun
 
+### Bun Example ([bundler.ts](file:///Users/estebanrfp/.gemini/antigravity/playground/primal-triangulum/bundler.ts))
+
+When using `Bun.build`, add a step to copy the assets after the build completes:
+
+```js
+async function build() {
+    console.time("Build");
+    const result = await Bun.build({
+        entrypoints: ['./app.js'],
+        outdir: './dist',
+        target: 'browser',
+    });
+    console.timeEnd("Build");
+}
+
+await build();
+```
+
 No additional configuration required.
 
 ## CDN Usage
