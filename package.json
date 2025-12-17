@@ -1,12 +1,13 @@
 {
   "name": "genosdb",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "description": "GenosDB (GDB): distributed graph database in real-time, peer-to-peer, scalable storage - efficient querying of complex relationships.",
   "main": "dist/index.js",
   "type": "module",
   "module": "./dist/index.js",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./*": "./dist/*.min.js"
   },
   "types": "./dist/index.d.ts",
   "scripts": {
