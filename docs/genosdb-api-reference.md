@@ -582,11 +582,6 @@ cursorChannel.send({ x: 120, y: 345 });
 ```
 
 This distinction prevents you from overloading the database with temporary data and ensures your application remains fast and efficient.
-
-¡Entendido! Es una idea excelente. Es como establecer un "contrato" o una guía de estilo directamente en la documentación para que tanto los humanos como las IAs sepan cómo generar el mejor código posible para tu ecoservistema.
-
-Aquí tienes un párrafo que destila la esencia de tu prompt en un consejo conciso y potente, perfecto para cerrar la sección de "Best Practices".
-
 ---
 
 ### 5. Code for Modernity, Clarity, and Performance
