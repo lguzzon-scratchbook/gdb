@@ -288,6 +288,8 @@
         let pageLastPostCursors = {};
         let postsCurrentlyInView = new Set();
         let lastBatchResultCount = 0;
+        let pageVisibilityObserver;
+        let visiblePostsMap = new Map(); // element -> pageNumber
 
         // --- DOM Elements ---
         const elements = {
@@ -381,18 +383,22 @@
                 if (!append) {
                     elements.postsContainer.innerHTML = '';
                     postsCurrentlyInView.clear();
+                    visiblePostsMap.clear();
                 }
 
                 if (results.length > 0) {
                     results.forEach(post => {
                         if (!postsCurrentlyInView.has(post.id)) {
-                            const postElement = createPostElement(post.id, post.value);
+                            const postElement = createPostElement(post.id, post.value, pageToLoad);
                             elements.postsContainer.appendChild(postElement);
                             postsCurrentlyInView.add(post.id);
+                            pageVisibilityObserver.observe(postElement);
                         }
                     });
                     pageLastPostCursors[pageToLoad] = results[results.length - 1].id;
-                    currentPage = pageToLoad;
+                    // Note: currentPage will be updated by IntersectionObserver during scroll
+                    // but we set it here for immediate feedback if not appending
+                    if (!append) currentPage = pageToLoad;
                     maxKnownPage = Math.max(maxKnownPage, pageToLoad);
 
                     if (results.length < POSTS_PER_PAGE) {
@@ -423,10 +429,11 @@
         }
 
         // --- Element and UI Creation (Grid) ---
-        function createPostElement(id, value) {
+        function createPostElement(id, value, pageNumber) {
             const element = document.createElement("div");
             element.className = "post";
             element.dataset.postId = id;
+            element.dataset.page = pageNumber;
 
             const img = document.createElement("img");
             img.src = value.image || `https://picsum.photos/seed/${id}/300/300`;
@@ -596,6 +603,7 @@
                 noMorePostsToLoadForScroll = false;
                 lastBatchResultCount = 0;
                 elements.postsContainer.innerHTML = '';
+                visiblePostsMap.clear();
 
                 await loadPosts({ pageToLoad: 1, append: false });
 
@@ -626,6 +634,40 @@
         // --- Application Initialization ---
         async function initializeApp() {
             const restoredScrollTop = loadPaginationState();
+
+            // Initialize IntersectionObserver for page synchronization
+            pageVisibilityObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        visiblePostsMap.set(entry.target, parseInt(entry.target.dataset.page));
+                    } else {
+                        visiblePostsMap.delete(entry.target);
+                    }
+                });
+
+                if (visiblePostsMap.size > 0) {
+                    // Find the page of the post that is highest in the document among visible posts
+                    let highestPost = null;
+                    let minTop = Infinity;
+
+                    visiblePostsMap.forEach((page, element) => {
+                        const rect = element.getBoundingClientRect();
+                        if (rect.top < minTop) {
+                            minTop = rect.top;
+                            highestPost = { element, page };
+                        }
+                    });
+
+                    if (highestPost && highestPost.page !== currentPage) {
+                        currentPage = highestPost.page;
+                        updatePaginationControls();
+                        savePaginationState();
+                    }
+                }
+            }, {
+                threshold: 0.1, // Trigger when at least 10% of the post is visible
+                rootMargin: "-10% 0px -10% 0px" // Slight margin to focus on center view
+            });
 
             if (currentPage > 1 && Object.keys(pageLastPostCursors).length === 0) {
                 console.log("Inconsistent cursor state; resetting to page 1.");
