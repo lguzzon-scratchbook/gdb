@@ -342,20 +342,29 @@
         }
 
         // --- Main Loading Logic ---
-        async function loadPosts({ pageToLoad, append = false, restoreScrollTop = 0 }) {
+        async function loadPosts({ pageToLoad, append = false, prepend = false, restoreScrollTop = 0 }) {
             if (isLoading) return;
+
+            // Prevent duplicate loading of same page in infinite scroll
+            const isAlreadyLoaded = [...elements.postsContainer.children].some(el => parseInt(el.dataset.page) === pageToLoad);
+            if ((append || prepend) && isAlreadyLoaded) return;
+
             isLoading = true;
             lastBatchResultCount = 0;
 
             elements.loadingIndicator.style.display = 'block';
-            if (append) noMorePostsToLoadForScroll = false;
+
+            // Critical: Reset the "finished" flag when starting a new view (manual jump)
+            if (!append && !prepend) {
+                noMorePostsToLoadForScroll = false;
+            }
 
             let cursor = null;
             if (pageToLoad > 1) {
                 cursor = pageLastPostCursors[pageToLoad - 1];
                 if (!cursor) {
                     console.warn(`No cursor for page ${pageToLoad - 1}. Cannot load page ${pageToLoad}.`);
-                    if (!append && currentPage > 1 && Object.keys(pageLastPostCursors).length === 0) {
+                    if (!append && !prepend && currentPage > 1 && Object.keys(pageLastPostCursors).length === 0) {
                         console.log("Failed to restore cursors; reloading from page 1");
                         currentPage = 1;
                     } else {
@@ -380,25 +389,44 @@
                 const { results } = await db.map(queryOptions);
                 lastBatchResultCount = results.length;
 
-                if (!append) {
+                if (!append && !prepend) {
                     elements.postsContainer.innerHTML = '';
                     postsCurrentlyInView.clear();
                     visiblePostsMap.clear();
                 }
 
                 if (results.length > 0) {
-                    results.forEach(post => {
-                        if (!postsCurrentlyInView.has(post.id)) {
-                            const postElement = createPostElement(post.id, post.value, pageToLoad);
-                            elements.postsContainer.appendChild(postElement);
-                            postsCurrentlyInView.add(post.id);
-                            pageVisibilityObserver.observe(postElement);
-                        }
-                    });
+                    const scrollHeightBefore = document.documentElement.scrollHeight;
+                    const scrollTopBefore = window.scrollY;
+
+                    if (prepend) {
+                        const fragment = document.createDocumentFragment();
+                        results.forEach(post => {
+                            if (!postsCurrentlyInView.has(post.id)) {
+                                const postElement = createPostElement(post.id, post.value, pageToLoad);
+                                fragment.appendChild(postElement);
+                                postsCurrentlyInView.add(post.id);
+                                pageVisibilityObserver.observe(postElement);
+                            }
+                        });
+                        elements.postsContainer.prepend(fragment);
+
+                        // Maintain scroll position after prepending
+                        const scrollHeightAfter = document.documentElement.scrollHeight;
+                        window.scrollTo(0, scrollTopBefore + (scrollHeightAfter - scrollHeightBefore));
+                    } else {
+                        results.forEach(post => {
+                            if (!postsCurrentlyInView.has(post.id)) {
+                                const postElement = createPostElement(post.id, post.value, pageToLoad);
+                                elements.postsContainer.appendChild(postElement);
+                                postsCurrentlyInView.add(post.id);
+                                pageVisibilityObserver.observe(postElement);
+                            }
+                        });
+                    }
+
                     pageLastPostCursors[pageToLoad] = results[results.length - 1].id;
-                    // Note: currentPage will be updated by IntersectionObserver during scroll
-                    // but we set it here for immediate feedback if not appending
-                    if (!append) currentPage = pageToLoad;
+                    if (!append && !prepend) currentPage = pageToLoad;
                     maxKnownPage = Math.max(maxKnownPage, pageToLoad);
 
                     if (results.length < POSTS_PER_PAGE) {
@@ -407,7 +435,7 @@
                     }
                 } else {
                     if (append) noMorePostsToLoadForScroll = true;
-                    if (!append) {
+                    if (!append && !prepend) {
                         maxKnownPage = Math.max(1, pageToLoad - 1);
                         if (pageToLoad > maxKnownPage) currentPage = maxKnownPage;
                     }
@@ -482,9 +510,25 @@
         // --- Event Handlers ---
         async function handleScroll() {
             const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-            if (scrollTop + clientHeight >= scrollHeight - 300 && !isLoading && !noMorePostsToLoadForScroll) {
-                if (pageLastPostCursors[currentPage] || (currentPage === 0 && !Object.keys(pageLastPostCursors).length)) {
-                    await loadPosts({ pageToLoad: currentPage + 1, append: true });
+
+            // Infinite scroll DOWN (Append)
+            if (scrollTop + clientHeight >= scrollHeight - 400 && !isLoading && !noMorePostsToLoadForScroll) {
+                const lastPost = elements.postsContainer.lastElementChild;
+                const nextTargetPage = lastPost ? parseInt(lastPost.dataset.page) + 1 : currentPage + 1;
+
+                if (pageLastPostCursors[nextTargetPage - 1]) {
+                    await loadPosts({ pageToLoad: nextTargetPage, append: true });
+                }
+            }
+
+            // Infinite scroll UP (Prepend/Retrocede)
+            if (scrollTop < 400 && !isLoading) {
+                const firstPost = elements.postsContainer.firstElementChild;
+                const firstLoadedPage = firstPost ? parseInt(firstPost.dataset.page) : currentPage;
+                const prevTargetPage = firstLoadedPage - 1;
+
+                if (prevTargetPage >= 1 && (prevTargetPage === 1 || pageLastPostCursors[prevTargetPage - 1])) {
+                    await loadPosts({ pageToLoad: prevTargetPage, prepend: true });
                 }
             }
         }
