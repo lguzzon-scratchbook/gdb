@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.8] - 2026-03-13
+
+### Added
+
+- **`db.sm.map(options)`:** New secure query method that decrypts SM-encrypted nodes in parallel and applies the same query engine as `db.map()` (`query`, `field`, `order`, `$limit`). Does not support realtime mode.
+- **`db.sm.remove(id)`:** New secure remove method that deletes SM-encrypted nodes, automatically handling the internal `SM_ID_PREFIX_` prefix.
+
+### Changed
+
+- **SM `processNodeWrapperForResult`:** Extracted from `get()` to module scope so it can be shared by `get()` and `map()`, avoiding code duplication.
+
+### Fixed
+
+- **`createDebouncedTask` race condition (`gdb.js`):** Fixed a bug where rapid sequential operations (e.g., multiple `put`/`remove` calls) caused `TypeError: Cannot read properties of null (reading 'reject')`. The `deferred` reference is now captured locally before being nullified.
+
 ## [0.12.7] - 2026-02-18
 
 ### Changed
