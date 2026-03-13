@@ -31,9 +31,11 @@ The SM relies on a combination of Ethereum-based cryptographic identities, the W
     *   **"Verifier-Only" Mode:** A GDB instance without an active local user session can still receive and verify operations from authenticated peers. Its SM acts in a "verifier-only" mode, applying the same security rules to maintain network-wide consistency.
 
 3.  **Secure Data Storage (Local Encryption)**
-    *   The SM provides simple, user-centric encryption via `db.sm.put()` and `db.sm.get()`.
+    *   The SM provides simple, user-centric encryption via `db.sm.put()`, `db.sm.get()`, `db.sm.map()`, and `db.sm.remove()`.
     *   When an authenticated user calls `db.sm.put(data)`, the data is automatically encrypted with a key derived from their Ethereum identity before being stored in GDB.
     *   When the same user calls `db.sm.get(id)`, the SM attempts to decrypt the data. If successful, the original plaintext is returned; otherwise, the encrypted ciphertext is returned, ensuring data privacy.
+    *   `db.sm.map(options)` allows querying encrypted nodes using the same query language as `db.map()`. It fetches all encrypted nodes, decrypts them in parallel, and then applies the query filters on the decrypted data. This method does not support realtime mode.
+    *   `db.sm.remove(id)` deletes an encrypted node by its ID, automatically handling the internal SM prefix.
 
 4.  **Role-Based Access Control (RBAC)**
     *   **Role and Permission Definition:** A hierarchy of roles (e.g., `guest`, `user`, `admin`, `superadmin`) with specific permissions (`read`, `write`, `delete`, `assignRole`) is established. This hierarchy can be customized during GDB initialization via the `sm.customRoles` configuration option.

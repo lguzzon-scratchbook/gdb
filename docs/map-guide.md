@@ -292,3 +292,49 @@ The `db.map` function has been designed to provide a consistent and intuitive in
 - Enhanced `$text` operator for nested field searches.
 - Improved `$between` to support date ranges.
 - Maintained backward compatibility with existing operators while adding new functionality.
+
+---
+
+### **Secure Variant: `db.sm.map(options)`**
+
+When the Security Manager (SM) is enabled, `db.sm.map()` provides the same query capabilities as `db.map()` but operates on encrypted data stored via `db.sm.put()`.
+
+#### **How It Works**
+
+1. Fetches all SM-encrypted nodes from GDB.
+2. Decrypts them in parallel using the current user's key.
+3. Applies `query`, `field`, `order`, and `$limit` on the decrypted data using the same query engine as `db.map()`.
+
+> **Note:** `db.sm.map()` does not support realtime mode. Each call performs a fresh decrypt-and-query cycle.
+
+#### **Example**
+
+```javascript
+const db = await gdb("my-db", {
+  rtc: true,
+  sm: { superAdmins: ["0x1..."] }
+})
+
+// Store encrypted data
+await db.sm.put({ name: "Alice", age: 25, status: "active" }, "alice")
+await db.sm.put({ name: "Bob", age: 30, status: "inactive" }, "bob")
+
+// Query encrypted nodes (same syntax as db.map)
+const { results } = await db.sm.map({
+  query: { status: "active", age: { $gte: 18 } },
+  field: "name",
+  order: "asc",
+  $limit: 10,
+})
+
+console.log(results)
+// [{ id: "alice", value: { name: "Alice", age: 25, status: "active" }, decrypted: true, ... }]
+```
+
+#### **Return Object**
+
+| Property  | Type    | Description                              |
+| --------- | ------- | ---------------------------------------- |
+| `results` | `array` | The filtered and decrypted results.      |
+
+Each result includes a `decrypted` boolean field: `true` if the current user owns and successfully decrypted the node, `false` otherwise.
